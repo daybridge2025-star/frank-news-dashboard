@@ -14,7 +14,7 @@ KST = pytz.timezone('Asia/Seoul')
 
 def fetch_news_for_ticker(ticker, company_name, max_items=10):
     """Google News RSS에서 특정 종목 뉴스 수집"""
-    query = f"{ticker} stock"
+    query = f"{ticker}+stock"
     url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
 
     try:
