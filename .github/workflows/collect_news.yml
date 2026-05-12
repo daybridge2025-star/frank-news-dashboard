@@ -1,0 +1,32 @@
+name: 뉴스 수집 (매시 정각)
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 뉴스 수집 실행
+        env:
+          GOOGLE_CLIENT_ID:      ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET:  ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN:  ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GOOGLE_TOKEN_URI:      ${{ secrets.GOOGLE_TOKEN_URI }}
+          GOOGLE_SHEETS_ID:      ${{ secrets.GOOGLE_SHEETS_ID }}
+        run: python collect_news.py
