@@ -2,7 +2,7 @@ name: 뉴스 수집 (매시 정각)
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 매시 정각 UTC = 매시 정각 UTC (KST +9)
+    - cron: '0 */2 * * *'  # 2시간마다 UTC (GitHub Actions 무료 한도 절약)
   workflow_dispatch:        # 수동 실행 가능
 
 jobs:
