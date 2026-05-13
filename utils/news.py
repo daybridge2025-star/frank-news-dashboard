@@ -11,7 +11,7 @@ import os
 import re
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import pytz
 
 KST = pytz.timezone('Asia/Seoul')
@@ -175,10 +175,24 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         feed = feedparser.parse(url)
         now_kst = datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
 
-        # 1단계: RSS 수집 + Jina AI Reader로 본문 크롤링 시도 (실패해도 기사는 유지)
+        # 1단계: RSS 수집 + 24시간 필터 + Jina AI Reader로 본문 크롤링 시도
         collected = []
         crawl_ok = 0
+        skipped = 0
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
         for entry in feed.entries[:max_items]:
+            # 24시간 초과 기사 스킵 (다음날 중복 수집 방지)
+            pub = entry.get('published_parsed')
+            if pub:
+                try:
+                    pub_dt = datetime(*pub[:6], tzinfo=timezone.utc)
+                    if pub_dt < cutoff:
+                        skipped += 1
+                        continue
+                except Exception:
+                    pass  # 파싱 실패 시 필터 없이 수집
+
             content = fetch_article_content(entry.link)
             if content:
                 crawl_ok += 1
@@ -193,7 +207,7 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
             time.sleep(3)
 
         print(f"  {ticker} ({company_name}): {len(collected)}건 수집 "
-              f"(본문 크롤링 성공 {crawl_ok}건 / 제목 기반 {len(collected)-crawl_ok}건)")
+              f"(본문 크롤링 성공 {crawl_ok}건 / 제목 기반 {len(collected)-crawl_ok}건 / 24h 초과 스킵 {skipped}건)")
 
         if not collected:
             return []
