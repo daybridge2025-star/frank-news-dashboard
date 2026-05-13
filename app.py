@@ -26,25 +26,75 @@ st.set_page_config(
 # ── CSS ──────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+    .brief-box {
+        background: #181825;
+        border: 1px solid #89b4fa;
+        border-left: 4px solid #89b4fa;
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 18px;
+        line-height: 1.8;
+    }
+    .brief-title {
+        color: #89b4fa;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-bottom: 10px;
+    }
+    .brief-body {
+        color: #cdd6f4;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+    }
     .news-card {
         background: #1e1e2e;
         border: 1px solid #313244;
         border-radius: 10px;
         padding: 14px 18px;
         margin-bottom: 10px;
-        line-height: 1.6;
+        line-height: 1.7;
     }
-    .news-card a {
-        color: #89dceb;
+    .news-index {
+        color: #6c7086;
+        font-size: 0.8rem;
+    }
+    .news-title-kr a {
+        color: #cdd6f4;
         text-decoration: none;
-        font-weight: 600;
-        font-size: 0.95rem;
+        font-weight: 700;
+        font-size: 1.0rem;
     }
-    .news-card a:hover { text-decoration: underline; }
-    .news-meta {
+    .news-title-kr a:hover {
+        color: #89dceb;
+        text-decoration: underline;
+    }
+    .news-title-en {
         color: #6c7086;
         font-size: 0.78rem;
+        margin-top: 2px;
+        margin-bottom: 8px;
+    }
+    .news-summary {
+        color: #a6adc8;
+        font-size: 0.85rem;
+        line-height: 1.65;
+        border-top: 1px solid #313244;
+        padding-top: 8px;
         margin-top: 4px;
+    }
+    .news-meta {
+        color: #585b70;
+        font-size: 0.75rem;
+        margin-top: 8px;
+    }
+    .section-header {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #cdd6f4;
+        margin: 24px 0 10px 0;
+        border-left: 4px solid #89b4fa;
+        padding-left: 10px;
     }
     .ticker-badge {
         display: inline-block;
@@ -56,22 +106,7 @@ st.markdown("""
         font-weight: 700;
         margin-right: 6px;
     }
-    .section-header {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #cdd6f4;
-        margin: 18px 0 10px 0;
-        border-left: 4px solid #89b4fa;
-        padding-left: 10px;
-    }
-    .page-btn-row {
-        display: flex;
-        gap: 8px;
-        margin-top: 6px;
-    }
-    .stButton>button {
-        border-radius: 8px;
-    }
+    .stButton>button { border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,7 +118,6 @@ def kst_now_str():
 
 @st.cache_data(ttl=300)
 def load_news():
-    """5분 캐시로 TODAY 시트 읽기"""
     return get_today_news()
 
 
@@ -108,7 +142,6 @@ with st.sidebar:
 
     st.divider()
 
-    # 종목 추가
     st.subheader("➕ 종목 추가")
     with st.form("add_ticker_form", clear_on_submit=True):
         new_ticker = st.text_input("티커 (예: AAPL)", max_chars=10).upper().strip()
@@ -128,7 +161,6 @@ with st.sidebar:
 
     st.divider()
 
-    # 종목 삭제
     st.subheader("🗑️ 종목 삭제")
     tickers_raw = load_tickers()
     if tickers_raw:
@@ -148,26 +180,22 @@ with st.sidebar:
 
 # ── 메인 ─────────────────────────────────────────────────────────
 st.title("📰 Frank News Dashboard")
-st.caption("미국 주식 뉴스 자동 수집 대시보드 | 매시 정각 업데이트")
+st.caption("미국 주식 뉴스 자동 수집 대시보드 | 2시간마다 업데이트")
 st.divider()
 
 df = load_news()
 tickers = load_tickers()
 
 if df.empty or tickers is None:
-    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 매시 정각에 뉴스를 수집합니다.")
+    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
     st.stop()
 
-# 등록 종목 순서대로 섹션 배치
 ticker_order = [t['ticker'] for t in tickers]
 
-# 세션 스테이트: 종목별 페이지 번호
 if 'page' not in st.session_state:
     st.session_state['page'] = {}
 
-ITEMS_PER_PAGE = 10  # 페이지당 10건
-PREVIEW_COUNT = 10   # 첫 페이지 표시 건수
-
+ITEMS_PER_PAGE = 10
 found_any = False
 
 for ticker_sym in ticker_order:
@@ -177,20 +205,11 @@ for ticker_sym in ticker_order:
 
     found_any = True
 
-    # 수집 시각 기준 최신순 정렬
     if 'collected_at' in ticker_df.columns:
         ticker_df = ticker_df.sort_values('collected_at', ascending=False)
 
     company_name = ticker_df['company'].iloc[0] if 'company' in ticker_df.columns else ticker_sym
     total = len(ticker_df)
-
-    # 페이지 번호 초기화
-    page_key = f"page_{ticker_sym}"
-    if page_key not in st.session_state['page']:
-        st.session_state['page'][page_key] = 0
-
-    current_page = st.session_state['page'][page_key]
-    total_pages = max(1, (total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
 
     # 섹션 헤더
     st.markdown(
@@ -201,16 +220,42 @@ for ticker_sym in ticker_order:
         unsafe_allow_html=True
     )
 
-    # 현재 페이지 슬라이스
+    # 종합 브리핑 박스 (summary_kr는 첫 번째 유효 행에만 저장)
+    summary_kr = ''
+    if 'summary_kr' in ticker_df.columns:
+        for val in ticker_df['summary_kr']:
+            if val and str(val).strip():
+                summary_kr = str(val).strip()
+                break
+
+    if summary_kr:
+        st.markdown(
+            f'<div class="brief-box">'
+            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑</div>'
+            f'<div class="brief-body">{summary_kr}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    # 페이지네이션
+    page_key = f"page_{ticker_sym}"
+    if page_key not in st.session_state['page']:
+        st.session_state['page'][page_key] = 0
+
+    current_page = st.session_state['page'][page_key]
+    total_pages = max(1, (total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
     start = current_page * ITEMS_PER_PAGE
     end = start + ITEMS_PER_PAGE
     page_df = ticker_df.iloc[start:end]
 
+    # 기사 카드
     for idx, (_, row) in enumerate(page_df.iterrows(), start=start + 1):
-        title = row.get('title', '(제목 없음)')
+        title_en = row.get('title', '(제목 없음)')
+        title_kr = row.get('title_kr', '') or title_en
         link = row.get('link', '#')
         published = row.get('published', '')
         collected = row.get('collected_at', '')
+        article_summary = str(row.get('article_summary_kr', '') or '')
 
         meta_parts = []
         if published:
@@ -219,16 +264,23 @@ for ticker_sym in ticker_order:
             meta_parts.append(f"수집: {collected[:16]}")
         meta = " &nbsp;|&nbsp; ".join(meta_parts)
 
+        summary_html = (
+            f'<div class="news-summary">{article_summary}</div>'
+            if article_summary.strip() else ''
+        )
+
         st.markdown(
             f'<div class="news-card">'
-            f'<span style="color:#6c7086;font-size:0.8rem;">#{idx}</span> '
-            f'<a href="{link}" target="_blank">{title}</a>'
+            f'<span class="news-index">#{idx}</span>'
+            f'<div class="news-title-kr"><a href="{link}" target="_blank">{title_kr}</a></div>'
+            f'<div class="news-title-en">{title_en}</div>'
+            f'{summary_html}'
             f'<div class="news-meta">{meta}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
 
-    # 페이지네이션 버튼 (2페이지 이상일 때만)
+    # 페이지 버튼
     if total_pages > 1:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
@@ -255,4 +307,4 @@ if not found_any:
 
 # ── 푸터 ─────────────────────────────────────────────────────────
 st.divider()
-st.caption("Frank News Dashboard · Google News RSS 기반 · 매시 정각 자동 수집 · GitHub Actions")
+st.caption("Frank News Dashboard · 기사 본문 크롤링 기반 · 2시간마다 자동 수집 · GitHub Actions")
