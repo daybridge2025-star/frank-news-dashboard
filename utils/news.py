@@ -1,6 +1,6 @@
 """
 뉴스 수집 유틸리티
-Google News RSS 기반 + 기사 본문 크롤링 + Gemini 번역/요약
+Google News RSS 기반 + 기사 본문 크롤링(가능한 경우) + Gemini 번역/요약
 """
 
 import feedparser
@@ -41,8 +41,8 @@ def _get_gemini_model():
 
 def fetch_article_content(url, timeout=10):
     """
-    기사 URL에서 본문 크롤링.
-    페이월/차단/빈 본문이면 None 반환.
+    기사 URL에서 본문 크롤링 시도.
+    페이월/차단/빈 본문이면 None 반환 (기사 수집은 계속).
     """
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
@@ -52,12 +52,10 @@ def fetch_article_content(url, timeout=10):
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(resp.text, 'html.parser')
 
-        # 불필요한 태그 제거
         for tag in soup(['script', 'style', 'nav', 'header', 'footer',
                          'aside', 'iframe', 'form', 'noscript']):
             tag.decompose()
 
-        # 본문 추출: <article> 우선, 없으면 <p> 태그 수집
         article_tag = soup.find('article')
         if article_tag:
             text = article_tag.get_text(separator=' ', strip=True)
@@ -65,14 +63,11 @@ def fetch_article_content(url, timeout=10):
             paragraphs = soup.find_all('p')
             text = ' '.join(p.get_text(strip=True) for p in paragraphs)
 
-        # 연속 공백 정리
         text = ' '.join(text.split())
 
-        # 200자 미만이면 페이월/차단으로 판단
         if len(text) < 200:
             return None
 
-        # Gemini 토큰 절약을 위해 최대 4000자로 제한
         return text[:4000]
 
     except Exception:
@@ -81,12 +76,13 @@ def fetch_article_content(url, timeout=10):
 
 def translate_and_summarize(articles, model, ticker='', company_name=''):
     """
-    크롤링된 기사 목록을 Gemini로 번역 + 요약 (1 API 호출/종목).
+    기사 목록을 Gemini로 번역 + 요약 (1 API 호출/종목).
+    content가 없는 기사는 제목만으로 번역 + 요약.
 
-    articles: [{'title': str, 'content': str}, ...]
+    articles: [{'title': str, 'content': str or None}, ...]
     반환: {
         'articles': [{'title_kr': str, 'article_summary_kr': str}, ...],
-        'summary_kr': str  # 종목 종합 브리핑
+        'summary_kr': str
     }
     """
     empty = {
@@ -96,12 +92,15 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
     if not model or not articles:
         return empty
 
-    # 프롬프트 본문 구성
+    # 기사별 텍스트 구성 (본문 있으면 본문, 없으면 제목만)
     articles_text = ''
     for i, a in enumerate(articles):
-        articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n본문: {a['content']}\n"
+        if a.get('content'):
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n본문: {a['content']}\n"
+        else:
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n본문: (본문 없음 - 제목 기반으로 요약)\n"
 
-    prompt = f"""다음은 {ticker}({company_name}) 관련 최신 미국 주식 뉴스 기사들입니다.
+    prompt = f"""다음은 {ticker}({company_name}) 관련 최신 미국 주식 뉴스입니다.
 {articles_text}
 아래 두 가지 작업을 수행하고, 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
 
@@ -109,10 +108,10 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
   "articles": [
     {{
       "title_kr": "기사 0 제목을 자연스러운 한국어로 번역",
-      "article_summary_kr": "기사 0 본문 핵심 내용을 500자 이내 한국어로 요약"
+      "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약 (본문 없으면 제목 기반으로 작성)"
     }}
   ],
-  "summary_kr": "전체 기사를 종합 분석한 오늘의 뉴스 동향 (1000자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적 수치와 함께 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
+  "summary_kr": "전체 기사를 종합 분석한 오늘의 뉴스 동향 (1000자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
 }}"""
 
     try:
@@ -122,7 +121,6 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
         )
         text = response.text.strip()
 
-        # 코드블록 제거
         if text.startswith('```'):
             lines = text.split('\n')
             text = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
@@ -142,8 +140,8 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
 
 def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
     """
-    Google News RSS 수집 → 기사 본문 크롤링 → Gemini 번역/요약.
-    크롤링 불가 기사는 자동 제외.
+    Google News RSS 수집 → 기사 본문 크롤링 시도(실패해도 기사 유지)
+    → Gemini 번역/요약.
     """
     query = f"{ticker}+stock"
     url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
@@ -152,41 +150,41 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         feed = feedparser.parse(url)
         now_kst = datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
 
-        # 1단계: RSS 수집 후 본문 크롤링 시도
-        crawled = []
+        # 1단계: RSS 수집 + 본문 크롤링 시도 (실패해도 기사는 유지)
+        collected = []
+        crawl_ok = 0
         for entry in feed.entries[:max_items]:
             content = fetch_article_content(entry.link)
-            if content is None:
-                print(f"    ↳ 스킵 (크롤링 불가): {entry.title[:50]}...")
-                continue
-            crawled.append({
+            if content:
+                crawl_ok += 1
+            collected.append({
                 'title': entry.title,
                 'link': entry.link,
                 'published': entry.get('published', ''),
-                'content': content,
+                'content': content,  # None이면 제목 기반 요약
                 'url_hash': hashlib.md5(entry.link.encode()).hexdigest()[:12],
             })
 
-        print(f"  {ticker} ({company_name}): {len(crawled)}건 크롤링 성공 "
-              f"(시도 {min(max_items, len(feed.entries))}건)")
+        print(f"  {ticker} ({company_name}): {len(collected)}건 수집 "
+              f"(본문 크롤링 성공 {crawl_ok}건 / 제목 기반 {len(collected)-crawl_ok}건)")
 
-        if not crawled:
+        if not collected:
             return []
 
         # 2단계: Gemini 번역 + 요약
         summary_kr = ''
+        gemini_articles = [{'title_kr': '', 'article_summary_kr': ''} for _ in collected]
+
         if model:
             print(f"  [Gemini] {ticker} 번역 및 요약 중...")
-            gemini_input = [{'title': a['title'], 'content': a['content']} for a in crawled]
+            gemini_input = [{'title': a['title'], 'content': a['content']} for a in collected]
             result = translate_and_summarize(gemini_input, model, ticker, company_name)
             gemini_articles = result['articles']
             summary_kr = result['summary_kr']
-        else:
-            gemini_articles = [{'title_kr': '', 'article_summary_kr': ''} for _ in crawled]
 
         # 3단계: news_items 조합
         news_items = []
-        for i, a in enumerate(crawled):
+        for i, a in enumerate(collected):
             g = gemini_articles[i] if i < len(gemini_articles) else {}
             news_items.append({
                 'ticker': ticker,
@@ -197,7 +195,6 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
                 'collected_at': now_kst,
                 'url_hash': a['url_hash'],
                 'title_kr': g.get('title_kr', ''),
-                # 종합 브리핑은 첫 번째 행에만 저장
                 'summary_kr': summary_kr if i == 0 else '',
                 'article_summary_kr': g.get('article_summary_kr', ''),
             })
@@ -210,10 +207,7 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
 
 
 def fetch_all_news(tickers, delay=1.0):
-    """
-    전체 종목 뉴스 일괄 수집.
-    delay: 종목 간 딜레이(초) — Rate limiting 방지
-    """
+    """전체 종목 뉴스 일괄 수집"""
     model = _get_gemini_model()
 
     all_news = []
