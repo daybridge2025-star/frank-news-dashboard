@@ -29,12 +29,14 @@ DEFAULT_TICKERS = [
     {'ticker': 'KTOS', 'company_name': '크라토스'},
 ]
 
-TODAY_HEADERS = ['ticker', 'company', 'title', 'link', 'published', 'collected_at', 'url_hash']
+TODAY_HEADERS = [
+    'ticker', 'company', 'title', 'link', 'published',
+    'collected_at', 'url_hash', 'title_kr', 'summary_kr'
+]
 CONFIG_HEADERS = ['ticker', 'company_name', 'added_date']
 
 
 def get_gspread_client():
-    """OAuth refresh token으로 gspread 클라이언트 생성"""
     creds = Credentials(
         token=None,
         refresh_token=os.environ['GOOGLE_REFRESH_TOKEN'],
@@ -52,8 +54,7 @@ def get_spreadsheet():
     return client.open_by_key(os.environ['GOOGLE_SHEETS_ID'])
 
 
-def _ensure_sheet(ss, name, headers, rows=2000, cols=10):
-    """시트가 없으면 생성 후 헤더 추가"""
+def _ensure_sheet(ss, name, headers, rows=2000, cols=12):
     try:
         sheet = ss.worksheet(name)
     except gspread.WorksheetNotFound:
@@ -63,7 +64,6 @@ def _ensure_sheet(ss, name, headers, rows=2000, cols=10):
 
 
 def get_tickers():
-    """CONFIG 시트에서 종목 목록 반환. 없으면 기본값으로 초기화."""
     try:
         ss = get_spreadsheet()
         try:
@@ -86,7 +86,6 @@ def get_tickers():
 
 
 def add_ticker(ticker, company_name):
-    """종목 추가"""
     ss = get_spreadsheet()
     config = _ensure_sheet(ss, 'CONFIG', CONFIG_HEADERS, 200, 3)
     today_str = datetime.now(KST).strftime('%Y-%m-%d')
@@ -94,7 +93,6 @@ def add_ticker(ticker, company_name):
 
 
 def remove_ticker(ticker):
-    """종목 삭제"""
     ss = get_spreadsheet()
     try:
         config = ss.worksheet('CONFIG')
@@ -108,7 +106,6 @@ def remove_ticker(ticker):
 
 
 def get_today_news():
-    """TODAY 시트 전체 데이터를 DataFrame으로 반환"""
     try:
         ss = get_spreadsheet()
         try:
@@ -127,7 +124,6 @@ def get_today_news():
 
 
 def get_existing_hashes(today_sheet):
-    """TODAY 시트의 url_hash 집합 반환 (중복 방지용)"""
     try:
         hashes = today_sheet.col_values(7)
         return set(hashes[1:])
@@ -136,13 +132,12 @@ def get_existing_hashes(today_sheet):
 
 
 def save_news_to_today(news_items):
-    """신규 뉴스를 TODAY 시트에 저장. 저장된 건수 반환."""
     if not news_items:
         return 0
 
     try:
         ss = get_spreadsheet()
-        today_sheet = _ensure_sheet(ss, 'TODAY', TODAY_HEADERS, 2000, 7)
+        today_sheet = _ensure_sheet(ss, 'TODAY', TODAY_HEADERS, 2000, 9)
         existing = get_existing_hashes(today_sheet)
 
         new_rows = []
@@ -150,7 +145,10 @@ def save_news_to_today(news_items):
             if item['url_hash'] not in existing:
                 new_rows.append([
                     item['ticker'], item['company'], item['title'],
-                    item['link'], item['published'], item['collected_at'], item['url_hash']
+                    item['link'], item['published'], item['collected_at'],
+                    item['url_hash'],
+                    item.get('title_kr', ''),
+                    item.get('summary_kr', '')
                 ])
                 existing.add(item['url_hash'])
 
@@ -165,12 +163,6 @@ def save_news_to_today(news_items):
 
 
 def archive_and_reset():
-    """
-    자정 작업:
-    1. TODAY 시트 → 종목별 아카이브 시트로 이동
-    2. 각 아카이브 시트에서 90일 초과 데이터 삭제
-    3. TODAY 시트 초기화
-    """
     ss = get_spreadsheet()
     cutoff = datetime.now(KST) - timedelta(days=90)
 
@@ -191,7 +183,7 @@ def archive_and_reset():
 
     for ticker in df['ticker'].unique():
         ticker_df = df[df['ticker'] == ticker]
-        archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 7)
+        archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 9)
 
         existing = get_existing_hashes(archive)
         new_rows = []
@@ -199,7 +191,10 @@ def archive_and_reset():
             if str(row['url_hash']) not in existing:
                 new_rows.append([
                     row['ticker'], row['company'], row['title'],
-                    row['link'], row['published'], row['collected_at'], row['url_hash']
+                    row['link'], row['published'], row['collected_at'],
+                    row['url_hash'],
+                    row.get('title_kr', ''),
+                    row.get('summary_kr', '')
                 ])
 
         if new_rows:
@@ -223,9 +218,13 @@ def archive_and_reset():
             archive.clear()
             archive.append_row(TODAY_HEADERS)
             if keep:
-                rows = [[r['ticker'], r['company'], r['title'],
-                         r['link'], r['published'], r['collected_at'], r['url_hash']]
-                        for r in keep]
+                rows = [[
+                    r['ticker'], r['company'], r['title'],
+                    r['link'], r['published'], r['collected_at'],
+                    r['url_hash'],
+                    r.get('title_kr', ''),
+                    r.get('summary_kr', '')
+                ] for r in keep]
                 archive.append_rows(rows, value_input_option='RAW')
             print(f"  {ticker}: {deleted}건 90일 초과 삭제")
 
