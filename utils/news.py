@@ -47,7 +47,7 @@ def translate_and_summarize(news_items, model):
 
 반드시 아래 JSON 배열 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요:
 [
-  {{"title_kr": "한국어 번역 제목", "summary_kr": "한 줄 요약 (40자 이내)"}},
+  {{"title_kr": "한국어 번역 제목", "summary_kr": "핵심 내용 요약 (200자 이내)"}},
   ...
 ]"""
 
