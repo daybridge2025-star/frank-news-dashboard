@@ -1,19 +1,69 @@
 """
 뉴스 수집 유틸리티
-Google News RSS 기반
+Google News RSS + Gemini 번역/요약
 """
 
 import feedparser
 import hashlib
 import time
+import os
+import json
 from datetime import datetime
 import pytz
+import google.generativeai as genai
 
 KST = pytz.timezone('Asia/Seoul')
 
 
-def fetch_news_for_ticker(ticker, company_name, max_items=10):
-    """Google News RSS에서 특정 종목 뉴스 수집"""
+def _get_gemini_model():
+    """Gemini 모델 초기화"""
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        return None
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel('gemini-1.5-flash')
+
+
+def translate_and_summarize(news_items, model):
+    """
+    Gemini API로 뉴스 제목 일괄 번역 + 100자 요약
+    티커당 1회 API 호출로 전체 처리
+    """
+    if not model or not news_items:
+        return {i: {'title_kr': '', 'summary_kr': ''} for i in range(len(news_items))}
+
+    titles = [item['title'] for item in news_items]
+    prompt = f"""다음은 미국 주식 관련 영어 뉴스 제목들입니다.
+각 제목에 대해:
+1. title_kr: 자연스러운 한국어로 번역 (40자 이내)
+2. summary_kr: 제목을 바탕으로 핵심 내용을 한국어로 요약 (100자 이내)
+
+반드시 아래 JSON 배열 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요:
+[
+  {{"title_kr": "번역된 제목", "summary_kr": "핵심 요약"}},
+  ...
+]
+
+뉴스 제목 목록:
+{json.dumps(titles, ensure_ascii=False)}"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        # 마크다운 코드블록 제거
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        results = json.loads(text.strip())
+        return {i: results[i] for i in range(len(results))}
+    except Exception as e:
+        print(f"  [Gemini 오류] 번역 실패: {e}")
+        return {i: {'title_kr': '', 'summary_kr': ''} for i in range(len(news_items))}
+
+
+def fetch_news_for_ticker(ticker, company_name, model=None, max_items=10):
+    """Google News RSS에서 특정 종목 뉴스 수집 + Gemini 번역"""
     query = f"{ticker}+stock"
     url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
 
@@ -31,10 +81,20 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10):
                 'link': entry.link,
                 'published': entry.get('published', ''),
                 'collected_at': now_kst,
-                'url_hash': url_hash
+                'url_hash': url_hash,
+                'title_kr': '',
+                'summary_kr': ''
             })
 
-        print(f"  {ticker} ({company_name}): {len(news_items)}건 수집")
+        # Gemini 번역 (일괄)
+        if news_items and model:
+            translations = translate_and_summarize(news_items, model)
+            for i, item in enumerate(news_items):
+                t = translations.get(i, {})
+                item['title_kr'] = t.get('title_kr', '')
+                item['summary_kr'] = t.get('summary_kr', '')
+
+        print(f"  {ticker} ({company_name}): {len(news_items)}건 수집/번역")
         return news_items
 
     except Exception as e:
@@ -42,14 +102,17 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10):
         return []
 
 
-def fetch_all_news(tickers, delay=0.5):
-    """
-    전체 종목 뉴스 일괄 수집
-    delay: 종목 간 요청 딜레이 (초) - Rate limiting 방지
-    """
+def fetch_all_news(tickers, delay=1.0):
+    """전체 종목 뉴스 일괄 수집 + Gemini 번역"""
+    model = _get_gemini_model()
+    if model:
+        print("  Gemini 번역 활성화")
+    else:
+        print("  [경고] GEMINI_API_KEY 없음, 번역 생략")
+
     all_news = []
     for t in tickers:
-        items = fetch_news_for_ticker(t['ticker'], t['company_name'])
+        items = fetch_news_for_ticker(t['ticker'], t['company_name'], model=model)
         all_news.extend(items)
         if delay > 0:
             time.sleep(delay)
