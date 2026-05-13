@@ -6,3 +6,4 @@ feedparser>=6.0.11
 pandas>=2.2.0
 pytz>=2024.1
 requests>=2.31.0
+google-generativeai>=0.8.0
