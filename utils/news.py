@@ -39,13 +39,32 @@ def _get_gemini_model():
         return None
 
 
+def _decode_google_news_url(google_url):
+    """
+    gnewsdecoder로 Google News 리다이렉트 URL → 실제 기사 URL 변환.
+    실패 시 원본 URL 반환.
+    """
+    try:
+        from gnewsdecoder import gnewsdecoder
+        result = gnewsdecoder(google_url)
+        actual_url = result.get('url')
+        if actual_url and actual_url.startswith('http'):
+            return actual_url
+    except Exception:
+        pass
+    return google_url
+
+
 def fetch_article_content(url, timeout=10):
     """
-    기사 URL에서 본문 크롤링 시도.
+    Google News URL 디코딩 → 실제 기사 본문 크롤링.
     페이월/차단/빈 본문이면 None 반환 (기사 수집은 계속).
     """
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+        # Google News URL → 실제 기사 URL 디코딩
+        actual_url = _decode_google_news_url(url)
+
+        resp = requests.get(actual_url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         if resp.status_code != 200:
             return None
 
