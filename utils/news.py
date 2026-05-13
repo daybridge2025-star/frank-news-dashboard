@@ -3,10 +3,12 @@
 Google News RSS 기반 + 기사 본문 크롤링(가능한 경우) + Gemini 번역/요약
 """
 
+import base64
 import feedparser
 import hashlib
 import json
 import os
+import re
 import time
 import requests
 from datetime import datetime
@@ -41,15 +43,29 @@ def _get_gemini_model():
 
 def _decode_google_news_url(google_url):
     """
-    gnewsdecoder로 Google News 리다이렉트 URL → 실제 기사 URL 변환.
+    Google News 리다이렉트 URL → 실제 기사 URL 추출 (순수 Python, 외부 라이브러리 불필요).
+    Google News URL에 base64로 인코딩된 실제 URL이 포함되어 있음.
     실패 시 원본 URL 반환.
     """
     try:
-        from gnewsdecoder import gnewsdecoder
-        result = gnewsdecoder(google_url)
-        actual_url = result.get('url')
-        if actual_url and actual_url.startswith('http'):
-            return actual_url
+        match = re.search(r'articles/([A-Za-z0-9_-]+)', google_url)
+        if not match:
+            return google_url
+
+        encoded = match.group(1)
+        # base64 패딩 맞추기
+        rem = len(encoded) % 4
+        if rem:
+            encoded += '=' * (4 - rem)
+
+        decoded_bytes = base64.urlsafe_b64decode(encoded)
+        decoded_str = decoded_bytes.decode('latin-1')
+
+        # https:// 또는 http:// 패턴 검색
+        urls = re.findall(r'https?://[^\x00-\x1f\x7f-\xff\s]{10,}', decoded_str)
+        if urls:
+            # 실제 기사 URL이 보통 가장 길다
+            return max(urls, key=len)
     except Exception:
         pass
     return google_url
