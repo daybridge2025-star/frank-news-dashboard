@@ -29,4 +29,5 @@ jobs:
           GOOGLE_REFRESH_TOKEN:  ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           GOOGLE_TOKEN_URI:      ${{ secrets.GOOGLE_TOKEN_URI }}
           GOOGLE_SHEETS_ID:      ${{ secrets.GOOGLE_SHEETS_ID }}
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
         run: python collect_news.py
