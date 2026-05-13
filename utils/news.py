@@ -71,35 +71,25 @@ def _decode_google_news_url(google_url):
     return google_url
 
 
-def fetch_article_content(url, timeout=10):
+def fetch_article_content(url, timeout=15):
     """
-    Google News URL 디코딩 → 실제 기사 본문 크롤링.
-    페이월/차단/빈 본문이면 None 반환 (기사 수집은 계속).
+    Jina AI Reader를 통해 기사 본문 크롤링.
+    JS 리다이렉트 포함 처리. 실패 시 None 반환 (기사 수집은 계속).
     """
     try:
-        # Google News URL → 실제 기사 URL 디코딩
-        actual_url = _decode_google_news_url(url)
-
-        resp = requests.get(actual_url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+        jina_url = f"https://r.jina.ai/{url}"
+        resp = requests.get(
+            jina_url,
+            headers={
+                'Accept': 'text/plain',
+                'X-Return-Format': 'text',
+            },
+            timeout=timeout
+        )
         if resp.status_code != 200:
             return None
 
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(resp.text, 'html.parser')
-
-        for tag in soup(['script', 'style', 'nav', 'header', 'footer',
-                         'aside', 'iframe', 'form', 'noscript']):
-            tag.decompose()
-
-        article_tag = soup.find('article')
-        if article_tag:
-            text = article_tag.get_text(separator=' ', strip=True)
-        else:
-            paragraphs = soup.find_all('p')
-            text = ' '.join(p.get_text(strip=True) for p in paragraphs)
-
-        text = ' '.join(text.split())
-
+        text = resp.text.strip()
         if len(text) < 200:
             return None
 
@@ -185,7 +175,7 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         feed = feedparser.parse(url)
         now_kst = datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
 
-        # 1단계: RSS 수집 + 본문 크롤링 시도 (실패해도 기사는 유지)
+        # 1단계: RSS 수집 + Jina AI Reader로 본문 크롤링 시도 (실패해도 기사는 유지)
         collected = []
         crawl_ok = 0
         for entry in feed.entries[:max_items]:
@@ -199,6 +189,8 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
                 'content': content,  # None이면 제목 기반 요약
                 'url_hash': hashlib.md5(entry.link.encode()).hexdigest()[:12],
             })
+            # Jina 무료 Rate Limit 대응 (20 RPM → 기사당 3초 딜레이)
+            time.sleep(3)
 
         print(f"  {ticker} ({company_name}): {len(collected)}건 수집 "
               f"(본문 크롤링 성공 {crawl_ok}건 / 제목 기반 {len(collected)-crawl_ok}건)")
@@ -217,10 +209,17 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
             gemini_articles = result['articles']
             summary_kr = result['summary_kr']
 
-        # 3단계: news_items 조합
+        # 3단계: news_items 조합 + [본문]/[AI추론] 마커 부착
         news_items = []
         for i, a in enumerate(collected):
             g = gemini_articles[i] if i < len(gemini_articles) else {}
+            raw_summary = g.get('article_summary_kr', '')
+            if raw_summary:
+                marker = '[본문] ' if a.get('content') else '[AI추론] '
+                article_summary_kr = marker + raw_summary
+            else:
+                article_summary_kr = ''
+
             news_items.append({
                 'ticker': ticker,
                 'company': company_name,
@@ -231,7 +230,7 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
                 'url_hash': a['url_hash'],
                 'title_kr': g.get('title_kr', ''),
                 'summary_kr': summary_kr if i == 0 else '',
-                'article_summary_kr': g.get('article_summary_kr', ''),
+                'article_summary_kr': article_summary_kr,
             })
 
         return news_items
