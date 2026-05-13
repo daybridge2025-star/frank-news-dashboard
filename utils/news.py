@@ -52,7 +52,10 @@ def translate_and_summarize(news_items, model):
 ]"""
 
     try:
-        response = model.generate_content(prompt)
+        response = model.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt
+        )
         text = response.text.strip()
 
         # 코드블록 제거
