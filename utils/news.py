@@ -21,11 +21,10 @@ def _get_gemini_model():
         print("  [Gemini] GEMINI_API_KEY 없음 - 번역 스킵")
         return None
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        print("  [Gemini] 모델 초기화 완료")
-        return model
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        print("  [Gemini] 클라이언트 초기화 완료")
+        return client
     except Exception as e:
         print(f"  [Gemini] 초기화 실패: {e}")
         return None
