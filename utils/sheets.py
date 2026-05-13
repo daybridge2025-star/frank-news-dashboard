@@ -29,7 +29,10 @@ DEFAULT_TICKERS = [
     {'ticker': 'KTOS', 'company_name': '크라토스'},
 ]
 
-TODAY_HEADERS = ['ticker', 'company', 'title', 'link', 'published', 'collected_at', 'url_hash', 'title_kr', 'summary_kr']
+TODAY_HEADERS = [
+    'ticker', 'company', 'title', 'link', 'published',
+    'collected_at', 'url_hash', 'title_kr', 'summary_kr', 'article_summary_kr'
+]
 CONFIG_HEADERS = ['ticker', 'company_name', 'added_date']
 
 
@@ -71,7 +74,6 @@ def get_tickers():
             records = config.get_all_records()
             if records:
                 return records
-            # 헤더만 있는 경우 기본값 삽입
         except gspread.WorksheetNotFound:
             config = ss.add_worksheet('CONFIG', 200, 3)
             config.append_row(CONFIG_HEADERS)
@@ -104,7 +106,7 @@ def remove_ticker(ticker):
     records = config.get_all_records()
     for i, r in enumerate(records):
         if r['ticker'] == ticker.upper():
-            config.delete_rows(i + 2)  # +2: 헤더(1행) + 0-index 보정
+            config.delete_rows(i + 2)
             return
 
 
@@ -143,7 +145,7 @@ def save_news_to_today(news_items):
 
     try:
         ss = get_spreadsheet()
-        today_sheet = _ensure_sheet(ss, 'TODAY', TODAY_HEADERS, 2000, 9)
+        today_sheet = _ensure_sheet(ss, 'TODAY', TODAY_HEADERS, 2000, 10)
         existing = get_existing_hashes(today_sheet)
 
         new_rows = []
@@ -152,7 +154,8 @@ def save_news_to_today(news_items):
                 new_rows.append([
                     item['ticker'], item['company'], item['title'],
                     item['link'], item['published'], item['collected_at'], item['url_hash'],
-                    item.get('title_kr', ''), item.get('summary_kr', '')
+                    item.get('title_kr', ''), item.get('summary_kr', ''),
+                    item.get('article_summary_kr', '')
                 ])
                 existing.add(item['url_hash'])
 
@@ -176,7 +179,6 @@ def archive_and_reset():
     ss = get_spreadsheet()
     cutoff = datetime.now(KST) - timedelta(days=90)
 
-    # TODAY 시트 읽기
     try:
         today_sheet = ss.worksheet('TODAY')
     except gspread.WorksheetNotFound:
@@ -195,7 +197,7 @@ def archive_and_reset():
     # 종목별 아카이브
     for ticker in df['ticker'].unique():
         ticker_df = df[df['ticker'] == ticker]
-        archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 9)
+        archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 10)
 
         existing = get_existing_hashes(archive)
         new_rows = []
@@ -204,7 +206,8 @@ def archive_and_reset():
                 new_rows.append([
                     row['ticker'], row['company'], row['title'],
                     row['link'], row['published'], row['collected_at'], row['url_hash'],
-                    row.get('title_kr', ''), row.get('summary_kr', '')
+                    row.get('title_kr', ''), row.get('summary_kr', ''),
+                    row.get('article_summary_kr', '')
                 ])
 
         if new_rows:
@@ -223,16 +226,19 @@ def archive_and_reset():
                 else:
                     deleted += 1
             except Exception:
-                keep.append(r)  # 파싱 실패 시 보존
+                keep.append(r)
 
         if deleted > 0:
             archive.clear()
             archive.append_row(TODAY_HEADERS)
             if keep:
-                rows = [[r['ticker'], r['company'], r['title'],
-                         r['link'], r['published'], r['collected_at'], r['url_hash'],
-                         r.get('title_kr', ''), r.get('summary_kr', '')]
-                        for r in keep]
+                rows = [
+                    [r['ticker'], r['company'], r['title'],
+                     r['link'], r['published'], r['collected_at'], r['url_hash'],
+                     r.get('title_kr', ''), r.get('summary_kr', ''),
+                     r.get('article_summary_kr', '')]
+                    for r in keep
+                ]
                 archive.append_rows(rows, value_input_option='RAW')
             print(f"  {ticker}: {deleted}건 90일 초과 삭제")
 
