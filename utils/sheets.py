@@ -29,14 +29,12 @@ DEFAULT_TICKERS = [
     {'ticker': 'KTOS', 'company_name': '크라토스'},
 ]
 
-TODAY_HEADERS = [
-    'ticker', 'company', 'title', 'link', 'published',
-    'collected_at', 'url_hash', 'title_kr', 'summary_kr'
-]
+TODAY_HEADERS = ['ticker', 'company', 'title', 'link', 'published', 'collected_at', 'url_hash', 'title_kr', 'summary_kr']
 CONFIG_HEADERS = ['ticker', 'company_name', 'added_date']
 
 
 def get_gspread_client():
+    """OAuth refresh token으로 gspread 클라이언트 생성"""
     creds = Credentials(
         token=None,
         refresh_token=os.environ['GOOGLE_REFRESH_TOKEN'],
@@ -54,7 +52,8 @@ def get_spreadsheet():
     return client.open_by_key(os.environ['GOOGLE_SHEETS_ID'])
 
 
-def _ensure_sheet(ss, name, headers, rows=2000, cols=12):
+def _ensure_sheet(ss, name, headers, rows=2000, cols=10):
+    """시트가 없으면 생성 후 헤더 추가"""
     try:
         sheet = ss.worksheet(name)
     except gspread.WorksheetNotFound:
@@ -64,6 +63,7 @@ def _ensure_sheet(ss, name, headers, rows=2000, cols=12):
 
 
 def get_tickers():
+    """CONFIG 시트에서 종목 목록 반환. 없으면 기본값으로 초기화."""
     try:
         ss = get_spreadsheet()
         try:
@@ -71,6 +71,7 @@ def get_tickers():
             records = config.get_all_records()
             if records:
                 return records
+            # 헤더만 있는 경우 기본값 삽입
         except gspread.WorksheetNotFound:
             config = ss.add_worksheet('CONFIG', 200, 3)
             config.append_row(CONFIG_HEADERS)
@@ -86,6 +87,7 @@ def get_tickers():
 
 
 def add_ticker(ticker, company_name):
+    """종목 추가"""
     ss = get_spreadsheet()
     config = _ensure_sheet(ss, 'CONFIG', CONFIG_HEADERS, 200, 3)
     today_str = datetime.now(KST).strftime('%Y-%m-%d')
@@ -93,6 +95,7 @@ def add_ticker(ticker, company_name):
 
 
 def remove_ticker(ticker):
+    """종목 삭제"""
     ss = get_spreadsheet()
     try:
         config = ss.worksheet('CONFIG')
@@ -101,11 +104,12 @@ def remove_ticker(ticker):
     records = config.get_all_records()
     for i, r in enumerate(records):
         if r['ticker'] == ticker.upper():
-            config.delete_rows(i + 2)
+            config.delete_rows(i + 2)  # +2: 헤더(1행) + 0-index 보정
             return
 
 
 def get_today_news():
+    """TODAY 시트 전체 데이터를 DataFrame으로 반환"""
     try:
         ss = get_spreadsheet()
         try:
@@ -124,14 +128,16 @@ def get_today_news():
 
 
 def get_existing_hashes(today_sheet):
+    """TODAY 시트의 url_hash 집합 반환 (중복 방지용)"""
     try:
-        hashes = today_sheet.col_values(7)
-        return set(hashes[1:])
+        hashes = today_sheet.col_values(7)  # 7번째 열: url_hash
+        return set(hashes[1:])  # 헤더 제외
     except Exception:
         return set()
 
 
 def save_news_to_today(news_items):
+    """신규 뉴스를 TODAY 시트에 저장. 저장된 건수 반환."""
     if not news_items:
         return 0
 
@@ -145,10 +151,8 @@ def save_news_to_today(news_items):
             if item['url_hash'] not in existing:
                 new_rows.append([
                     item['ticker'], item['company'], item['title'],
-                    item['link'], item['published'], item['collected_at'],
-                    item['url_hash'],
-                    item.get('title_kr', ''),
-                    item.get('summary_kr', '')
+                    item['link'], item['published'], item['collected_at'], item['url_hash'],
+                    item.get('title_kr', ''), item.get('summary_kr', '')
                 ])
                 existing.add(item['url_hash'])
 
@@ -163,9 +167,16 @@ def save_news_to_today(news_items):
 
 
 def archive_and_reset():
+    """
+    자정 작업:
+    1. TODAY 시트 → 종목별 아카이브 시트로 이동
+    2. 각 아카이브 시트에서 90일 초과 데이터 삭제
+    3. TODAY 시트 초기화
+    """
     ss = get_spreadsheet()
     cutoff = datetime.now(KST) - timedelta(days=90)
 
+    # TODAY 시트 읽기
     try:
         today_sheet = ss.worksheet('TODAY')
     except gspread.WorksheetNotFound:
@@ -181,6 +192,7 @@ def archive_and_reset():
 
     df = pd.DataFrame(records)
 
+    # 종목별 아카이브
     for ticker in df['ticker'].unique():
         ticker_df = df[df['ticker'] == ticker]
         archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 9)
@@ -191,16 +203,15 @@ def archive_and_reset():
             if str(row['url_hash']) not in existing:
                 new_rows.append([
                     row['ticker'], row['company'], row['title'],
-                    row['link'], row['published'], row['collected_at'],
-                    row['url_hash'],
-                    row.get('title_kr', ''),
-                    row.get('summary_kr', '')
+                    row['link'], row['published'], row['collected_at'], row['url_hash'],
+                    row.get('title_kr', ''), row.get('summary_kr', '')
                 ])
 
         if new_rows:
             archive.append_rows(new_rows, value_input_option='RAW')
             print(f"  {ticker}: {len(new_rows)}건 아카이브")
 
+        # 90일 초과 삭제
         all_records = archive.get_all_records()
         keep, deleted = [], 0
         for r in all_records:
@@ -212,22 +223,20 @@ def archive_and_reset():
                 else:
                     deleted += 1
             except Exception:
-                keep.append(r)
+                keep.append(r)  # 파싱 실패 시 보존
 
         if deleted > 0:
             archive.clear()
             archive.append_row(TODAY_HEADERS)
             if keep:
-                rows = [[
-                    r['ticker'], r['company'], r['title'],
-                    r['link'], r['published'], r['collected_at'],
-                    r['url_hash'],
-                    r.get('title_kr', ''),
-                    r.get('summary_kr', '')
-                ] for r in keep]
+                rows = [[r['ticker'], r['company'], r['title'],
+                         r['link'], r['published'], r['collected_at'], r['url_hash'],
+                         r.get('title_kr', ''), r.get('summary_kr', '')]
+                        for r in keep]
                 archive.append_rows(rows, value_input_option='RAW')
             print(f"  {ticker}: {deleted}건 90일 초과 삭제")
 
+    # TODAY 시트 초기화
     today_sheet.clear()
     today_sheet.append_row(TODAY_HEADERS)
     print("TODAY 시트 초기화 완료")
