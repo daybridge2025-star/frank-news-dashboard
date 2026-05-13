@@ -53,7 +53,7 @@ def translate_and_summarize(news_items, model):
 
     try:
         response = model.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.0-flash-lite',
             contents=prompt
         )
         text = response.text.strip()
