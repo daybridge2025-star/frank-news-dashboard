@@ -88,6 +88,28 @@ st.markdown("""
         font-size: 0.75rem;
         margin-top: 8px;
     }
+    .badge-crawled {
+        display: inline-block;
+        background: #1e3a2f;
+        color: #a6e3a1;
+        border: 1px solid #a6e3a1;
+        border-radius: 4px;
+        padding: 1px 7px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .badge-inferred {
+        display: inline-block;
+        background: #2a2a3d;
+        color: #a6adc8;
+        border: 1px solid #585b70;
+        border-radius: 4px;
+        padding: 1px 7px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
     .section-header {
         font-size: 1.25rem;
         font-weight: 700;
@@ -257,6 +279,15 @@ for ticker_sym in ticker_order:
         collected = row.get('collected_at', '')
         article_summary = str(row.get('article_summary_kr', '') or '')
 
+        # [본문] / [AI추론] 마커 파싱
+        badge_html = ''
+        if article_summary.startswith('[본문] '):
+            badge_html = '<div><span class="badge-crawled">📄 본문 기반</span></div>'
+            article_summary = article_summary[len('[본문] '):]
+        elif article_summary.startswith('[AI추론] '):
+            badge_html = '<div><span class="badge-inferred">🔍 AI 추론</span></div>'
+            article_summary = article_summary[len('[AI추론] '):]
+
         meta_parts = []
         if published:
             meta_parts.append(f"📅 {published[:25]}")
@@ -265,7 +296,7 @@ for ticker_sym in ticker_order:
         meta = " &nbsp;|&nbsp; ".join(meta_parts)
 
         summary_html = (
-            f'<div class="news-summary">{article_summary}</div>'
+            f'{badge_html}<div class="news-summary">{article_summary}</div>'
             if article_summary.strip() else ''
         )
 
