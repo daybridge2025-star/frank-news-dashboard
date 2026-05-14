@@ -14,6 +14,15 @@ sys.path.insert(0, os.path.dirname(__file__))
 from utils.sheets import get_tickers, add_ticker, remove_ticker, get_today_news
 
 KST = pytz.timezone('Asia/Seoul')
+ET  = pytz.timezone('America/New_York')
+
+KR_WEEKDAY = ['월', '화', '수', '목', '금', '토', '일']
+
+def et_date_str():
+    """미국 동부 기준 날짜 문자열 반환. 예: 2026.05.14.(목) ET 기준"""
+    now_et = datetime.now(ET)
+    wd = KR_WEEKDAY[now_et.weekday()]
+    return now_et.strftime(f'%Y.%m.%d.({wd}) ET 기준')
 
 # ── 페이지 기본 설정 ─────────────────────────────────────────────
 st.set_page_config(
@@ -184,7 +193,7 @@ def render_ticker_content(ticker_sym, ticker_df):
     if summary_kr:
         st.markdown(
             f'<div class="brief-box">'
-            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑</div>'
+            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑 ({et_date_str()})</div>'
             f'<div class="brief-body">{summary_kr}</div>'
             f'</div>',
             unsafe_allow_html=True
