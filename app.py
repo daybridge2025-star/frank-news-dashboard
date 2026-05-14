@@ -14,6 +14,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 from utils.sheets import get_tickers, add_ticker, remove_ticker, get_today_news
+from utils.edgar import get_edgar_fundamentals
+from utils.damodaran import enrich_fundamentals
 
 # ── 프리미엄 게이트 ───────────────────────────────────────────────
 # Streamlit Cloud 시크릿에서 PREMIUM_UNLOCKED=false 로 설정하면 잠금
@@ -382,33 +384,48 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
 
     # ── 1. 퀄리티 필터: ROIC vs WACC ────────────────────────────
     if PREMIUM_UNLOCKED:
-        if fundamentals and fundamentals.get('roic') is not None:
-            roic   = fundamentals['roic']
-            wacc   = fundamentals['wacc']
-            spread = roic - wacc
-            spread_cls = 'positive' if spread > 0 else 'negative'
+        roic_val  = fundamentals.get('roic')      if fundamentals else None
+        wacc_val  = fundamentals.get('wacc_used') if fundamentals else None
+        spread_val= fundamentals.get('roic_wacc_spread') if fundamentals else None
+        damod_ind = fundamentals.get('damod_industry','') if fundamentals else ''
+        ind_wacc  = fundamentals.get('industry_wacc') if fundamentals else None
+        ind_roic  = fundamentals.get('industry_roic') if fundamentals else None
+
+        if roic_val is not None and wacc_val is not None:
+            spread = spread_val if spread_val is not None else (roic_val - wacc_val)
+            spread_cls  = 'positive' if spread > 0 else 'negative'
             spread_sign = '+' if spread > 0 else ''
-            verdict_cls  = 'verdict-buy'   if spread > 5  else \
-                           'verdict-watch' if spread > 0  else 'verdict-pass'
-            verdict_txt  = '✅ 가치 창출 (EVA 양수)' if spread > 0 else '⚠️ 자본 파괴 (EVA 음수)'
+            verdict_cls = 'verdict-buy'   if spread > 5  else \
+                          'verdict-watch' if spread > 0  else 'verdict-pass'
+            verdict_txt = '✅ 가치 창출 (EVA 양수)' if spread > 0 else '⚠️ 자본 파괴 (EVA 음수)'
+            ind_chip = ''
+            if ind_roic is not None:
+                ind_chip = (f'<div class="analysis-chip">'
+                            f'<div class="chip-label">업종 ROIC</div>'
+                            f'<div class="chip-value">{ind_roic:.1f}%</div></div>')
+            ind_label = f' ({damod_ind})' if damod_ind else ''
             st.markdown(
                 f'<div class="analysis-card">'
-                f'<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC</div>'
+                f'<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC{ind_label}</div>'
                 f'<div class="analysis-metric-row">'
-                f'<div class="analysis-chip"><div class="chip-label">ROIC</div><div class="chip-value">{roic:.1f}%</div></div>'
-                f'<div class="analysis-chip"><div class="chip-label">WACC (업종)</div><div class="chip-value">{wacc:.1f}%</div></div>'
+                f'<div class="analysis-chip"><div class="chip-label">ROIC</div><div class="chip-value">{roic_val:.1f}%</div></div>'
+                f'<div class="analysis-chip"><div class="chip-label">WACC (재레버링)</div><div class="chip-value">{wacc_val:.1f}%</div></div>'
                 f'<div class="analysis-chip"><div class="chip-label">스프레드</div><div class="chip-value {spread_cls}">{spread_sign}{spread:.1f}%p</div></div>'
+                f'{ind_chip}'
                 f'</div>'
                 f'<div class="analysis-verdict {verdict_cls}">{verdict_txt}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
         else:
+            wait_msg = '⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다'
+            if fundamentals and fundamentals.get('error'):
+                wait_msg = f'⚠️ {fundamentals["error"]}'
             st.markdown(
-                '<div class="analysis-card">'
-                '<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC</div>'
-                '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div>'
-                '</div>',
+                f'<div class="analysis-card">'
+                f'<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC</div>'
+                f'<div class="analysis-verdict verdict-wait">{wait_msg}</div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
     else:
@@ -419,10 +436,11 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
 
     # ── 2. 밸류 필터: EV/EBITDA vs 업종 ─────────────────────────
     if PREMIUM_UNLOCKED:
-        if fundamentals and fundamentals.get('ev_ebitda') is not None:
-            ev_eb     = fundamentals['ev_ebitda']
-            ind_med   = fundamentals.get('industry_ev_ebitda', None)
-            discount  = ((ind_med - ev_eb) / ind_med * 100) if ind_med else None
+        ev_eb_val = fundamentals.get('ev_ebitda')     if fundamentals else None
+        ind_ev    = fundamentals.get('industry_ev_ebitda') if fundamentals else None
+
+        if ev_eb_val is not None:
+            discount  = ((ind_ev - ev_eb_val) / ind_ev * 100) if ind_ev else None
             disc_cls  = 'positive' if (discount or 0) > 0 else 'negative'
             if discount is not None:
                 verdict_cls = 'verdict-buy'   if discount > 20 else \
@@ -430,16 +448,17 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                 verdict_txt = (f'✅ 업종 대비 {discount:.0f}% 할인' if discount > 0
                                else f'⚠️ 업종 대비 {-discount:.0f}% 프리미엄')
             else:
-                verdict_cls, verdict_txt = 'verdict-wait', '업종 벤치마크 대조 중'
+                verdict_cls = 'verdict-watch'
+                verdict_txt = '업종 EV/EBITDA 매핑 중 (업종 미확인)'
             chip_ind = (f'<div class="analysis-chip"><div class="chip-label">업종 중앙값</div>'
-                        f'<div class="chip-value">{ind_med:.1f}x</div></div>') if ind_med else ''
+                        f'<div class="chip-value">{ind_ev:.1f}x</div></div>') if ind_ev else ''
             chip_disc = (f'<div class="analysis-chip"><div class="chip-label">할인율</div>'
                          f'<div class="chip-value {disc_cls}">{discount:+.0f}%</div></div>') if discount is not None else ''
             st.markdown(
                 f'<div class="analysis-card">'
                 f'<div class="analysis-card-title">② 밸류 필터 — EV/EBITDA 상대 배수</div>'
                 f'<div class="analysis-metric-row">'
-                f'<div class="analysis-chip"><div class="chip-label">EV/EBITDA</div><div class="chip-value">{ev_eb:.1f}x</div></div>'
+                f'<div class="analysis-chip"><div class="chip-label">EV/EBITDA</div><div class="chip-value">{ev_eb_val:.1f}x</div></div>'
                 f'{chip_ind}{chip_disc}'
                 f'</div>'
                 f'<div class="analysis-verdict {verdict_cls}">{verdict_txt}</div>'
@@ -462,10 +481,12 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
 
     # ── 3. DCF 보조 검증 ─────────────────────────────────────────
     if PREMIUM_UNLOCKED:
-        if fundamentals and fundamentals.get('dcf_value') is not None:
-            iv       = fundamentals['dcf_value']
-            price    = fundamentals.get('current_price', None)
-            margin   = ((iv - price) / iv * 100) if price else None
+        dcf_iv  = fundamentals.get('dcf_value')    if fundamentals else None
+        price   = fundamentals.get('current_price') if fundamentals else None
+        wacc_u  = fundamentals.get('wacc_used')    if fundamentals else None
+
+        if dcf_iv is not None and dcf_iv > 0:
+            margin     = ((dcf_iv - price) / dcf_iv * 100) if price else None
             margin_cls = 'positive' if (margin or 0) > 0 else 'negative'
             if margin is not None:
                 verdict_cls = 'verdict-buy'   if margin > 30 else \
@@ -475,27 +496,38 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                                f'⚠️ 현재가 내재가치 {-margin:.0f}% 초과')
             else:
                 verdict_cls, verdict_txt = 'verdict-wait', '주가 데이터 확인 중'
-            chip_price = (f'<div class="analysis-chip"><div class="chip-label">현재가</div>'
-                          f'<div class="chip-value">${price:.2f}</div></div>') if price else ''
+            chip_price  = (f'<div class="analysis-chip"><div class="chip-label">현재가</div>'
+                           f'<div class="chip-value">${price:.2f}</div></div>') if price else ''
             chip_margin = (f'<div class="analysis-chip"><div class="chip-label">안전마진</div>'
                            f'<div class="chip-value {margin_cls}">{margin:+.0f}%</div></div>') if margin is not None else ''
+            chip_wacc   = (f'<div class="analysis-chip"><div class="chip-label">할인율(WACC)</div>'
+                           f'<div class="chip-value">{wacc_u:.1f}%</div></div>') if wacc_u else ''
             st.markdown(
                 f'<div class="analysis-card">'
                 f'<div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
                 f'<div class="analysis-metric-row">'
-                f'<div class="analysis-chip"><div class="chip-label">DCF 내재가치</div><div class="chip-value">${iv:.2f}</div></div>'
-                f'{chip_price}{chip_margin}'
+                f'<div class="analysis-chip"><div class="chip-label">DCF 내재가치</div><div class="chip-value">${dcf_iv:.2f}</div></div>'
+                f'{chip_price}{chip_margin}{chip_wacc}'
                 f'</div>'
                 f'<div class="analysis-verdict {verdict_cls}">{verdict_txt}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
         else:
+            # FCF ≤ 0 이거나 EDGAR 데이터 불완전 — 사유 명시
+            reason = ''
+            if fundamentals and fundamentals.get('ebit') is not None:
+                ebit = fundamentals.get('ebit', 0)
+                ebitda = fundamentals.get('ebitda')
+                if ebit is not None and ebit <= 0:
+                    reason = ' (영업손실 구간 — DCF 산출 불가)'
+                elif ebitda is None:
+                    reason = ' (DA 데이터 미확인)'
             st.markdown(
-                '<div class="analysis-card">'
-                '<div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
-                '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div>'
-                '</div>',
+                f'<div class="analysis-card">'
+                f'<div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
+                f'<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다{reason}</div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
     else:
@@ -848,10 +880,50 @@ def load_tickers():
     return get_tickers()
 
 
+@st.cache_data(ttl=86400)   # 24시간 캐시 — EDGAR API 부하 최소화
+def fetch_premium_fundamentals(ticker_sym: str) -> dict:
+    """
+    EDGAR + Damodaran 연동으로 프리미엄 분석 데이터 산출 (24시간 캐시).
+    실패 시 빈 dict 반환 (UI에서 ⏳ 안내 표시).
+    """
+    api_key = os.environ.get('FINNHUB_API_KEY', '')
+    # Finnhub 현재가·시총·발행주식수는 이미 캐시된 fin_data 활용
+    fin_data = fetch_finnhub_data(ticker_sym)
+
+    current_price    = fin_data.get('current') or fin_data.get('prev_close')
+    market_cap       = fin_data.get('mcap')          # $M 단위
+    # Finnhub metric에는 발행주식수 직접 제공 없음 → EDGAR에서 추출
+    shares_outstanding = None
+    if market_cap and current_price and current_price > 0:
+        # 역산: 발행주식수 ≈ 시가총액(M) × 1,000,000 / 현재가
+        shares_outstanding = market_cap * 1_000_000 / current_price
+
+    try:
+        raw = get_edgar_fundamentals(
+            ticker=ticker_sym,
+            finnhub_api_key=api_key,
+            current_price=current_price,
+            shares_outstanding=shares_outstanding,
+            market_cap=market_cap,
+        )
+        if raw.get('error'):
+            print(f'[EDGAR] {ticker_sym}: {raw["error"]}')
+            return {}
+        # shares_outstanding 역산값 주입 (DCF 재계산용)
+        if shares_outstanding:
+            raw['shares_outstanding'] = shares_outstanding
+        enriched = enrich_fundamentals(raw)
+        return enriched
+    except Exception as e:
+        print(f'[Premium] {ticker_sym} 펀더멘탈 계산 오류: {e}')
+        return {}
+
+
 def clear_cache():
     load_news.clear()
     load_tickers.clear()
     fetch_finnhub_data.clear()
+    fetch_premium_fundamentals.clear()
 
 
 def render_ticker_content(ticker_sym, ticker_df):
@@ -877,9 +949,9 @@ def render_ticker_content(ticker_sym, ticker_df):
     render_stock_header(ticker_sym, fin_data)
 
     # ── 프리미엄 분석 섹션 ──────────────────────────────────────
-    # fundamentals 파라미터: EDGAR 연동 후 실제 dict 전달 예정
-    # 현재는 None → "EDGAR 연동 후 자동 계산됩니다" 안내 표시
-    render_premium_analysis(ticker_sym, fundamentals=None)
+    # EDGAR + Damodaran 연동 (24시간 캐시)
+    fundamentals = fetch_premium_fundamentals(ticker_sym) if PREMIUM_UNLOCKED else None
+    render_premium_analysis(ticker_sym, fundamentals=fundamentals or None)
 
     # 종합 브리핑 박스
     summary_kr = ''
