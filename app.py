@@ -1,6 +1,6 @@
 """
 Frank News Dashboard — Streamlit 웹 대시보드
-Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별로 표시
+Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별 탭으로 표시
 """
 
 import streamlit as st
@@ -110,14 +110,6 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 6px;
     }
-    .section-header {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #cdd6f4;
-        margin: 24px 0 10px 0;
-        border-left: 4px solid #89b4fa;
-        padding-left: 10px;
-    }
     .ticker-badge {
         display: inline-block;
         background: #313244;
@@ -127,6 +119,16 @@ st.markdown("""
         font-size: 0.8rem;
         font-weight: 700;
         margin-right: 6px;
+    }
+    /* 탭 모바일 최적화 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 6px 12px;
     }
     .stButton>button { border-radius: 8px; }
 </style>
@@ -153,79 +155,11 @@ def clear_cache():
     load_tickers.clear()
 
 
-# ── 사이드바 ─────────────────────────────────────────────────────
-with st.sidebar:
-    st.title("⚙️ 종목 관리")
-    st.caption(f"업데이트: {kst_now_str()}")
-
-    if st.button("🔄 새로고침", use_container_width=True):
-        clear_cache()
-        st.rerun()
-
-    st.divider()
-
-    st.subheader("➕ 종목 추가")
-    with st.form("add_ticker_form", clear_on_submit=True):
-        new_ticker = st.text_input("티커 (예: AAPL)", max_chars=10).upper().strip()
-        new_company = st.text_input("회사명 (예: 애플)", max_chars=50).strip()
-        submitted = st.form_submit_button("추가", use_container_width=True)
-        if submitted:
-            if new_ticker and new_company:
-                try:
-                    add_ticker(new_ticker, new_company)
-                    clear_cache()
-                    st.success(f"{new_ticker} 추가 완료!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"추가 실패: {e}")
-            else:
-                st.warning("티커와 회사명을 모두 입력해주세요.")
-
-    st.divider()
-
-    st.subheader("🗑️ 종목 삭제")
-    tickers_raw = load_tickers()
-    if tickers_raw:
-        ticker_options = {f"{t['ticker']} ({t['company_name']})": t['ticker'] for t in tickers_raw}
-        selected_label = st.selectbox("삭제할 종목 선택", list(ticker_options.keys()))
-        if st.button("삭제", use_container_width=True, type="secondary"):
-            try:
-                remove_ticker(ticker_options[selected_label])
-                clear_cache()
-                st.success(f"{ticker_options[selected_label]} 삭제 완료!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"삭제 실패: {e}")
-    else:
-        st.info("등록된 종목이 없습니다.")
-
-
-# ── 메인 ─────────────────────────────────────────────────────────
-st.title("📰 Frank News Dashboard")
-st.caption("미국 주식 뉴스 자동 수집 대시보드 | 2시간마다 업데이트")
-st.divider()
-
-df = load_news()
-tickers = load_tickers()
-
-if df.empty or tickers is None:
-    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
-    st.stop()
-
-ticker_order = [t['ticker'] for t in tickers]
-
-if 'page' not in st.session_state:
-    st.session_state['page'] = {}
-
-ITEMS_PER_PAGE = 10
-found_any = False
-
-for ticker_sym in ticker_order:
-    ticker_df = df[df['ticker'] == ticker_sym].copy()
+def render_ticker_content(ticker_sym, ticker_df):
+    """종목별 브리핑 + 기사 카드 + 페이지네이션 렌더링"""
     if ticker_df.empty:
-        continue
-
-    found_any = True
+        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
+        return
 
     if 'collected_at' in ticker_df.columns:
         ticker_df = ticker_df.sort_values('collected_at', ascending=False)
@@ -233,16 +167,13 @@ for ticker_sym in ticker_order:
     company_name = ticker_df['company'].iloc[0] if 'company' in ticker_df.columns else ticker_sym
     total = len(ticker_df)
 
-    # 섹션 헤더
     st.markdown(
-        f'<div class="section-header">'
-        f'<span class="ticker-badge">{ticker_sym}</span>{company_name} '
-        f'<span style="color:#6c7086;font-size:0.85rem;font-weight:400;">({total}건)</span>'
-        f'</div>',
+        f'<div style="color:#6c7086;font-size:0.85rem;margin-bottom:12px;">'
+        f'<span class="ticker-badge">{ticker_sym}</span>{company_name} · {total}건</div>',
         unsafe_allow_html=True
     )
 
-    # 종합 브리핑 박스 (summary_kr는 첫 번째 유효 행에만 저장)
+    # 종합 브리핑 박스
     summary_kr = ''
     if 'summary_kr' in ticker_df.columns:
         for val in ticker_df['summary_kr']:
@@ -260,7 +191,10 @@ for ticker_sym in ticker_order:
         )
 
     # 페이지네이션
+    ITEMS_PER_PAGE = 10
     page_key = f"page_{ticker_sym}"
+    if 'page' not in st.session_state:
+        st.session_state['page'] = {}
     if page_key not in st.session_state['page']:
         st.session_state['page'][page_key] = 0
 
@@ -279,7 +213,7 @@ for ticker_sym in ticker_order:
         collected = row.get('collected_at', '')
         article_summary = str(row.get('article_summary_kr', '') or '')
 
-        # [본문] / [AI추론] 마커 파싱
+        # [본문] / [AI추론] 마커 파싱 (구 데이터 호환)
         badge_html = ''
         if article_summary.startswith('[본문] '):
             badge_html = '<div><span class="badge-crawled">📄 본문 기반</span></div>'
@@ -331,11 +265,84 @@ for ticker_sym in ticker_order:
                     st.session_state['page'][page_key] += 1
                     st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
 
-if not found_any:
-    st.info("📭 등록된 종목에 해당하는 뉴스가 없습니다. 잠시 후 다시 확인해주세요.")
+# ── 사이드바 ─────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("⚙️ 종목 관리")
+    st.caption(f"업데이트: {kst_now_str()}")
+
+    if st.button("🔄 새로고침", use_container_width=True):
+        clear_cache()
+        st.rerun()
+
+    st.divider()
+
+    st.subheader("➕ 종목 추가")
+    with st.form("add_ticker_form", clear_on_submit=True):
+        new_ticker = st.text_input("티커 (예: AAPL)", max_chars=10).upper().strip()
+        new_company = st.text_input("회사명 (예: 애플)", max_chars=50).strip()
+        submitted = st.form_submit_button("추가", use_container_width=True)
+        if submitted:
+            if new_ticker and new_company:
+                try:
+                    add_ticker(new_ticker, new_company)
+                    clear_cache()
+                    st.success(f"{new_ticker} 추가 완료!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"추가 실패: {e}")
+            else:
+                st.warning("티커와 회사명을 모두 입력해주세요.")
+
+    st.divider()
+
+    st.subheader("🗑️ 종목 삭제")
+    tickers_raw = load_tickers()
+    if tickers_raw:
+        ticker_options = {f"{t['ticker']} ({t['company_name']})": t['ticker'] for t in tickers_raw}
+        selected_label = st.selectbox("삭제할 종목 선택", list(ticker_options.keys()))
+        if st.button("삭제", use_container_width=True, type="secondary"):
+            try:
+                remove_ticker(ticker_options[selected_label])
+                clear_cache()
+                st.success(f"{ticker_options[selected_label]} 삭제 완료!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"삭제 실패: {e}")
+    else:
+        st.info("등록된 종목이 없습니다.")
+
+
+# ── 메인 ─────────────────────────────────────────────────────────
+st.title("📰 Frank News Dashboard")
+st.caption("미국 주식 뉴스 자동 수집 대시보드 | Finnhub 기반 | 2시간마다 업데이트")
+st.divider()
+
+df = load_news()
+tickers = load_tickers()
+
+if df.empty or not tickers:
+    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
+    st.stop()
+
+ticker_order = [t['ticker'] for t in tickers]
+
+# 탭 레이블: 기사 있는 종목은 건수 표시, 없는 종목은 회색으로 구분
+tab_labels = []
+for t in tickers:
+    sym = t['ticker']
+    count = len(df[df['ticker'] == sym])
+    label = f"{sym} ({count})" if count > 0 else sym
+    tab_labels.append(label)
+
+tabs = st.tabs(tab_labels)
+
+for tab, ticker_info in zip(tabs, tickers):
+    sym = ticker_info['ticker']
+    ticker_df = df[df['ticker'] == sym].copy()
+    with tab:
+        render_ticker_content(sym, ticker_df)
 
 # ── 푸터 ─────────────────────────────────────────────────────────
 st.divider()
-st.caption("Frank News Dashboard · 기사 본문 크롤링 기반 · 2시간마다 자동 수집 · GitHub Actions")
+st.caption("Frank News Dashboard · Finnhub 뉴스 API · Gemini 번역/요약 · 2시간마다 자동 수집 · GitHub Actions")
