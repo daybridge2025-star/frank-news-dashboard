@@ -74,24 +74,52 @@ def _decode_google_news_url(google_url):
 def _resolve_url(url, timeout=10):
     """
     Google News 리다이렉트 URL → 실제 기사 URL 추출.
-    HTTP 리다이렉트를 따라가서 최종 URL 반환.
+    1) HTTP 리다이렉트 추적
+    2) HTML에서 og:url / canonical 파싱
+    3) base64 디코딩 fallback
     실패 시 원본 URL 반환.
     """
     try:
-        resp = requests.get(
-            url,
-            headers=HEADERS,
-            timeout=timeout,
-            allow_redirects=True
-        )
+        resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         final_url = resp.url
-        # 여전히 Google News 도메인이면 base64 디코딩 시도
-        if 'news.google.com' in final_url:
-            decoded = _decode_google_news_url(url)
-            if decoded != url:
-                return decoded
-        return final_url
-    except Exception:
+
+        # HTTP 리다이렉트로 Google News 밖으로 나간 경우
+        if 'news.google.com' not in final_url:
+            print(f"    [URL해석] HTTP리다이렉트 성공: {final_url[:80]}")
+            return final_url
+
+        # HTML에서 og:url 또는 canonical 추출 시도
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(resp.text, 'html.parser')
+
+            og = soup.find('meta', property='og:url')
+            if og and og.get('content') and 'news.google.com' not in og['content']:
+                print(f"    [URL해석] og:url 성공: {og['content'][:80]}")
+                return og['content']
+
+            canonical = soup.find('link', rel='canonical')
+            if canonical and canonical.get('href') and 'news.google.com' not in canonical['href']:
+                print(f"    [URL해석] canonical 성공: {canonical['href'][:80]}")
+                return canonical['href']
+
+            # 디버그: HTML 앞부분 출력으로 Google News 응답 구조 파악
+            print(f"    [URL해석] HTML파싱 실패 - 응답 앞 200자: {resp.text[:200]!r}")
+
+        except Exception as e:
+            print(f"    [URL해석] HTML파싱 예외: {e}")
+
+        # base64 디코딩 fallback
+        decoded = _decode_google_news_url(url)
+        if decoded != url:
+            print(f"    [URL해석] base64 성공: {decoded[:80]}")
+            return decoded
+
+        print(f"    [URL해석] 모든 방법 실패 - 원본 URL로 Jina 시도")
+        return url
+
+    except Exception as e:
+        print(f"    [URL해석] 예외: {e}")
         return url
 
 
@@ -113,16 +141,21 @@ def fetch_article_content(url, timeout=15):
             },
             timeout=timeout
         )
+
+        print(f"    [Jina] status={resp.status_code} len={len(resp.text)} url={actual_url[:60]}")
+
         if resp.status_code != 200:
             return None
 
         text = resp.text.strip()
         if len(text) < 200:
+            print(f"    [Jina] 본문 너무 짧음({len(text)}자) - 스킵")
             return None
 
         return text[:4000]
 
-    except Exception:
+    except Exception as e:
+        print(f"    [Jina] 예외: {e}")
         return None
 
 
