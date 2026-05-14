@@ -71,13 +71,40 @@ def _decode_google_news_url(google_url):
     return google_url
 
 
-def fetch_article_content(url, timeout=15):
+def _resolve_url(url, timeout=10):
     """
-    Jina AI Reader를 통해 기사 본문 크롤링.
-    JS 리다이렉트 포함 처리. 실패 시 None 반환 (기사 수집은 계속).
+    Google News 리다이렉트 URL → 실제 기사 URL 추출.
+    HTTP 리다이렉트를 따라가서 최종 URL 반환.
+    실패 시 원본 URL 반환.
     """
     try:
-        jina_url = f"https://r.jina.ai/{url}"
+        resp = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=timeout,
+            allow_redirects=True
+        )
+        final_url = resp.url
+        # 여전히 Google News 도메인이면 base64 디코딩 시도
+        if 'news.google.com' in final_url:
+            decoded = _decode_google_news_url(url)
+            if decoded != url:
+                return decoded
+        return final_url
+    except Exception:
+        return url
+
+
+def fetch_article_content(url, timeout=15):
+    """
+    Google News URL → 실제 URL 해석 → Jina AI Reader로 본문 크롤링.
+    실패 시 None 반환 (기사 수집은 계속).
+    """
+    try:
+        # Google News 리다이렉트 URL이면 실제 기사 URL로 먼저 변환
+        actual_url = _resolve_url(url) if 'news.google.com' in url else url
+
+        jina_url = f"https://r.jina.ai/{actual_url}"
         resp = requests.get(
             jina_url,
             headers={
