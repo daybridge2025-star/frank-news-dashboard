@@ -203,7 +203,12 @@ def render_stock_header(ticker_sym, data):
     안 A: 탭 상단 가격 4칩 + 핵심지표 6칩 (항상 표시)
     안 B: 성장률·애널리스트·어닝 히스토리 expander (접기/펼치기)
     """
+    api_key = os.environ.get('FINNHUB_API_KEY', '')
+    if not api_key:
+        st.caption('⚠️ FINNHUB_API_KEY 시크릿이 설정되지 않았습니다.')
+        return
     if not data:
+        st.caption('⚠️ Finnhub API 응답 없음 — 새로고침을 눌러주세요.')
         return
 
     def _v(val, fmt='.2f', pref='', suf='', na='—'):
