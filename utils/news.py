@@ -1,17 +1,14 @@
 """
 뉴스 수집 유틸리티
-Google News RSS 기반 + 기사 본문 크롤링(가능한 경우) + Gemini 번역/요약
+Finnhub API 기반 + Gemini 번역/요약
 """
 
-import base64
-import feedparser
 import hashlib
 import json
 import os
-import re
-import time
 import requests
-from datetime import datetime, timezone, timedelta
+import time
+from datetime import datetime, timedelta
 import pytz
 
 KST = pytz.timezone('Asia/Seoul')
@@ -41,140 +38,10 @@ def _get_gemini_model():
         return None
 
 
-def _decode_google_news_url(google_url):
-    """
-    Google News 리다이렉트 URL → 실제 기사 URL 추출 (순수 Python, 외부 라이브러리 불필요).
-    Google News URL에 base64로 인코딩된 실제 URL이 포함되어 있음.
-    실패 시 원본 URL 반환.
-    """
-    try:
-        match = re.search(r'articles/([A-Za-z0-9_-]+)', google_url)
-        if not match:
-            return google_url
-
-        encoded = match.group(1)
-        # base64 패딩 맞추기
-        rem = len(encoded) % 4
-        if rem:
-            encoded += '=' * (4 - rem)
-
-        decoded_bytes = base64.urlsafe_b64decode(encoded)
-        decoded_str = decoded_bytes.decode('latin-1')
-
-        # https:// 또는 http:// 패턴 검색
-        urls = re.findall(r'https?://[^\x00-\x1f\x7f-\xff\s]{10,}', decoded_str)
-        if urls:
-            # 실제 기사 URL이 보통 가장 길다
-            return max(urls, key=len)
-    except Exception:
-        pass
-    return google_url
-
-
-def _resolve_url(url, timeout=10):
-    """
-    Google News 리다이렉트 URL → 실제 기사 URL 추출.
-    1) HTTP 리다이렉트 추적
-    2) HTML 전체에서 비-Google 외부 URL 정규식 추출 (JS 데이터 포함)
-    3) base64 디코딩 fallback
-    실패 시 원본 URL 반환.
-    """
-    # Google 도메인 제외 패턴
-    GOOGLE_DOMAINS = (
-        'news.google.com', 'www.google.com', 'accounts.google.com',
-        'gstatic.com', 'googleapis.com', 'google.com'
-    )
-
-    def is_external(u):
-        return u and not any(d in u for d in GOOGLE_DOMAINS)
-
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        final_url = resp.url
-
-        # HTTP 리다이렉트로 Google News 밖으로 나간 경우
-        if is_external(final_url):
-            print(f"    [URL해석] HTTP리다이렉트 성공: {final_url[:80]}")
-            return final_url
-
-        html = resp.text
-
-        # 방법 1: JSON 데이터의 "url" 필드 (JS 변수, JSON-LD 등)
-        json_urls = re.findall(r'"url"\s*:\s*"(https://[^"]{20,})"', html)
-        for u in json_urls:
-            if is_external(u):
-                print(f"    [URL해석] JSON url필드 성공: {u[:80]}")
-                return u
-
-        # 방법 2: href 속성에서 외부 URL (http/https, 경로 10자 이상)
-        href_urls = re.findall(
-            r'href=["\']?(https://[a-zA-Z0-9][a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/[^\s"\'<>]{10,})',
-            html
-        )
-        for u in href_urls:
-            if is_external(u):
-                print(f"    [URL해석] href 추출 성공: {u[:80]}")
-                return u
-
-        # 방법 3: base64 디코딩
-        decoded = _decode_google_news_url(url)
-        if decoded != url:
-            print(f"    [URL해석] base64 성공: {decoded[:80]}")
-            return decoded
-
-        print(f"    [URL해석] 모든 방법 실패")
-        return None  # None 반환 → Jina 호출 자체를 스킵
-
-    except Exception as e:
-        print(f"    [URL해석] 예외: {e}")
-        return None
-
-
-def fetch_article_content(url, timeout=15):
-    """
-    Google News URL → 실제 URL 해석 → Jina AI Reader로 본문 크롤링.
-    실제 URL 추출 실패 시 None 반환 (기사 수집은 계속, [AI추론] 경로).
-    """
-    try:
-        # Google News URL이면 실제 기사 URL로 변환 (실패 시 None)
-        if 'news.google.com' in url:
-            actual_url = _resolve_url(url)
-            if not actual_url:
-                return None  # 실제 URL 추출 실패 → [AI추론] 경로
-        else:
-            actual_url = url
-
-        jina_url = f"https://r.jina.ai/{actual_url}"
-        resp = requests.get(
-            jina_url,
-            headers={
-                'Accept': 'text/plain',
-                'X-Return-Format': 'text',
-            },
-            timeout=timeout
-        )
-
-        print(f"    [Jina] status={resp.status_code} len={len(resp.text)} url={actual_url[:80]}")
-
-        if resp.status_code != 200:
-            return None
-
-        text = resp.text.strip()
-        if len(text) < 200:
-            print(f"    [Jina] 본문 너무 짧음({len(text)}자) - 스킵")
-            return None
-
-        return text[:4000]
-
-    except Exception as e:
-        print(f"    [Jina] 예외: {e}")
-        return None
-
-
 def translate_and_summarize(articles, model, ticker='', company_name=''):
     """
     기사 목록을 Gemini로 번역 + 요약 (1 API 호출/종목).
-    content가 없는 기사는 제목만으로 번역 + 요약.
+    content(Finnhub snippet)가 있으면 활용, 없으면 제목 기반.
 
     articles: [{'title': str, 'content': str or None}, ...]
     반환: {
@@ -189,13 +56,12 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
     if not model or not articles:
         return empty
 
-    # 기사별 텍스트 구성 (본문 있으면 본문, 없으면 제목만)
     articles_text = ''
     for i, a in enumerate(articles):
         if a.get('content'):
-            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n본문: {a['content']}\n"
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n스니펫: {a['content']}\n"
         else:
-            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n본문: (본문 없음 - 제목 기반으로 요약)\n"
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n스니펫: (없음 - 제목 기반으로 요약)\n"
 
     prompt = f"""다음은 {ticker}({company_name}) 관련 최신 미국 주식 뉴스입니다.
 {articles_text}
@@ -205,7 +71,7 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
   "articles": [
     {{
       "title_kr": "기사 0 제목을 자연스러운 한국어로 번역",
-      "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약 (본문 없으면 제목 기반으로 작성)"
+      "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약 (스니펫 없으면 제목 기반으로 작성)"
     }}
   ],
   "summary_kr": "전체 기사를 종합 분석한 오늘의 뉴스 동향 (1000자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
@@ -237,54 +103,59 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
 
 def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
     """
-    Google News RSS 수집 → 기사 본문 크롤링 시도(실패해도 기사 유지)
-    → Gemini 번역/요약.
+    Finnhub API로 뉴스 수집 → Gemini 번역/요약.
+    직접 기사 URL + summary snippet 제공.
     """
-    query = f"{ticker}+stock"
-    url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+    api_key = os.environ.get('FINNHUB_API_KEY', '')
+    if not api_key:
+        print(f"  [ERROR] FINNHUB_API_KEY 없음")
+        return []
+
+    now_kst = datetime.now(KST)
+    today_str = now_kst.strftime('%Y-%m-%d')
+    yesterday_str = (now_kst - timedelta(days=1)).strftime('%Y-%m-%d')
+    now_kst_str = now_kst.strftime('%Y-%m-%d %H:%M:%S')
+
+    url = (
+        f"https://finnhub.io/api/v1/company-news"
+        f"?symbol={ticker}&from={yesterday_str}&to={today_str}&token={api_key}"
+    )
 
     try:
-        feed = feedparser.parse(url)
-        now_kst = datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
+        resp = requests.get(url, headers=HEADERS, timeout=10)
+        if resp.status_code != 200:
+            print(f"  [ERROR] Finnhub API 오류: {resp.status_code}")
+            return []
 
-        # 1단계: RSS 수집 + 24시간 필터 + Jina AI Reader로 본문 크롤링 시도
+        raw_articles = resp.json()
+        if not isinstance(raw_articles, list):
+            print(f"  [ERROR] Finnhub 응답 형식 오류")
+            return []
+
+        # 최신순 정렬 후 max_items 제한
+        raw_articles = sorted(raw_articles, key=lambda x: x.get('datetime', 0), reverse=True)
+        raw_articles = raw_articles[:max_items]
+
         collected = []
-        crawl_ok = 0
-        skipped = 0
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-
-        for entry in feed.entries[:max_items]:
-            # 24시간 초과 기사 스킵 (다음날 중복 수집 방지)
-            pub = entry.get('published_parsed')
-            if pub:
-                try:
-                    pub_dt = datetime(*pub[:6], tzinfo=timezone.utc)
-                    if pub_dt < cutoff:
-                        skipped += 1
-                        continue
-                except Exception:
-                    pass  # 파싱 실패 시 필터 없이 수집
-
-            content = fetch_article_content(entry.link)
-            if content:
-                crawl_ok += 1
+        for a in raw_articles:
+            pub_ts = a.get('datetime', 0)
+            pub_str = datetime.fromtimestamp(pub_ts, tz=KST).strftime('%Y-%m-%d %H:%M:%S') if pub_ts else ''
+            article_url = a.get('url', '')
             collected.append({
-                'title': entry.title,
-                'link': entry.link,
-                'published': entry.get('published', ''),
-                'content': content,  # None이면 제목 기반 요약
-                'url_hash': hashlib.md5(entry.link.encode()).hexdigest()[:12],
+                'title':    a.get('headline', ''),
+                'link':     article_url,
+                'published': pub_str,
+                'content':  a.get('summary', ''),   # Finnhub snippet → Gemini 컨텍스트
+                'source':   a.get('source', ''),
+                'url_hash': hashlib.md5(article_url.encode()).hexdigest()[:12],
             })
-            # Jina 무료 Rate Limit 대응 (20 RPM → 기사당 3초 딜레이)
-            time.sleep(3)
 
-        print(f"  {ticker} ({company_name}): {len(collected)}건 수집 "
-              f"(본문 크롤링 성공 {crawl_ok}건 / 제목 기반 {len(collected)-crawl_ok}건 / 24h 초과 스킵 {skipped}건)")
+        print(f"  {ticker} ({company_name}): {len(collected)}건 수집 (Finnhub)")
 
         if not collected:
             return []
 
-        # 2단계: Gemini 번역 + 요약
+        # Gemini 번역 + 요약
         summary_kr = ''
         gemini_articles = [{'title_kr': '', 'article_summary_kr': ''} for _ in collected]
 
@@ -295,28 +166,21 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
             gemini_articles = result['articles']
             summary_kr = result['summary_kr']
 
-        # 3단계: news_items 조합 + [본문]/[AI추론] 마커 부착
+        # news_items 조합
         news_items = []
         for i, a in enumerate(collected):
             g = gemini_articles[i] if i < len(gemini_articles) else {}
-            raw_summary = g.get('article_summary_kr', '')
-            if raw_summary:
-                marker = '[본문] ' if a.get('content') else '[AI추론] '
-                article_summary_kr = marker + raw_summary
-            else:
-                article_summary_kr = ''
-
             news_items.append({
-                'ticker': ticker,
-                'company': company_name,
-                'title': a['title'],
-                'link': a['link'],
-                'published': a['published'],
-                'collected_at': now_kst,
-                'url_hash': a['url_hash'],
-                'title_kr': g.get('title_kr', ''),
-                'summary_kr': summary_kr if i == 0 else '',
-                'article_summary_kr': article_summary_kr,
+                'ticker':           ticker,
+                'company':          company_name,
+                'title':            a['title'],
+                'link':             a['link'],
+                'published':        a['published'],
+                'collected_at':     now_kst_str,
+                'url_hash':         a['url_hash'],
+                'title_kr':         g.get('title_kr', ''),
+                'summary_kr':       summary_kr if i == 0 else '',
+                'article_summary_kr': g.get('article_summary_kr', ''),
             })
 
         return news_items
