@@ -75,62 +75,74 @@ def _resolve_url(url, timeout=10):
     """
     Google News 리다이렉트 URL → 실제 기사 URL 추출.
     1) HTTP 리다이렉트 추적
-    2) HTML에서 og:url / canonical 파싱
+    2) HTML 전체에서 비-Google 외부 URL 정규식 추출 (JS 데이터 포함)
     3) base64 디코딩 fallback
     실패 시 원본 URL 반환.
     """
+    # Google 도메인 제외 패턴
+    GOOGLE_DOMAINS = (
+        'news.google.com', 'www.google.com', 'accounts.google.com',
+        'gstatic.com', 'googleapis.com', 'google.com'
+    )
+
+    def is_external(u):
+        return u and not any(d in u for d in GOOGLE_DOMAINS)
+
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
         final_url = resp.url
 
         # HTTP 리다이렉트로 Google News 밖으로 나간 경우
-        if 'news.google.com' not in final_url:
+        if is_external(final_url):
             print(f"    [URL해석] HTTP리다이렉트 성공: {final_url[:80]}")
             return final_url
 
-        # HTML에서 og:url 또는 canonical 추출 시도
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, 'html.parser')
+        html = resp.text
 
-            og = soup.find('meta', property='og:url')
-            if og and og.get('content') and 'news.google.com' not in og['content']:
-                print(f"    [URL해석] og:url 성공: {og['content'][:80]}")
-                return og['content']
+        # 방법 1: JSON 데이터의 "url" 필드 (JS 변수, JSON-LD 등)
+        json_urls = re.findall(r'"url"\s*:\s*"(https://[^"]{20,})"', html)
+        for u in json_urls:
+            if is_external(u):
+                print(f"    [URL해석] JSON url필드 성공: {u[:80]}")
+                return u
 
-            canonical = soup.find('link', rel='canonical')
-            if canonical and canonical.get('href') and 'news.google.com' not in canonical['href']:
-                print(f"    [URL해석] canonical 성공: {canonical['href'][:80]}")
-                return canonical['href']
+        # 방법 2: href 속성에서 외부 URL (http/https, 경로 10자 이상)
+        href_urls = re.findall(
+            r'href=["\']?(https://[a-zA-Z0-9][a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/[^\s"\'<>]{10,})',
+            html
+        )
+        for u in href_urls:
+            if is_external(u):
+                print(f"    [URL해석] href 추출 성공: {u[:80]}")
+                return u
 
-            # 디버그: HTML 앞부분 출력으로 Google News 응답 구조 파악
-            print(f"    [URL해석] HTML파싱 실패 - 응답 앞 200자: {resp.text[:200]!r}")
-
-        except Exception as e:
-            print(f"    [URL해석] HTML파싱 예외: {e}")
-
-        # base64 디코딩 fallback
+        # 방법 3: base64 디코딩
         decoded = _decode_google_news_url(url)
         if decoded != url:
             print(f"    [URL해석] base64 성공: {decoded[:80]}")
             return decoded
 
-        print(f"    [URL해석] 모든 방법 실패 - 원본 URL로 Jina 시도")
-        return url
+        print(f"    [URL해석] 모든 방법 실패")
+        return None  # None 반환 → Jina 호출 자체를 스킵
 
     except Exception as e:
         print(f"    [URL해석] 예외: {e}")
-        return url
+        return None
 
 
 def fetch_article_content(url, timeout=15):
     """
     Google News URL → 실제 URL 해석 → Jina AI Reader로 본문 크롤링.
-    실패 시 None 반환 (기사 수집은 계속).
+    실제 URL 추출 실패 시 None 반환 (기사 수집은 계속, [AI추론] 경로).
     """
     try:
-        # Google News 리다이렉트 URL이면 실제 기사 URL로 먼저 변환
-        actual_url = _resolve_url(url) if 'news.google.com' in url else url
+        # Google News URL이면 실제 기사 URL로 변환 (실패 시 None)
+        if 'news.google.com' in url:
+            actual_url = _resolve_url(url)
+            if not actual_url:
+                return None  # 실제 URL 추출 실패 → [AI추론] 경로
+        else:
+            actual_url = url
 
         jina_url = f"https://r.jina.ai/{actual_url}"
         resp = requests.get(
@@ -142,7 +154,7 @@ def fetch_article_content(url, timeout=15):
             timeout=timeout
         )
 
-        print(f"    [Jina] status={resp.status_code} len={len(resp.text)} url={actual_url[:60]}")
+        print(f"    [Jina] status={resp.status_code} len={len(resp.text)} url={actual_url[:80]}")
 
         if resp.status_code != 200:
             return None
