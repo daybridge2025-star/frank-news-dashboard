@@ -3,8 +3,10 @@ Frank News Dashboard — Streamlit 웹 대시보드
 Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별 탭으로 표시
 """
 
+import re
 import streamlit as st
 import pandas as pd
+import requests
 from datetime import datetime
 import pytz
 import sys
@@ -18,11 +20,59 @@ ET  = pytz.timezone('America/New_York')
 
 KR_WEEKDAY = ['월', '화', '수', '목', '금', '토', '일']
 
+
 def et_date_str():
-    """미국 동부 기준 날짜 문자열 반환. 예: 2026.05.14.(목) ET 기준"""
+    """미국 동부 기준 날짜 문자열. 예: 2026.05.14.(목) ET 기준"""
     now_et = datetime.now(ET)
     wd = KR_WEEKDAY[now_et.weekday()]
     return now_et.strftime(f'%Y.%m.%d.({wd}) ET 기준')
+
+
+def format_summary_html(text):
+    """
+    summary_kr 텍스트를 섹션별 일관된 HTML로 변환.
+    - 연속 빈 줄 정규화
+    - [핵심 이슈] / [투자 포인트] / [시장 분위기] 헤더 스타일링
+    """
+    if not text:
+        return ''
+    # 연속 빈 줄 → 최대 1줄로 정규화
+    text = re.sub(r'\n{3,}', '\n\n', text.strip())
+    # 섹션 헤더 → 스타일된 div
+    for header in ['[핵심 이슈]', '[투자 포인트]', '[시장 분위기]']:
+        text = text.replace(
+            header,
+            f'</p><p class="brief-section">{header}</p><p class="brief-para">'
+        )
+    # 전체를 p 태그로 감싸고 줄바꿈 처리
+    text = f'<p class="brief-para">{text}</p>'
+    text = text.replace('\n\n', '</p><p class="brief-para">')
+    text = text.replace('\n', '<br>')
+    # 빈 p 태그 제거
+    text = re.sub(r'<p class="brief-para">\s*</p>', '', text)
+    return text
+
+
+def lookup_company_name(ticker):
+    """Yahoo Finance 비공개 API로 티커 → 회사명 조회. 실패 시 빈 문자열 반환."""
+    try:
+        url = (
+            f"https://query1.finance.yahoo.com/v1/finance/search"
+            f"?q={ticker}&quotesCount=5&newsCount=0&listsCount=0"
+        )
+        resp = requests.get(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0'},
+            timeout=5
+        )
+        data = resp.json()
+        for q in data.get('quotes', []):
+            if q.get('symbol', '').upper() == ticker.upper():
+                return q.get('shortname') or q.get('longname') or ''
+        return ''
+    except Exception:
+        return ''
+
 
 # ── 페이지 기본 설정 ─────────────────────────────────────────────
 st.set_page_config(
@@ -49,12 +99,21 @@ st.markdown("""
         font-size: 0.85rem;
         font-weight: 700;
         letter-spacing: 0.05em;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
-    .brief-body {
+    .brief-section {
+        color: #89b4fa;
+        font-weight: 700;
+        font-size: 0.88rem;
+        margin: 12px 0 4px 0;
+        padding: 0;
+    }
+    .brief-para {
         color: #cdd6f4;
         font-size: 0.9rem;
-        white-space: pre-wrap;
+        margin: 4px 0;
+        padding: 0;
+        line-height: 1.75;
     }
     .news-card {
         background: #1e1e2e;
@@ -191,10 +250,11 @@ def render_ticker_content(ticker_sym, ticker_df):
                 break
 
     if summary_kr:
+        body_html = format_summary_html(summary_kr)
         st.markdown(
             f'<div class="brief-box">'
             f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑 ({et_date_str()})</div>'
-            f'<div class="brief-body">{summary_kr}</div>'
+            f'{body_html}'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -286,25 +346,53 @@ with st.sidebar:
 
     st.divider()
 
+    # ── 종목 추가 (티커 자동 조회) ───────────────────────────────
     st.subheader("➕ 종목 추가")
-    with st.form("add_ticker_form", clear_on_submit=True):
-        new_ticker = st.text_input("티커 (예: AAPL)", max_chars=10).upper().strip()
-        new_company = st.text_input("회사명 (예: 애플)", max_chars=50).strip()
-        submitted = st.form_submit_button("추가", use_container_width=True)
-        if submitted:
-            if new_ticker and new_company:
-                try:
-                    add_ticker(new_ticker, new_company)
-                    clear_cache()
-                    st.success(f"{new_ticker} 추가 완료!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"추가 실패: {e}")
+
+    # session_state 초기화
+    if 'pending_ticker' not in st.session_state:
+        st.session_state['pending_ticker'] = ''
+    if 'pending_name' not in st.session_state:
+        st.session_state['pending_name'] = ''
+
+    with st.form("ticker_lookup_form", clear_on_submit=False):
+        ticker_input = st.text_input(
+            "티커 입력 (예: AAPL, SOXL)",
+            max_chars=10,
+            value=st.session_state['pending_ticker']
+        )
+        lookup_clicked = st.form_submit_button("🔍 회사명 조회", use_container_width=True)
+
+    if lookup_clicked:
+        t = ticker_input.upper().strip()
+        if t:
+            with st.spinner("조회 중..."):
+                name = lookup_company_name(t)
+            if name:
+                st.session_state['pending_ticker'] = t
+                st.session_state['pending_name'] = name
             else:
-                st.warning("티커와 회사명을 모두 입력해주세요.")
+                st.warning("회사명을 찾을 수 없습니다. 티커를 확인해 주세요.")
+                st.session_state['pending_name'] = ''
+        else:
+            st.warning("티커를 입력해 주세요.")
+
+    if st.session_state['pending_name']:
+        st.info(f"**{st.session_state['pending_ticker']}** → {st.session_state['pending_name']}")
+        if st.button("➕ 종목 추가 확정", use_container_width=True, type="primary"):
+            try:
+                add_ticker(st.session_state['pending_ticker'], st.session_state['pending_name'])
+                clear_cache()
+                st.success(f"{st.session_state['pending_ticker']} 추가 완료!")
+                st.session_state['pending_ticker'] = ''
+                st.session_state['pending_name'] = ''
+                st.rerun()
+            except Exception as e:
+                st.error(f"추가 실패: {e}")
 
     st.divider()
 
+    # ── 종목 삭제 ────────────────────────────────────────────────
     st.subheader("🗑️ 종목 삭제")
     tickers_raw = load_tickers()
     if tickers_raw:
@@ -334,9 +422,7 @@ if df.empty or not tickers:
     st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
     st.stop()
 
-ticker_order = [t['ticker'] for t in tickers]
-
-# 탭 레이블: 기사 있는 종목은 건수 표시, 없는 종목은 회색으로 구분
+# 탭 레이블: 기사 건수 표시
 tab_labels = []
 for t in tickers:
     sym = t['ticker']
