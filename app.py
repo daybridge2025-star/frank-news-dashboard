@@ -29,10 +29,16 @@ KR_WEEKDAY = ['월', '화', '수', '목', '금', '토', '일']
 
 
 def et_date_str():
-    """미국 동부 기준 날짜 문자열. 예: 2026.05.14.(목) ET 기준"""
-    now_et = datetime.now(ET)
-    wd = KR_WEEKDAY[now_et.weekday()]
-    return now_et.strftime(f'%Y.%m.%d.({wd}) ET 기준')
+    """ET + KST 날짜·시간 병기 문자열.
+    예: 2026.05.15.(금) 14:32 ET  /  05.16.(토) 03:32 KST 기준
+    """
+    now_et  = datetime.now(ET)
+    now_kst = now_et.astimezone(KST)
+    wd_et  = KR_WEEKDAY[now_et.weekday()]
+    wd_kst = KR_WEEKDAY[now_kst.weekday()]
+    et_str  = now_et.strftime(f'%Y.%m.%d.({wd_et}) %H:%M ET')
+    kst_str = now_kst.strftime(f'%m.%d.({wd_kst}) %H:%M KST')
+    return f'{et_str}  /  {kst_str} 기준'
 
 
 def format_summary_html(text):
@@ -622,7 +628,14 @@ st.markdown("""
         font-size: 0.85rem;
         font-weight: 700;
         letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+    .brief-time {
+        color: #a6adc8;
+        font-size: 0.75rem;
+        font-weight: 400;
         margin-bottom: 12px;
+        letter-spacing: 0.03em;
     }
     .brief-section {
         color: #89b4fa;
@@ -1055,7 +1068,8 @@ def render_ticker_content(ticker_sym, ticker_df):
         body_html = format_summary_html(summary_kr)
         st.markdown(
             f'<div class="brief-box">'
-            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑 ({et_date_str()})</div>'
+            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑</div>'
+            f'<div class="brief-time">📅 {et_date_str()}</div>'
             f'{body_html}'
             f'</div>',
             unsafe_allow_html=True
