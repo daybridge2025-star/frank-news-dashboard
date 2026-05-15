@@ -39,7 +39,7 @@ def _get_gemini_model():
         return None
 
 
-def translate_and_summarize(articles, model, ticker='', company_name=''):
+def translate_and_summarize(articles, model, ticker='', company_name='', today_str=''):
     """
     기사 목록을 Gemini로 번역 + 요약 (1 API 호출/종목).
     content(Finnhub snippet)가 있으면 활용, 없으면 제목 기반.
@@ -64,9 +64,11 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
         else:
             articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n내용: (스니펫 없음)\n"
 
-    prompt = f"""다음은 Finnhub에서 수집한 {ticker}({company_name}) 관련 최신 뉴스입니다.
+    date_ctx = f"기준일: {today_str}\n" if today_str else ''
+    prompt = f"""{date_ctx}다음은 Finnhub에서 수집한 {ticker}({company_name}) 관련 최신 뉴스입니다.
 {articles_text}
-위 Finnhub 기사들을 기반으로, Google 검색을 활용해 오늘 {ticker} 관련 추가 뉴스와 시장 분석을 보완하여 아래 JSON을 작성하세요.
+위 Finnhub 기사들을 기반으로, Google 검색을 활용해 {ticker} 관련 추가 뉴스와 시장 분석을 보완하여 아래 JSON을 작성하세요.
+검색 범위: 기준일 당일 뉴스를 우선하되, 당일 기사가 부족하면 최근 2일 이내 기사까지 포함하세요.
 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
 
 {{
@@ -76,7 +78,7 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
       "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약"
     }}
   ],
-  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 오늘의 뉴스 브리핑 (1200자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
+  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 최신 뉴스 브리핑 (1200자 이내)\\n\\n[핵심 이슈] 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
 }}"""
 
     def _parse_json(text):
@@ -191,7 +193,8 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         if model:
             print(f"  [Gemini] {ticker} 번역 및 요약 중...")
             gemini_input = [{'title': a['title'], 'content': a['content']} for a in collected]
-            result = translate_and_summarize(gemini_input, model, ticker, company_name)
+            today_label = now_kst.strftime('%Y년 %m월 %d일')
+            result = translate_and_summarize(gemini_input, model, ticker, company_name, today_str=today_label)
             gemini_articles = result['articles']
             summary_kr = result['summary_kr']
 
@@ -219,10 +222,10 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         return []
 
 
+
 def fetch_all_news(tickers, delay=1.0):
     """전체 종목 뉴스 일괄 수집"""
     model = _get_gemini_model()
-
     all_news = []
     for t in tickers:
         items = fetch_news_for_ticker(t['ticker'], t['company_name'], model=model)
