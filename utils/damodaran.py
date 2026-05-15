@@ -434,6 +434,28 @@ def enrich_fundamentals(fundamentals: dict, industry_override: str = '') -> dict
         is_hg = True
     f['is_high_growth'] = is_hg
 
+    # ── 복합 기업 플래그 (업종 후보 3개 이상) ──────────────────────
+    is_conglom = len(INDUSTRY_CANDIDATES.get(ticker, [])) >= 3
+    f['is_conglomerate'] = is_conglom
+
+    # ── Scenario DCF (Bear / Base / Bull) ────────────────────────
+    shares = f.get('shares_outstanding')
+    if fcf is not None and fcf > 0 and wacc_used and shares and shares > 0:
+        w = wacc_used / 100
+        # Bear: WACC+2%, terminal g=1.5%
+        bear_d = (w + 0.02) - 0.015
+        # Base: current WACC, terminal g=2.5%
+        base_d = w - 0.025
+        # Bull: WACC-1%, FCF×1.5, terminal g=4%
+        bull_d = (w - 0.01) - 0.040
+        f['bear_dcf'] = round((fcf / bear_d) / shares, 2) if bear_d > 0 else None
+        f['base_dcf'] = round((fcf / base_d) / shares, 2) if base_d > 0 else None
+        f['bull_dcf'] = round((fcf * 1.5 / bull_d) / shares, 2) if bull_d > 0 else None
+    else:
+        f['bear_dcf'] = None
+        f['base_dcf'] = None
+        f['bull_dcf'] = None
+
     rdcf_g = None
     if wacc_used and ev and ev > 0 and fcf is not None:
         rdcf_g = round(((wacc_used / 100) - (fcf / 1e6 / ev)) * 100, 2)
