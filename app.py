@@ -392,18 +392,27 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
 
     with st.expander('🔬 투자 분석 (프리미엄)', expanded=True):
 
-        # 업종 배지 + 선택기
+        # ── 업종 배지 + 기업 유형 배지 + 업종 선택기 ────────────────
         if PREMIUM_UNLOCKED and fundamentals:
-            damod_ind = fundamentals.get('damod_industry', '') or ''
-            ind_src   = fundamentals.get('industry_source', 'finnhub_auto')
-            is_ov     = ind_src in ('override_user', 'override_auto')
-            badge_cls = 'industry-badge overridden' if is_ov else 'industry-badge'
-            src_lbl   = ('🔄 수동' if ind_src == 'override_user'
-                         else '⚙️ 자동보정' if ind_src == 'override_auto'
-                         else '🤖 자동')
-            badge_txt = damod_ind if damod_ind else '업종 미매핑'
+            damod_ind  = fundamentals.get('damod_industry', '') or ''
+            ind_src    = fundamentals.get('industry_source', 'finnhub_auto')
+            is_ov      = ind_src in ('override_user', 'override_auto')
+            badge_cls  = 'industry-badge overridden' if is_ov else 'industry-badge'
+            src_lbl    = ('🔄 수동' if ind_src == 'override_user'
+                          else '⚙️ 자동보정' if ind_src == 'override_auto'
+                          else '🤖 자동')
+            badge_txt  = damod_ind if damod_ind else '업종 미매핑'
+            is_conglom = fundamentals.get('is_conglomerate', False)
+            is_hg_top  = fundamentals.get('is_high_growth', False)
+            type_badges = ''
+            if is_conglom:
+                type_badges += '<span class="entity-badge conglom">🔀 복합 기업</span>'
+            if is_hg_top:
+                type_badges += ' <span class="entity-badge highgrowth">🚀 고성장 기업</span>'
             st.markdown(
-                '<div class="' + badge_cls + '">🏷️ ' + src_lbl + ': ' + badge_txt + '</div>',
+                '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
+                + '<div class="' + badge_cls + '">🏷️ ' + src_lbl + ': ' + badge_txt + '</div>'
+                + type_badges + '</div>',
                 unsafe_allow_html=True
             )
             candidates = INDUSTRY_CANDIDATES.get(ticker_sym.upper(), [])
@@ -427,30 +436,50 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     st.session_state[ss_key] = new_ov
                     st.rerun()
 
-        # ① ROIC vs WACC
+        # ── 공통 헬퍼 ────────────────────────────────────────────────
+        def _ind_tag(ind):
+            if not ind:
+                return ''
+            return (' <span style="font-size:0.72rem;font-weight:400;color:#a6adc8;background:#313244;'
+                    'border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;">🏷️ '
+                    + ind + '</span>')
+
+        def _warns(msgs):
+            if not msgs:
+                return ''
+            return ''.join('<div class="analysis-warn">⚠️ ' + m + '</div>' for m in msgs)
+
+        damod_ind  = (fundamentals.get('damod_industry') or '') if fundamentals else ''
+        is_conglom = fundamentals.get('is_conglomerate', False) if fundamentals else False
+        is_hg      = fundamentals.get('is_high_growth', False)  if fundamentals else False
+
+        # ① ROIC vs WACC ─────────────────────────────────────────────
         if PREMIUM_UNLOCKED:
             roic_val   = fundamentals.get('roic')             if fundamentals else None
             wacc_val   = fundamentals.get('wacc_used')        if fundamentals else None
             spread_val = fundamentals.get('roic_wacc_spread') if fundamentals else None
             ind_roic   = fundamentals.get('industry_roic')    if fundamentals else None
-
             if roic_val is not None and wacc_val is not None:
-                spread = spread_val if spread_val is not None else (roic_val - wacc_val)
+                spread  = spread_val if spread_val is not None else (roic_val - wacc_val)
                 sp_cls  = 'positive' if spread > 0 else 'negative'
                 sp_sign = '+' if spread > 0 else ''
-                v_cls = 'verdict-buy' if spread > 5 else ('verdict-watch' if spread > 0 else 'verdict-pass')
-                v_txt = '✅ 가치 창출 (EVA 양수)' if spread > 0 else '⚠️ 자본 파괴 (EVA 음수)'
-                hint  = ('ROIC가 WACC 초과 → 경제적 해자 존재, 주주 가치 창출 중.' if spread > 0
-                         else 'ROIC가 WACC 미달. 업종 분류 오류 가능성 — 위 업종 선택기로 변경 후 재확인 권장.')
-                ind_c = ('<div class="analysis-chip"><div class="chip-label">업종 ROIC</div>'
-                         '<div class="chip-value">' + str(round(ind_roic, 1)) + '%</div></div>') if ind_roic is not None else ''
-                _ind_tag1 = (' <span style="font-size:0.72rem;font-weight:400;color:#a6adc8;background:#313244;'
-                             'border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;">🏷️ '
-                             + (fundamentals.get('damod_industry') or '') + '</span>'
-                             if fundamentals and fundamentals.get('damod_industry') else '')
+                v_cls   = 'verdict-buy' if spread > 5 else ('verdict-watch' if spread > 0 else 'verdict-pass')
+                v_txt   = '✅ 가치 창출 (EVA 양수)' if spread > 0 else '⚠️ 자본 파괴 (EVA 음수)'
+                ind_c   = ('<div class="analysis-chip"><div class="chip-label">업종 ROIC</div>'
+                           '<div class="chip-value">' + str(round(ind_roic, 1)) + '%</div></div>') if ind_roic is not None else ''
+                wlist = []
+                if is_conglom:
+                    wlist.append('복합 기업: 단일 업종 WACC 적용 시 신뢰도 저하. 사업부별 가중 WACC가 이상적.')
+                if is_hg:
+                    wlist.append('고성장 기업: ROIC 낮더라도 매출성장·재투자 효율로 미래 가치 창출 가능.')
+                hint = ('ROIC ' + str(round(roic_val, 1)) + '% vs WACC ' + str(round(wacc_val, 1)) + '% → 스프레드 '
+                        + sp_sign + str(round(spread, 1)) + '%p. '
+                        + ('경제적 해자 존재, 주주 가치 창출 중.' if spread > 0
+                           else 'WACC 미달. 업종 분류 오류 가능성 — 위 선택기로 변경 후 재확인 권장.'))
                 st.markdown(
                     '<div class="analysis-card">'
-                    '<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC' + _ind_tag1 + '</div>'
+                    '<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC' + _ind_tag(damod_ind) + '</div>'
+                    '<div class="analysis-card-subtitle">투하자본이익률이 자본비용을 초과하면 가치 창출 기업</div>'
                     '<div class="analysis-metric-row">'
                     '<div class="analysis-chip"><div class="chip-label">ROIC</div>'
                     '<div class="chip-value">' + str(round(roic_val, 1)) + '%</div></div>'
@@ -458,28 +487,31 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     '<div class="chip-value">' + str(round(wacc_val, 1)) + '%</div></div>'
                     '<div class="analysis-chip"><div class="chip-label">스프레드</div>'
                     '<div class="chip-value ' + sp_cls + '">' + sp_sign + str(round(spread, 1)) + '%p</div></div>'
-                    + ind_c +
-                    '</div>'
-                    '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
+                    + ind_c + '</div>'
+                    + _warns(wlist)
+                    + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
                     '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
-                    '</div>',
-                    unsafe_allow_html=True
+                    '</div>', unsafe_allow_html=True
                 )
             else:
                 w = '⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다'
                 if fundamentals and fundamentals.get('error'):
                     w = '⚠️ ' + str(fundamentals['error'])
-                st.markdown('<div class="analysis-card"><div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC</div>'
-                            '<div class="analysis-verdict verdict-wait">' + w + '</div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">① 퀄리티 필터 — ROIC vs WACC</div>'
+                    '<div class="analysis-card-subtitle">투하자본이익률이 자본비용을 초과하면 가치 창출 기업</div>'
+                    '<div class="analysis-verdict verdict-wait">' + w + '</div></div>', unsafe_allow_html=True)
         else:
             render_premium_lock('📊', '퀄리티 필터 — ROIC vs WACC 분석',
                 '투하자본이익률(ROIC)과 가중평균자본비용(WACC)을 비교해 실질적 가치 창출 기업을 선별합니다.')
 
-        # ② EV/EBITDA
+        # ② EV/EBITDA ─────────────────────────────────────────────────
         if PREMIUM_UNLOCKED:
-            ev_eb = fundamentals.get('ev_ebitda')          if fundamentals else None
-            ind_ev= fundamentals.get('industry_ev_ebitda') if fundamentals else None
+            ev_eb    = fundamentals.get('ev_ebitda')          if fundamentals else None
+            ind_ev   = fundamentals.get('industry_ev_ebitda') if fundamentals else None
+            ebitda_v = fundamentals.get('ebitda')             if fundamentals else None
             if ev_eb is not None:
                 disc  = ((ind_ev - ev_eb) / ind_ev * 100) if ind_ev else None
                 d_cls = 'positive' if (disc or 0) > 0 else 'negative'
@@ -488,43 +520,52 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                          'verdict-pass') if disc is not None else 'verdict-watch'
                 v_txt = ('✅ 업종 대비 ' + str(round(disc)) + '% 할인' if (disc or 0) > 0
                          else '⚠️ 업종 대비 ' + str(round(-(disc or 0))) + '% 프리미엄') if disc is not None else '업종 EV/EBITDA 매핑 불가'
-                hint  = ('저평가 구간. 이익 성장 시 밸류에이션 정상화 기대.' if (disc or 0) > 0
-                         else '미래 성장 프리미엄 반영. 성장 둔화 시 멀티플 압축 리스크.' if disc is not None
-                         else '업종 중앙값 없음. 절대 배수(10~20x)와 직접 비교 권장.')
-                i_c   = ('<div class="analysis-chip"><div class="chip-label">업종 중앙값</div><div class="chip-value">'
-                         + str(round(ind_ev, 1)) + 'x</div></div>') if ind_ev else ''
-                d_c   = ('<div class="analysis-chip"><div class="chip-label">할인율</div><div class="chip-value ' + d_cls + '">'
+                hint  = ('현재 EV/EBITDA ' + str(round(ev_eb, 1)) + 'x '
+                         + ('vs 업종 중앙값 ' + str(round(ind_ev, 1)) + 'x. ' if ind_ev else '. ')
+                         + ('저평가 구간. 이익 성장 시 밸류에이션 정상화 기대.' if (disc or 0) > 0
+                            else '미래 성장 프리미엄 반영. 성장 둔화 시 멀티플 압축 리스크.' if disc is not None
+                            else '업종 중앙값 없음. 절대 배수(10~20x)와 직접 비교 권장.'))
+                i_c   = ('<div class="analysis-chip"><div class="chip-label">업종 중앙값</div>'
+                         '<div class="chip-value">' + str(round(ind_ev, 1)) + 'x</div></div>') if ind_ev else ''
+                d_c   = ('<div class="analysis-chip"><div class="chip-label">할인율</div>'
+                         '<div class="chip-value ' + d_cls + '">'
                          + ('+' if (disc or 0) > 0 else '') + str(round(disc or 0)) + '%</div></div>') if disc is not None else ''
-                _ind_tag2 = (' <span style="font-size:0.72rem;font-weight:400;color:#a6adc8;background:#313244;'
-                             'border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;">🏷️ '
-                             + (fundamentals.get('damod_industry') or '') + '</span>'
-                             if fundamentals and fundamentals.get('damod_industry') else '')
+                wlist = []
+                if is_conglom:
+                    wlist.append('복합 기업: 단일 업종 멀티플 적용 한계. 사업부별 SOTP 분석이 더 적합.')
+                if is_hg and ebitda_v is not None and ebitda_v < 0:
+                    wlist.append('EBITDA 음수: EV/EBITDA 적용 불가. ⑥ PSR 카드로 대체 평가 권장.')
                 st.markdown(
                     '<div class="analysis-card">'
-                    '<div class="analysis-card-title">② 밸류 필터 — EV/EBITDA 상대 배수' + _ind_tag2 + '</div>'
+                    '<div class="analysis-card-title">② 밸류 필터 — EV/EBITDA 상대 배수' + _ind_tag(damod_ind) + '</div>'
+                    '<div class="analysis-card-subtitle">업종 동종사 중앙값 대비 현재 배수의 할인·프리미엄 수준</div>'
                     '<div class="analysis-metric-row">'
                     '<div class="analysis-chip"><div class="chip-label">EV/EBITDA</div>'
                     '<div class="chip-value">' + str(round(ev_eb, 1)) + 'x</div></div>'
-                    + i_c + d_c +
-                    '</div>'
-                    '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
+                    + i_c + d_c + '</div>'
+                    + _warns(wlist)
+                    + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
                     '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
-                    '</div>',
-                    unsafe_allow_html=True
+                    '</div>', unsafe_allow_html=True
                 )
             else:
-                st.markdown('<div class="analysis-card"><div class="analysis-card-title">② 밸류 필터 — EV/EBITDA 상대 배수</div>'
-                            '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">② 밸류 필터 — EV/EBITDA 상대 배수</div>'
+                    '<div class="analysis-card-subtitle">업종 동종사 중앙값 대비 현재 배수의 할인·프리미엄 수준</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div></div>',
+                    unsafe_allow_html=True)
         else:
             render_premium_lock('💹', '밸류 필터 — EV/EBITDA 업종 대비 분석',
                 '개별 종목 EV/EBITDA를 다모다란 업종 중앙값과 비교해 저평가 여부를 정량적으로 판단합니다.')
 
-        # ③ DCF
+        # ③ DCF ──────────────────────────────────────────────────────
         if PREMIUM_UNLOCKED:
-            dcf_iv = fundamentals.get('dcf_value')    if fundamentals else None
+            dcf_iv = fundamentals.get('dcf_value')     if fundamentals else None
             price  = fundamentals.get('current_price') if fundamentals else None
-            wacc_u = fundamentals.get('wacc_used')    if fundamentals else None
+            wacc_u = fundamentals.get('wacc_used')     if fundamentals else None
+            fcf_v  = fundamentals.get('fcf')           if fundamentals else None
             if dcf_iv is not None and dcf_iv > 0:
                 margin = ((dcf_iv - price) / dcf_iv * 100) if price else None
                 m_cls  = 'positive' if (margin or 0) > 0 else 'negative'
@@ -533,25 +574,37 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                 v_txt  = ('✅ 안전마진 ' + str(round(margin or 0)) + '% — 저평가 신호' if (margin or 0) > 30 else
                           '✅ 내재가치 대비 ' + str(round(margin or 0)) + '% 여유' if (margin or 0) > 0 else
                           '⚠️ 현재가 내재가치 ' + str(round(-(margin or 0))) + '% 초과') if margin is not None else '주가 데이터 확인 중'
-                hint   = ('안전마진 30% 이상 — 가치투자 기준 충족. FCF 기반 보수적 추정치입니다.' if (margin or 0) > 30 else
-                          '양의 안전마진이나 30% 미만. 성장 기대치와 종합 판단 권장.' if (margin or 0) > 0 else
-                          '현재가가 FCF 내재가치 초과. 고성장 기업에서는 일반적. Reverse DCF 카드로 내재 성장률 확인 권장.')
-                p_c = ('<div class="analysis-chip"><div class="chip-label">현재가</div><div class="chip-value">$' + str(round(price, 2)) + '</div></div>') if price else ''
-                m_c = ('<div class="analysis-chip"><div class="chip-label">안전마진</div><div class="chip-value ' + m_cls + '">'
+                wlist  = []
+                if is_hg and (fcf_v is None or (fcf_v or 0) <= 0):
+                    wlist.append('고성장 기업: FCF 음수 구간에서 DCF 신뢰도 낮음. ⑤ Scenario DCF 병행 확인 권장.')
+                elif is_hg:
+                    wlist.append('고성장 기업: 단일 성장률 가정 DCF는 보수적 추정치. ⑤ Scenario DCF 참고 권장.')
+                hint   = ('DCF 내재가치 $' + str(round(dcf_iv, 2))
+                          + (', 현재가 $' + str(round(price, 2)) if price else '')
+                          + (', 안전마진 ' + ('+' if (margin or 0) > 0 else '') + str(round(margin or 0)) + '%. ' if margin is not None else '. ')
+                          + ('안전마진 30%+ — 가치투자 기준 충족. FCF 기반 보수적 추정치.' if (margin or 0) > 30
+                             else '양의 안전마진이나 30% 미만. 성장 기대치와 종합 판단 권장.' if (margin or 0) > 0
+                             else '현재가가 FCF 내재가치 초과. 고성장 기업에서는 일반적. ④ Reverse DCF로 내재 성장률 확인 권장.'))
+                p_c = ('<div class="analysis-chip"><div class="chip-label">현재가</div>'
+                       '<div class="chip-value">$' + str(round(price, 2)) + '</div></div>') if price else ''
+                m_c = ('<div class="analysis-chip"><div class="chip-label">안전마진</div>'
+                       '<div class="chip-value ' + m_cls + '">'
                        + ('+' if (margin or 0) > 0 else '') + str(round(margin or 0)) + '%</div></div>') if margin is not None else ''
-                w_c = ('<div class="analysis-chip"><div class="chip-label">할인율(WACC)</div><div class="chip-value">' + str(round(wacc_u, 1)) + '%</div></div>') if wacc_u else ''
+                w_c = ('<div class="analysis-chip"><div class="chip-label">할인율(WACC)</div>'
+                       '<div class="chip-value">' + str(round(wacc_u, 1)) + '%</div></div>') if wacc_u else ''
                 st.markdown(
                     '<div class="analysis-card">'
                     '<div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
+                    '<div class="analysis-card-subtitle">FCF를 WACC로 할인한 내재가치 — 현재가 대비 안전마진 확인</div>'
                     '<div class="analysis-metric-row">'
-                    '<div class="analysis-chip"><div class="chip-label">DCF 내재가치</div><div class="chip-value">$' + str(round(dcf_iv, 2)) + '</div></div>'
-                    + p_c + m_c + w_c +
-                    '</div>'
-                    '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
+                    '<div class="analysis-chip"><div class="chip-label">DCF 내재가치</div>'
+                    '<div class="chip-value">$' + str(round(dcf_iv, 2)) + '</div></div>'
+                    + p_c + m_c + w_c + '</div>'
+                    + _warns(wlist)
+                    + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
                     '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
-                    '</div>',
-                    unsafe_allow_html=True
+                    '</div>', unsafe_allow_html=True
                 )
             else:
                 reason = ''
@@ -560,48 +613,71 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                         reason = ' (영업손실 구간 — DCF 산출 불가)'
                     elif fundamentals.get('ebitda') is None:
                         reason = ' (DA 데이터 미확인)'
-                st.markdown('<div class="analysis-card"><div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
-                            '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다' + reason + '</div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">③ DCF 보조 검증 — 내재가치 안전마진</div>'
+                    '<div class="analysis-card-subtitle">FCF를 WACC로 할인한 내재가치 — 현재가 대비 안전마진 확인</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다' + reason + '</div></div>',
+                    unsafe_allow_html=True)
         else:
             render_premium_lock('🔬', 'DCF 보조 검증 — 내재가치 안전마진',
                 'WACC 할인율을 적용한 DCF 모델로 내재가치를 산출하고 현재가 대비 안전마진(30% 이상 권장)을 확인합니다.')
 
-        # ④ Reverse DCF
+        # ④ Reverse DCF ───────────────────────────────────────────────
         if PREMIUM_UNLOCKED:
-            rdcf_g = fundamentals.get('rdcf_implied_g') if fundamentals else None
-            wacc_u = fundamentals.get('wacc_used')      if fundamentals else None
-            fcf_v  = fundamentals.get('fcf')            if fundamentals else None
+            rdcf_g  = fundamentals.get('rdcf_implied_g')    if fundamentals else None
+            wacc_u  = fundamentals.get('wacc_used')         if fundamentals else None
+            fcf_v   = fundamentals.get('fcf')               if fundamentals else None
+            price_v = fundamentals.get('current_price')     if fundamentals else None
+            rev_g   = fundamentals.get('revenue_growth_yoy') if fundamentals else None
             if rdcf_g is not None:
                 if rdcf_g < 0:
                     v_cls, v_txt = 'verdict-buy',   '✅ 성장 없어도 주가 정당 — 보수적 저평가 신호'
-                    hint = '현재 EV 기준 FCF/EV 가 WACC 초과 → 제로 성장으로도 주가 정당화. 저평가 가능성.'
                 elif rdcf_g <= 5:
-                    v_cls, v_txt = 'verdict-watch', '📌 저성장(' + str(rdcf_g) + '%/yr) 내재 — 적정 밸류에이션'
-                    hint = '내재 성장률 ' + str(rdcf_g) + '% — GDP 성장률 수준. 성숙 기업에 합리적, 고성장 기업엔 저평가 가능.'
+                    v_cls, v_txt = 'verdict-watch', '📌 저성장 (' + str(rdcf_g) + '%/yr) 내재 — 적정 밸류에이션'
                 elif rdcf_g <= 15:
-                    v_cls, v_txt = 'verdict-watch', '📌 중성장(' + str(rdcf_g) + '%/yr) 내재 — 기대치 점검 필요'
-                    hint = '내재 성장률 ' + str(rdcf_g) + '%. 과거 매출성장률과 비교해 달성 가능성 판단 권장.'
+                    v_cls, v_txt = 'verdict-watch', '📌 중성장 (' + str(rdcf_g) + '%/yr) 내재 — 기대치 점검 필요'
                 elif rdcf_g <= 30:
-                    v_cls, v_txt = 'verdict-pass',  '⚠️ 고성장(' + str(rdcf_g) + '%/yr) 내재 — 달성 여부가 핵심'
-                    hint = '내재 성장률 ' + str(rdcf_g) + '%. 미달 시 멀티플 압축 리스크. 실제 YoY 매출성장률과 비교 권장.'
+                    v_cls, v_txt = 'verdict-pass',  '⚠️ 고성장 (' + str(rdcf_g) + '%/yr) 내재 — 달성 여부가 핵심'
                 else:
-                    v_cls, v_txt = 'verdict-pass',  '🚨 초고성장(' + str(rdcf_g) + '%/yr) 내재 — 투기적 프리미엄'
-                    hint = '내재 성장률 ' + str(rdcf_g) + '% — 비현실적 수준. 성장 기대 실망 시 급격한 주가 조정 위험.'
-                f_c = ('<div class="analysis-chip"><div class="chip-label">FCF (연간)</div><div class="chip-value">$' + str(round(fcf_v/1e9, 1)) + 'B</div></div>') if fcf_v else ''
-                w_c = ('<div class="analysis-chip"><div class="chip-label">WACC</div><div class="chip-value">' + str(round(wacc_u, 1)) + '%</div></div>') if wacc_u else ''
+                    v_cls, v_txt = 'verdict-pass',  '🚨 초고성장 (' + str(rdcf_g) + '%/yr) 내재 — 투기적 프리미엄'
+                price_str = ('현재가 $' + str(round(price_v, 2)) + ' 기준, ' if price_v else '')
+                wacc_str  = ('WACC ' + str(round(wacc_u, 1)) + '% 적용 → ' if wacc_u else '')
+                rev_cmp   = ''
+                if rev_g is not None:
+                    diff = round(rdcf_g - rev_g, 1)
+                    if diff > 5:
+                        rev_cmp = ' 과거 실제 매출성장 ' + str(round(rev_g, 1)) + '%보다 ' + str(diff) + '%p 높은 성장 내재 — 달성 부담 큼.'
+                    elif diff < -5:
+                        rev_cmp = ' 과거 실제 매출성장 ' + str(round(rev_g, 1)) + '%보다 ' + str(abs(diff)) + '%p 낮은 성장만 내재 — 보수적 기대.'
+                    else:
+                        rev_cmp = ' 과거 실제 매출성장(' + str(round(rev_g, 1)) + '%)와 유사한 수준.'
+                if rdcf_g < 0:
+                    hint = price_str + wacc_str + '현재 EV 기준 FCF/EV가 WACC 초과 → 제로 성장으로도 주가 정당화. 저평가 가능성 높음.'
+                elif rdcf_g <= 5:
+                    hint = price_str + wacc_str + '내재 성장률 ' + str(rdcf_g) + '%/yr — GDP 성장률 수준.' + rev_cmp
+                elif rdcf_g <= 15:
+                    hint = price_str + wacc_str + '내재 성장률 ' + str(rdcf_g) + '%/yr — 중성장 구간.' + rev_cmp + ' 과거 추세 대비 달성 가능성 판단 권장.'
+                elif rdcf_g <= 30:
+                    hint = price_str + wacc_str + '내재 성장률 ' + str(rdcf_g) + '%/yr — 고성장 구간.' + rev_cmp + ' 성장 미달 시 멀티플 압축 리스크.'
+                else:
+                    hint = price_str + wacc_str + '내재 성장률 ' + str(rdcf_g) + '%/yr — 비현실적 수준.' + rev_cmp + ' 성장 기대 실망 시 급격한 조정 위험.'
+                f_c = ('<div class="analysis-chip"><div class="chip-label">FCF (연간)</div>'
+                       '<div class="chip-value">$' + str(round(fcf_v / 1e9, 1)) + 'B</div></div>') if fcf_v else ''
+                w_c = ('<div class="analysis-chip"><div class="chip-label">WACC</div>'
+                       '<div class="chip-value">' + str(round(wacc_u, 1)) + '%</div></div>') if wacc_u else ''
                 st.markdown(
                     '<div class="analysis-card">'
                     '<div class="analysis-card-title">④ Reverse DCF — 주가 내재 성장률</div>'
+                    '<div class="analysis-card-subtitle">"주가가 정당하려면 연 몇% 성장?" — 현재가에서 역산한 기대 성장률</div>'
                     '<div class="analysis-metric-row">'
                     '<div class="analysis-chip"><div class="chip-label">내재 성장률 (g)</div>'
                     '<div class="chip-value">' + str(rdcf_g) + '%/yr</div></div>'
-                    + f_c + w_c +
-                    '</div>'
+                    + f_c + w_c + '</div>'
                     '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
                     '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
-                    '</div>',
-                    unsafe_allow_html=True
+                    '</div>', unsafe_allow_html=True
                 )
             else:
                 reason = ''
@@ -610,73 +686,182 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                         reason = ' (FCF 음수 — 역DCF 산출 불가)'
                     elif not fundamentals.get('wacc_used'):
                         reason = ' (WACC 미확인)'
-                st.markdown('<div class="analysis-card"><div class="analysis-card-title">④ Reverse DCF — 주가 내재 성장률</div>'
-                            '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다' + reason + '</div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">④ Reverse DCF — 주가 내재 성장률</div>'
+                    '<div class="analysis-card-subtitle">"주가가 정당하려면 연 몇% 성장?" — 현재가에서 역산한 기대 성장률</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다' + reason + '</div></div>',
+                    unsafe_allow_html=True)
         else:
             render_premium_lock('🔄', 'Reverse DCF — 주가 내재 성장률',
                 '현재 주가에 시장이 요구하는 성장률을 역산합니다. 낮을수록 기대치 달성 부담이 적습니다.')
 
-        # ⑤ PSR + Rule of 40
+        # ⑤ Scenario DCF (Bear / Base / Bull) ────────────────────────
         if PREMIUM_UNLOCKED:
-            psr_v  = fundamentals.get('psr')                if fundamentals else None
+            bear_dcf = fundamentals.get('bear_dcf') if fundamentals else None
+            base_dcf = fundamentals.get('base_dcf') if fundamentals else None
+            bull_dcf = fundamentals.get('bull_dcf') if fundamentals else None
+            price_v  = fundamentals.get('current_price') if fundamentals else None
+            wacc_u   = fundamentals.get('wacc_used')     if fundamentals else None
+            if any(v is not None for v in [bear_dcf, base_dcf, bull_dcf]):
+                def _sc_chip(label, val, pv, sc_cls):
+                    if val is None:
+                        return ('<div class="scenario-chip ' + sc_cls + '">'
+                                '<div class="sc-label">' + label + '</div>'
+                                '<div class="sc-value">—</div>'
+                                '<div class="sc-marker"></div></div>')
+                    ud = round((val - pv) / pv * 100) if pv and pv > 0 else None
+                    ud_str = (('+' if ud > 0 else '') + str(ud) + '%') if ud is not None else ''
+                    ud_cls = 'sc-up' if (ud or 0) > 0 else 'sc-down'
+                    pv_str = ('$' + str(round(pv, 1))) if pv else '?'
+                    return ('<div class="scenario-chip ' + sc_cls + '">'
+                            '<div class="sc-label">' + label + '</div>'
+                            '<div class="sc-value">$' + str(round(val, 2)) + '</div>'
+                            '<div class="sc-marker ' + ud_cls + '">' + ud_str + ' vs ' + pv_str + '</div></div>')
+                bear_h = _sc_chip('🐻 Bear', bear_dcf, price_v, 'bear')
+                base_h = _sc_chip('📊 Base', base_dcf, price_v, 'base')
+                bull_h = _sc_chip('🐂 Bull', bull_dcf, price_v, 'bull')
+                if base_dcf and price_v and price_v > 0:
+                    bm = (base_dcf - price_v) / base_dcf * 100
+                    if bm > 30:
+                        v_cls5, v_txt5 = 'verdict-buy',   '✅ Base 시나리오 안전마진 ' + str(round(bm)) + '% — 저평가 신호'
+                    elif bm > 0:
+                        v_cls5, v_txt5 = 'verdict-watch', '📌 Base 시나리오 ' + str(round(bm)) + '% 여유 — 적정~소폭 저평가'
+                    else:
+                        v_cls5, v_txt5 = 'verdict-pass',  '⚠️ Base 시나리오 현재가 ' + str(round(-bm)) + '% 초과 — 프리미엄 반영'
+                else:
+                    v_cls5, v_txt5 = 'verdict-wait', '현재가 데이터 확인 중'
+                hint5 = ('Bear(WACC+2%, g=1.5%): 경기 침체·성장 둔화 시나리오. '
+                         'Base(현재 WACC, g=2.5%): 현황 유지 기본 시나리오. '
+                         'Bull(WACC-1%, FCF×1.5, g=4%): 업사이드 달성·금리 하락 시나리오. '
+                         '세 값 모두 현재가 상회 시 강한 저평가 신호.')
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">⑤ Scenario DCF — Bull / Base / Bear 내재가치</div>'
+                    '<div class="analysis-card-subtitle">성장 시나리오별 DCF 내재가치 — 낙관·기본·비관 범위 확인</div>'
+                    '<div class="scenario-row">' + bear_h + base_h + bull_h + '</div>'
+                    '<div class="analysis-verdict ' + v_cls5 + '">' + v_txt5 + '</div>'
+                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<div class="analysis-hint">' + hint5 + '</div></details>'
+                    '</div>', unsafe_allow_html=True
+                )
+            else:
+                reason5 = ''
+                if fundamentals and (fundamentals.get('fcf') or 0) <= 0:
+                    reason5 = ' (FCF 음수 — 시나리오 DCF 산출 불가)'
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">⑤ Scenario DCF — Bull / Base / Bear 내재가치</div>'
+                    '<div class="analysis-card-subtitle">성장 시나리오별 DCF 내재가치 — 낙관·기본·비관 범위 확인</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다' + reason5 + '</div></div>',
+                    unsafe_allow_html=True)
+        else:
+            render_premium_lock('📐', 'Scenario DCF — Bull / Base / Bear',
+                '낙관·기본·비관 3가지 시나리오로 DCF 내재가치 범위를 산출합니다.')
+
+        # ⑥ PSR (EV/Revenue) ─────────────────────────────────────────
+        if PREMIUM_UNLOCKED:
+            psr_v = fundamentals.get('psr')                if fundamentals else None
+            rev_g = fundamentals.get('revenue_growth_yoy') if fundamentals else None
+            if psr_v is not None:
+                p_cls = 'positive' if psr_v < 5 else ('negative' if psr_v > 15 else '')
+                if psr_v < 2:
+                    v_cls6, v_txt6 = 'verdict-buy',   '✅ 저PSR (< 2x) — 매출 대비 매우 저렴'
+                elif psr_v < 5:
+                    v_cls6, v_txt6 = 'verdict-buy',   '✅ 저PSR (' + str(round(psr_v, 1)) + 'x) — 합리적 매출 배수'
+                elif psr_v < 10:
+                    v_cls6, v_txt6 = 'verdict-watch', '📌 중PSR (' + str(round(psr_v, 1)) + 'x) — 성장 프리미엄 수준'
+                elif psr_v < 20:
+                    v_cls6, v_txt6 = 'verdict-pass',  '⚠️ 고PSR (' + str(round(psr_v, 1)) + 'x) — 강한 성장 지속 필수'
+                else:
+                    v_cls6, v_txt6 = 'verdict-pass',  '🚨 초고PSR (' + str(round(psr_v, 1)) + 'x) — 투기적 프리미엄'
+                rg_c = ''
+                if rev_g is not None:
+                    rg_cls = 'positive' if rev_g > 20 else ('negative' if rev_g < 0 else '')
+                    rg_c = ('<div class="analysis-chip"><div class="chip-label">매출성장(YoY)</div>'
+                            '<div class="chip-value ' + rg_cls + '">'
+                            + ('+' if rev_g > 0 else '') + str(round(rev_g, 1)) + '%</div></div>')
+                hint6 = ('PSR ' + str(round(psr_v, 1)) + 'x: 매출 $1당 시장이 $' + str(round(psr_v, 1)) + ' 지불. '
+                         + ('저PSR — 흑자 전환 시 강한 업사이드.' if psr_v < 5
+                            else '중PSR — 성장 지속 시 정당화 가능.' if psr_v < 10
+                            else '고PSR — 지속적 고성장 없이는 멀티플 압축 위험.')
+                         + (' 매출성장 ' + str(round(rev_g, 1)) + '% 조합 시 '
+                            + ('PSR/성장 균형 양호.' if psr_v / max(rev_g, 1) < 0.5 else 'PSR 대비 성장 부담.')
+                            if rev_g and rev_g > 0 else ''))
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">⑥ PSR — EV/Revenue 매출 배수</div>'
+                    '<div class="analysis-card-subtitle">매출 $1당 시장이 지불하는 금액 — 수익성 없는 성장주 평가에 유용</div>'
+                    '<div class="analysis-metric-row">'
+                    '<div class="analysis-chip"><div class="chip-label">PSR (EV/Rev)</div>'
+                    '<div class="chip-value ' + p_cls + '">' + str(round(psr_v, 1)) + 'x</div></div>'
+                    + rg_c + '</div>'
+                    '<div class="analysis-verdict ' + v_cls6 + '">' + v_txt6 + '</div>'
+                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<div class="analysis-hint">' + hint6 + '</div></details>'
+                    '</div>', unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">⑥ PSR — EV/Revenue 매출 배수</div>'
+                    '<div class="analysis-card-subtitle">매출 $1당 시장이 지불하는 금액 — 수익성 없는 성장주 평가에 유용</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div></div>',
+                    unsafe_allow_html=True)
+        else:
+            render_premium_lock('📈', 'PSR — EV/Revenue 매출 배수',
+                '적자 기업·초기 성장주를 위한 매출 기반 밸류에이션. 수익성 없는 구간에서도 상대 비교 가능합니다.')
+
+        # ⑦ Rule of 40 ───────────────────────────────────────────────
+        if PREMIUM_UNLOCKED:
             r40_v  = fundamentals.get('rule_of_40')         if fundamentals else None
             rev_g  = fundamentals.get('revenue_growth_yoy') if fundamentals else None
             fcf_mg = fundamentals.get('fcf_margin')         if fundamentals else None
-            is_hg  = fundamentals.get('is_high_growth', False) if fundamentals else False
-
-            if psr_v is not None or r40_v is not None:
-                hg_label = '🚀 고성장' if is_hg else '📊 일반'
-                p_cls = 'positive' if (psr_v or 99) < 5 else ('negative' if (psr_v or 0) > 15 else '')
-                psr_c = ('<div class="analysis-chip"><div class="chip-label">PSR (EV/Rev)</div>'
-                         '<div class="chip-value ' + p_cls + '">' + str(round(psr_v, 1)) + 'x</div></div>') if psr_v is not None else ''
-                rg_cls = 'positive' if (rev_g or 0) > 20 else ('negative' if (rev_g or 0) < 0 else '')
-                rg_c  = ('<div class="analysis-chip"><div class="chip-label">매출성장(YoY)</div>'
-                         '<div class="chip-value ' + rg_cls + '">' + ('+' if (rev_g or 0) > 0 else '') + str(round(rev_g or 0, 1)) + '%</div></div>') if rev_g is not None else ''
-                fm_cls= 'positive' if (fcf_mg or 0) > 10 else ('negative' if (fcf_mg or 0) < 0 else '')
-                fm_c  = ('<div class="analysis-chip"><div class="chip-label">FCF 마진</div>'
-                         '<div class="chip-value ' + fm_cls + '">' + ('+' if (fcf_mg or 0) > 0 else '') + str(round(fcf_mg or 0, 1)) + '%</div></div>') if fcf_mg is not None else ''
-                r40_c = r40_bar = v_cls2 = v_txt2 = hint2 = ''
-                if r40_v is not None:
-                    pct   = int(min(max(r40_v, 0), 80) / 80 * 100)
-                    b_cls = 'pass' if r40_v >= 40 else ('watch' if r40_v >= 20 else 'fail')
-                    v_cls2= 'verdict-buy' if r40_v >= 40 else ('verdict-watch' if r40_v >= 20 else 'verdict-pass')
-                    v_txt2= ('✅ Rule of 40 충족 — 성장·수익성 균형 달성' if r40_v >= 40 else
-                             '⚠️ Rule of 40 미충족 — 성장 또는 수익성 보강 필요' if r40_v >= 20 else
-                             '🚨 Rule of 40 크게 미달 — 손익 구조 점검 필요')
-                    rs    = str(round(rev_g, 1)) + '%' if rev_g is not None else '?'
-                    fs    = str(round(fcf_mg, 1)) + '%' if fcf_mg is not None else '?'
-                    hint2 = ('매출성장(' + rs + ') + FCF마진(' + fs + ') = ' + str(round(r40_v, 1)) + '. '
-                             + ('40이상 — 건강한 고성장 기업.' if r40_v >= 40 else '40 미만 — 성장·수익성 중 하나 보강 필요.'))
-                    r40_c = ('<div class="analysis-chip"><div class="chip-label">Rule of 40</div>'
-                             '<div class="chip-value">' + str(round(r40_v, 1)) + '</div></div>')
-                    r40_bar = '<div class="r40-bar-wrap"><div class="r40-bar-fill ' + b_cls + '" style="width:' + str(pct) + '%"></div></div>'
-                psr_hint = ''
-                if psr_v is not None:
-                    psr_hint = ('PSR ' + str(round(psr_v, 1)) + 'x: '
-                                + ('저PSR — 매출 대비 합리적.' if psr_v < 5
-                                   else '중PSR — 성장 프리미엄.' if psr_v < 15
-                                   else '고PSR — 강한 성장 기대 필수.'))
-                full_hint = ' '.join(filter(None, [psr_hint, hint2]))
+            if r40_v is not None:
+                pct   = int(min(max(r40_v, 0), 80) / 80 * 100)
+                b_cls = 'pass' if r40_v >= 40 else ('watch' if r40_v >= 20 else 'fail')
+                if r40_v >= 40:
+                    v_cls7, v_txt7 = 'verdict-buy',   '✅ Rule of 40 충족 (' + str(round(r40_v, 1)) + ') — 성장·수익성 균형 달성'
+                elif r40_v >= 20:
+                    v_cls7, v_txt7 = 'verdict-watch', '⚠️ Rule of 40 미충족 (' + str(round(r40_v, 1)) + ') — 성장 또는 수익성 보강 필요'
+                else:
+                    v_cls7, v_txt7 = 'verdict-pass',  '🚨 Rule of 40 크게 미달 (' + str(round(r40_v, 1)) + ') — 손익 구조 점검 필요'
+                rs = str(round(rev_g, 1)) + '%' if rev_g is not None else '?'
+                fs = str(round(fcf_mg, 1)) + '%' if fcf_mg is not None else '?'
+                hint7 = ('매출성장(' + rs + ') + FCF마진(' + fs + ') = ' + str(round(r40_v, 1)) + '. '
+                         + ('40 이상 — 고성장 SaaS·테크 기업 건전성 기준 충족.' if r40_v >= 40
+                            else '20~40 — 성장·수익성 한쪽 강화로 40 달성 목표.' if r40_v >= 20
+                            else '20 미만 — 양쪽 모두 개선 필요. 성장 둔화 + 손실 구간은 특히 주의.'))
+                rg_c = ('<div class="analysis-chip"><div class="chip-label">매출성장(YoY)</div>'
+                        '<div class="chip-value">' + rs + '</div></div>') if rev_g is not None else ''
+                fm_c = ('<div class="analysis-chip"><div class="chip-label">FCF 마진</div>'
+                        '<div class="chip-value">' + fs + '</div></div>') if fcf_mg is not None else ''
+                r40_bar = ('<div class="r40-bar-wrap"><div class="r40-bar-fill ' + b_cls
+                           + '" style="width:' + str(pct) + '%"></div></div>')
                 st.markdown(
                     '<div class="analysis-card">'
-                    '<div class="analysis-card-title">⑤ 고성장 지표 — PSR + Rule of 40 '
-                    '<span style="font-weight:400;color:#6c7086">(' + hg_label + ')</span></div>'
+                    '<div class="analysis-card-title">⑦ Rule of 40 — 성장·수익성 균형 지표</div>'
+                    '<div class="analysis-card-subtitle">(매출성장%) + (FCF마진%) ≥ 40 = 건강한 고성장 기업</div>'
                     '<div class="analysis-metric-row">'
-                    + psr_c + rg_c + fm_c + r40_c +
-                    '</div>'
+                    '<div class="analysis-chip"><div class="chip-label">Rule of 40</div>'
+                    '<div class="chip-value">' + str(round(r40_v, 1)) + '</div></div>'
+                    + rg_c + fm_c + '</div>'
                     + r40_bar
-                    + ('<div class="analysis-verdict ' + v_cls2 + '">' + v_txt2 + '</div>' if v_txt2 else '')
-                    + ('<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
-                       '<div class="analysis-hint">' + full_hint + '</div></details>' if full_hint else '')
-                    + '</div>',
-                    unsafe_allow_html=True
+                    + '<div class="analysis-verdict ' + v_cls7 + '">' + v_txt7 + '</div>'
+                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<div class="analysis-hint">' + hint7 + '</div></details>'
+                    '</div>', unsafe_allow_html=True
                 )
             else:
-                st.markdown('<div class="analysis-card"><div class="analysis-card-title">⑤ 고성장 지표 — PSR + Rule of 40</div>'
-                            '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="analysis-card">'
+                    '<div class="analysis-card-title">⑦ Rule of 40 — 성장·수익성 균형 지표</div>'
+                    '<div class="analysis-card-subtitle">(매출성장%) + (FCF마진%) ≥ 40 = 건강한 고성장 기업</div>'
+                    '<div class="analysis-verdict verdict-wait">⏳ EDGAR 재무 데이터 연동 후 자동 계산됩니다</div></div>',
+                    unsafe_allow_html=True)
         else:
-            render_premium_lock('🚀', '고성장 지표 — PSR + Rule of 40',
-                '매출 성장률과 FCF 마진의 합(Rule of 40)으로 고성장 기업의 건전성을 평가합니다.')
+            render_premium_lock('📐', 'Rule of 40 — 성장·수익성 균형',
+                '매출 성장률과 FCF 마진의 합이 40 이상이면 건강한 고성장 기업으로 판단합니다.')
 
     # 디버그 expander (with 블록 밖)
     if PREMIUM_UNLOCKED and fundamentals:
@@ -1012,6 +1197,46 @@ st.markdown("""
 .rec-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .rec-label { font-size: 0.72rem; color: #a6adc8; display: flex; align-items: center; gap: 4px; }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ── 기업 유형 배지 (복합기업 / 고성장) ── */
+.entity-badge {
+    display: inline-block; border-radius: 6px; padding: 2px 10px;
+    font-size: 0.78rem; font-weight: 600;
+}
+.entity-badge.conglom {
+    background: #2a2045; color: #cba6f7; border: 1px solid #6c5fa6;
+}
+.entity-badge.highgrowth {
+    background: #1a2e3a; color: #89dceb; border: 1px solid #3a6a7a;
+}
+
+/* ── 분석카드 서브타이틀 ── */
+.analysis-card-subtitle {
+    font-size: 0.75rem; color: #7f849c; margin-bottom: 10px; margin-top: -4px;
+}
+
+/* ── 경고 메시지 ── */
+.analysis-warn {
+    background: #2e2a1a; border-left: 3px solid #f9e2af;
+    border-radius: 4px; padding: 6px 10px;
+    font-size: 0.78rem; color: #f9e2af; margin: 6px 0;
+}
+
+/* ── Scenario DCF ── */
+.scenario-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.scenario-chip { flex: 1; min-width: 90px; border-radius: 8px; padding: 10px 12px; text-align: center; }
+.scenario-chip.bear { background: #2e1a1a; border: 1px solid #f38ba8; }
+.scenario-chip.base { background: #1e1e2e; border: 1px solid #45475a; }
+.scenario-chip.bull { background: #1a2e1a; border: 1px solid #a6e3a1; }
+.sc-label { font-size: 0.78rem; color: #a6adc8; margin-bottom: 4px; font-weight: 600; }
+.sc-value { font-size: 1.05rem; font-weight: 700; color: #cdd6f4; }
+.sc-marker { font-size: 0.72rem; margin-top: 4px; }
+.sc-up { color: #a6e3a1; }
+.sc-down { color: #f38ba8; }
+
+/* ── 애널리스트 바 (rec-bar-wrap 별칭) ── */
+.rec-bar-wrap { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
+
 </style>
 """, unsafe_allow_html=True)
 
