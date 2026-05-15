@@ -133,6 +133,42 @@ def get_company_facts(cik: str) -> Optional[dict]:
     return None
 
 
+def extract_annual_values_list(facts: dict, tag: str, unit: str = 'USD',
+                                n: int = 2) -> list:
+    """최근 n개 연간 값을 리스트로 반환 (최신순). YoY 성장률 계산용."""
+    try:
+        entries = (
+            facts.get('facts', {})
+                 .get('us-gaap', {})
+                 .get(tag, {})
+                 .get('units', {})
+                 .get(unit, [])
+        )
+        annual = [
+            e for e in entries
+            if e.get('form') in ('10-K', '20-F') and e.get('fp') == 'FY'
+               and e.get('val') is not None
+        ]
+        if not annual:
+            annual = [e for e in entries
+                      if e.get('form') in ('10-K', '20-F')
+                      and e.get('val') is not None]
+        if not annual:
+            return []
+        annual_sorted = sorted(annual, key=lambda e: e.get('end', ''), reverse=True)
+        seen_end = set()
+        dedup = []
+        for e in annual_sorted:
+            end_key = e.get('end', '')
+            if end_key not in seen_end:
+                seen_end.add(end_key)
+                dedup.append(e)
+        return [float(e['val']) for e in dedup[:n]]
+    except Exception as e:
+        print('[EDGAR] extract_annual_values_list(' + tag + '): ' + str(e))
+        return []
+
+
 def extract_annual_value(facts: dict, tag: str, unit: str = 'USD',
                           years: int = 1) -> Optional[float]:
     try:
@@ -216,7 +252,12 @@ def get_edgar_fundamentals(ticker: str,
         debug['tags_found'][tag] = val is not None
         return val
 
-    revenue      = _tag('Revenues') or _tag('RevenueFromContractWithCustomerExcludingAssessedTax')
+    # 매출: 최신 2년치 추출 (YoY 성장률 계산용)
+    _rev_list = (extract_annual_values_list(facts, 'Revenues', n=2) or
+                 extract_annual_values_list(facts, 'RevenueFromContractWithCustomerExcludingAssessedTax', n=2))
+    revenue      = float(_rev_list[0]) if _rev_list else None
+    revenue_prev = float(_rev_list[1]) if len(_rev_list) > 1 else None
+
     ebit         = _tag('OperatingIncomeLoss')
     gross_profit = _tag('GrossProfit')
 
@@ -297,6 +338,7 @@ def get_edgar_fundamentals(ticker: str,
         'cik':                cik,
         'industry':           industry,
         'revenue':            revenue,
+        'revenue_prev':       revenue_prev,
         'gross_profit':       gross_profit,
         'gross_margin':       gross_margin,
         'ebit':               ebit,
