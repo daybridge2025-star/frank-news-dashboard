@@ -536,6 +536,32 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
             'WACC 할인율을 적용한 DCF 모델로 내재가치를 산출하고 현재가 대비 안전마진(30% 이상 권장)을 확인합니다.'
         )
 
+    # ── 디버그 expander (EDGAR 연동 상태 확인용) ─────────────────
+    if PREMIUM_UNLOCKED and fundamentals:
+        dbg = fundamentals.get('debug', {})
+        err = fundamentals.get('error', '')
+        with st.expander('🔍 EDGAR 데이터 연동 상태', expanded=False):
+            if err:
+                st.error(f'오류: {err}')
+            cik   = dbg.get('cik', '—')
+            loaded= dbg.get('facts_loaded', False)
+            is_etf= dbg.get('is_etf', False)
+            tags  = dbg.get('tags_found', {})
+            cols  = st.columns(3)
+            cols[0].metric('CIK', cik or '미발견')
+            cols[1].metric('EDGAR 로드', '✅' if loaded else '❌')
+            cols[2].metric('ETF 여부', '✅ ETF' if is_etf else '일반주')
+            if tags:
+                found = [k for k, v in tags.items() if v]
+                missing = [k for k, v in tags.items() if not v]
+                if found:
+                    st.caption(f'✅ 확인된 태그: {", ".join(found)}')
+                if missing:
+                    st.caption(f'❌ 미확인 태그: {", ".join(missing)}')
+            damod = fundamentals.get('damod_industry', '—')
+            wacc_u = fundamentals.get('wacc_used')
+            st.caption(f'업종 매핑: {damod} | WACC: {f"{wacc_u:.2f}%" if wacc_u else "—"}')
+
 
 # ── 페이지 기본 설정 ─────────────────────────────────────────────
 st.set_page_config(
@@ -881,42 +907,34 @@ def load_tickers():
 
 
 @st.cache_data(ttl=86400)   # 24시간 캐시 — EDGAR API 부하 최소화
-def fetch_premium_fundamentals(ticker_sym: str) -> dict:
+def fetch_premium_fundamentals(ticker_sym: str,
+                                current_price: float = 0,
+                                market_cap: float = 0) -> dict:
     """
     EDGAR + Damodaran 연동으로 프리미엄 분석 데이터 산출 (24시간 캐시).
-    실패 시 빈 dict 반환 (UI에서 ⏳ 안내 표시).
+    에러 포함 dict 반환 (debug 키로 원인 진단 가능).
     """
     api_key = os.environ.get('FINNHUB_API_KEY', '')
-    # Finnhub 현재가·시총·발행주식수는 이미 캐시된 fin_data 활용
-    fin_data = fetch_finnhub_data(ticker_sym)
 
-    current_price    = fin_data.get('current') or fin_data.get('prev_close')
-    market_cap       = fin_data.get('mcap')          # $M 단위
-    # Finnhub metric에는 발행주식수 직접 제공 없음 → EDGAR에서 추출
     shares_outstanding = None
     if market_cap and current_price and current_price > 0:
-        # 역산: 발행주식수 ≈ 시가총액(M) × 1,000,000 / 현재가
         shares_outstanding = market_cap * 1_000_000 / current_price
 
     try:
         raw = get_edgar_fundamentals(
             ticker=ticker_sym,
             finnhub_api_key=api_key,
-            current_price=current_price,
+            current_price=current_price or None,
             shares_outstanding=shares_outstanding,
-            market_cap=market_cap,
+            market_cap=market_cap or None,
         )
-        if raw.get('error'):
-            print(f'[EDGAR] {ticker_sym}: {raw["error"]}')
-            return {}
-        # shares_outstanding 역산값 주입 (DCF 재계산용)
         if shares_outstanding:
             raw['shares_outstanding'] = shares_outstanding
         enriched = enrich_fundamentals(raw)
         return enriched
     except Exception as e:
         print(f'[Premium] {ticker_sym} 펀더멘탈 계산 오류: {e}')
-        return {}
+        return {'error': str(e), 'debug': {'ticker': ticker_sym}}
 
 
 def clear_cache():
@@ -928,30 +946,43 @@ def clear_cache():
 
 def render_ticker_content(ticker_sym, ticker_df):
     """종목별 브리핑 + 기사 카드 + 페이지네이션 렌더링"""
-    if ticker_df.empty:
-        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
-        return
+    no_news = ticker_df.empty
 
-    if 'collected_at' in ticker_df.columns:
-        ticker_df = ticker_df.sort_values('collected_at', ascending=False)
-
-    company_name = ticker_df['company'].iloc[0] if 'company' in ticker_df.columns else ticker_sym
-    total = len(ticker_df)
+    if not no_news:
+        if 'collected_at' in ticker_df.columns:
+            ticker_df = ticker_df.sort_values('collected_at', ascending=False)
+        company_name = ticker_df['company'].iloc[0] if 'company' in ticker_df.columns else ticker_sym
+        total = len(ticker_df)
+    else:
+        company_name = ticker_sym
+        total = 0
 
     st.markdown(
         f'<div style="color:#6c7086;font-size:0.85rem;margin-bottom:12px;">'
-        f'<span class="ticker-badge">{ticker_sym}</span>{company_name} · {total}건</div>',
+        f'<span class="ticker-badge">{ticker_sym}</span>{company_name}'
+        f'{f" · {total}건" if total > 0 else " · 오늘 수집된 기사 없음"}</div>',
         unsafe_allow_html=True
     )
 
     # ── 안 A + 안 B: 가격·지표 카드 + 상세 expander ────────────
+    # 기사 유무와 무관하게 항상 표시
     fin_data = fetch_finnhub_data(ticker_sym)
     render_stock_header(ticker_sym, fin_data)
 
     # ── 프리미엄 분석 섹션 ──────────────────────────────────────
-    # EDGAR + Damodaran 연동 (24시간 캐시)
-    fundamentals = fetch_premium_fundamentals(ticker_sym) if PREMIUM_UNLOCKED else None
-    render_premium_analysis(ticker_sym, fundamentals=fundamentals or None)
+    # 기사 유무와 무관하게 항상 표시 (EDGAR + Damodaran 연동, 24시간 캐시)
+    if PREMIUM_UNLOCKED:
+        _price  = float(fin_data.get('current') or fin_data.get('prev_close') or 0)
+        _mcap   = float(fin_data.get('mcap') or 0)
+        fundamentals = fetch_premium_fundamentals(ticker_sym, _price, _mcap)
+    else:
+        fundamentals = None
+    render_premium_analysis(ticker_sym, fundamentals=fundamentals if fundamentals else None)
+
+    # 기사 없으면 안내 후 종료
+    if no_news:
+        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
+        return
 
     # 종합 브리핑 박스
     summary_kr = ''
@@ -1138,18 +1169,12 @@ if df.empty or not tickers:
 tab_labels = []
 for t in tickers:
     sym = t['ticker']
-    count = len(df[df['ticker'] == sym])
-    label = f"{sym} ({count})" if count > 0 else sym
-    tab_labels.append(label)
+    count = len(df[df['ticker'] == sym]) if not df.empty else 0
+    tab_labels.append(f"{sym} ({count})" if count > 0 else sym)
 
 tabs = st.tabs(tab_labels)
-
 for tab, ticker_info in zip(tabs, tickers):
-    sym = ticker_info['ticker']
-    ticker_df = df[df['ticker'] == sym].copy()
     with tab:
+        sym = ticker_info['ticker']
+        ticker_df = df[df['ticker'] == sym] if not df.empty else pd.DataFrame()
         render_ticker_content(sym, ticker_df)
-
-# ── 푸터 ─────────────────────────────────────────────────────────
-st.divider()
-st.caption("Frank News Dashboard · Finnhub 뉴스 API · Gemini 번역/요약 · 2시간마다 자동 수집 · GitHub Actions")
