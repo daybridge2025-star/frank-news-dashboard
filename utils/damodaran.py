@@ -168,6 +168,71 @@ _INDUSTRY_MAP: dict[str, str] = {
     'Defense':                         'Aerospace/Defense',
 }
 
+# ── 티커별 업종 강제 오버라이드 (Finnhub 오분류 수정) ─────────────
+INDUSTRY_OVERRIDE: dict[str, str] = {
+    'TSLA':  'Electrical Equipment',
+    'RKLB':  'Aerospace/Defense',
+    'IONQ':  'Electronics (General)',
+    'JOBY':  'Aerospace/Defense',
+    'PLTR':  'Software (System & Application)',
+    'KTOS':  'Aerospace/Defense',
+    'ONDS':  'Telecom. Services',
+    'SATL':  'Telecom. Services',
+    'VST':   'Power',
+    'NIO':   'Auto & Truck',
+}
+
+# ── 티커별 UI 업종 선택지 (label, damodaran_key) ──────────────────
+INDUSTRY_CANDIDATES: dict[str, list] = {
+    'TSLA': [
+        ('Electrical Equipment',           'Electrical Equipment'),
+        ('Auto & Truck',                   'Auto & Truck'),
+        ('Software (System & Application)','Software (System & Application)'),
+        ('Green & Renewable Energy',       'Green & Renewable Energy'),
+    ],
+    'RKLB': [
+        ('Aerospace/Defense',              'Aerospace/Defense'),
+        ('Electronics (General)',          'Electronics (General)'),
+    ],
+    'IONQ': [
+        ('Electronics (General)',          'Electronics (General)'),
+        ('Semiconductor',                  'Semiconductor'),
+        ('Software (System & Application)','Software (System & Application)'),
+    ],
+    'JOBY': [
+        ('Aerospace/Defense',              'Aerospace/Defense'),
+        ('Air Transport',                  'Air Transport'),
+    ],
+    'PLTR': [
+        ('Software (System & Application)','Software (System & Application)'),
+        ('Software (Internet)',            'Software (Internet)'),
+        ('Computer Services',             'Computer Services'),
+    ],
+    'KTOS': [
+        ('Aerospace/Defense',              'Aerospace/Defense'),
+        ('Electronics (General)',          'Electronics (General)'),
+    ],
+    'ONDS': [
+        ('Telecom. Services',              'Telecom. Services'),
+        ('Telecom (Wireless)',             'Telecom (Wireless)'),
+        ('Electronics (General)',          'Electronics (General)'),
+    ],
+    'SATL': [
+        ('Telecom. Services',              'Telecom. Services'),
+        ('Telecom (Wireless)',             'Telecom (Wireless)'),
+        ('Aerospace/Defense',              'Aerospace/Defense'),
+    ],
+    'VST': [
+        ('Power',                          'Power'),
+        ('Utility (General)',              'Utility (General)'),
+        ('Green & Renewable Energy',       'Green & Renewable Energy'),
+    ],
+    'NIO': [
+        ('Auto & Truck',                   'Auto & Truck'),
+        ('Electrical Equipment',           'Electrical Equipment'),
+    ],
+}
+
 
 @lru_cache(maxsize=256)
 def match_industry(finnhub_industry: str) -> Optional[str]:
@@ -278,75 +343,110 @@ def relever_wacc(industry: str,
     return round(wacc, 2)
 
 
-# ── 메인: EDGAR dict에 Damodaran 벤치마크 추가 ───────────────────
-def enrich_fundamentals(fundamentals: dict) -> dict:
-    """
-    EDGAR get_edgar_fundamentals() 결과에 Damodaran 벤치마크 데이터를 추가.
-
-    추가 키:
-      damod_industry        : 매핑된 Damodaran 업종명
-      industry_wacc         : 업종 WACC (%)
-      industry_ev_ebitda    : 업종 EV/EBITDA 중앙값
-      industry_roic         : 업종 ROIC (%)
-      wacc_used             : 실제 사용된 WACC (재레버링 또는 업종값)
-      roic_wacc_spread      : ROIC - WACC 스프레드 (%)
-    """
+# -- Main: EDGAR dict + Damodaran benchmark --
+def enrich_fundamentals(fundamentals: dict, industry_override: str = '') -> dict:
     f = fundamentals.copy()
+    ticker = f.get('ticker', '').upper()
 
-    # 업종 매핑
-    finnhub_ind = f.get('industry')
-    damod_ind   = match_industry(finnhub_ind) if finnhub_ind else None
+    # Industry priority: user override > auto override > finnhub
+    if industry_override:
+        damod_ind = industry_override
+        industry_source = 'override_user'
+    elif ticker in INDUSTRY_OVERRIDE:
+        damod_ind = INDUSTRY_OVERRIDE[ticker]
+        industry_source = 'override_auto'
+    else:
+        finnhub_ind = f.get('industry')
+        damod_ind = match_industry(finnhub_ind) if finnhub_ind else None
+        industry_source = 'finnhub_auto'
+
     f['damod_industry'] = damod_ind
+    f['industry_source'] = industry_source
 
     if not damod_ind:
-        f['industry_wacc']      = None
-        f['industry_ev_ebitda'] = None
-        f['industry_roic']      = None
-        f['wacc_used']          = None
-        f['roic_wacc_spread']   = None
+        for k in ['industry_wacc', 'industry_ev_ebitda', 'industry_roic',
+                  'wacc_used', 'roic_wacc_spread', 'revenue_growth_yoy',
+                  'psr', 'fcf_margin', 'rule_of_40', 'rdcf_implied_g']:
+            f[k] = None
+        f['is_high_growth'] = False
         return f
 
-    # 업종 벤치마크 조회
-    ind_wacc     = get_industry_wacc(damod_ind)
-    ind_ev_ebitda= get_industry_ev_ebitda(damod_ind)
-    ind_roic     = get_industry_roic(damod_ind)
+    ind_wacc      = get_industry_wacc(damod_ind)
+    ind_ev_ebitda = get_industry_ev_ebitda(damod_ind)
+    ind_roic      = get_industry_roic(damod_ind)
 
     f['industry_wacc']      = ind_wacc
     f['industry_ev_ebitda'] = ind_ev_ebitda
     f['industry_roic']      = ind_roic
 
-    # WACC: 기업 D/E & 세율이 있으면 재레버링, 없으면 업종값 사용
-    wacc_used = None
-    debt  = f.get('debt', 0) or 0
-    equity= f.get('equity') or 0
-    tax_r = f.get('tax_rate', 0.21) or 0.21
+    debt   = f.get('debt', 0) or 0
+    equity = f.get('equity') or 0
+    tax_r  = f.get('tax_rate', 0.21) or 0.21
 
     if equity > 0 and debt >= 0:
-        de_ratio = (debt / equity) * 100  # D/E %
+        de_ratio       = (debt / equity) * 100
         wacc_relevered = relever_wacc(damod_ind, de_ratio, tax_r)
-        wacc_used = wacc_relevered if wacc_relevered else ind_wacc
+        wacc_used      = wacc_relevered if wacc_relevered else ind_wacc
     else:
         wacc_used = ind_wacc
 
     f['wacc_used'] = wacc_used
 
-    # ROIC - WACC 스프레드
     roic = f.get('roic')
     if roic is not None and wacc_used is not None:
         f['roic_wacc_spread'] = round(roic - wacc_used, 2)
     else:
         f['roic_wacc_spread'] = None
 
-    # DCF 재계산 (wacc_used 기반)
-    if (wacc_used and f.get('ebitda') and f.get('capex') is not None and
-            f.get('ebit') and f.get('shares_outstanding')):
-        fcf = (f['ebitda'] - f['capex'] - f['ebit'] * tax_r)
-        if fcf > 0:
+    # High-growth metrics
+    revenue      = f.get('revenue')
+    revenue_prev = f.get('revenue_prev')
+    fcf          = f.get('fcf')
+    ev           = f.get('ev')
+    net_income   = f.get('net_income')
+
+    rev_growth = None
+    if revenue and revenue_prev and revenue_prev != 0:
+        rev_growth = round((revenue - revenue_prev) / abs(revenue_prev) * 100, 1)
+    f['revenue_growth_yoy'] = rev_growth
+
+    psr = None
+    if ev and revenue and revenue > 0:
+        psr = round(ev / (revenue / 1e6), 1)
+    f['psr'] = psr
+
+    fcf_margin = None
+    if fcf is not None and revenue and revenue > 0:
+        fcf_margin = round(fcf / revenue * 100, 1)
+    f['fcf_margin'] = fcf_margin
+
+    r40 = None
+    if rev_growth is not None and fcf_margin is not None:
+        r40 = round(rev_growth + fcf_margin, 1)
+    f['rule_of_40'] = r40
+
+    is_hg = False
+    if rev_growth is not None and rev_growth > 20:
+        is_hg = True
+    if psr is not None and psr > 8:
+        is_hg = True
+    if net_income is not None and net_income < 0:
+        is_hg = True
+    f['is_high_growth'] = is_hg
+
+    rdcf_g = None
+    if wacc_used and ev and ev > 0 and fcf is not None:
+        rdcf_g = round(((wacc_used / 100) - (fcf / 1e6 / ev)) * 100, 2)
+    f['rdcf_implied_g'] = rdcf_g
+
+    # DCF recalc with wacc_used
+    if (wacc_used and f.get('ebitda') and f.get('capex') is not None
+            and f.get('ebit') and f.get('shares_outstanding')):
+        fcf_dcf = f['ebitda'] - f['capex'] - f['ebit'] * tax_r
+        if fcf_dcf > 0:
             _wacc = wacc_used / 100
             _g    = 0.025
             if _wacc > _g:
-                terminal  = fcf / (_wacc - _g)
-                dcf_total = terminal
-                f['dcf_value'] = dcf_total / f['shares_outstanding']
+                f['dcf_value'] = (fcf_dcf / (_wacc - _g)) / f['shares_outstanding']
 
     return f
