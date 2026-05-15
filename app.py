@@ -900,68 +900,169 @@ def render_ticker_content(ticker_sym, ticker_df):
                     st.rerun()
 
 
-# ── 사이드바 ─────────────────────────────────────────────────────
+# ── 페이지 설정 + CSS 주입 ───────────────────────────────────────
+st.set_page_config(page_title='Frank News Dashboard', page_icon='📰', layout='wide')
+
+st.markdown("""
+<style>
+/* ── 칩 그리드 ── */
+.fin-grid {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;
+}
+.fin-chip {
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 8px;
+    padding: 8px 12px; min-width: 110px; flex: 1;
+}
+.fc-label { font-size: 0.72rem; color: #a6adc8; margin-bottom: 2px; }
+.fc-value { font-size: 1rem; font-weight: 600; color: #cdd6f4; }
+.fc-value.up { color: #a6e3a1; }
+.fc-value.down { color: #f38ba8; }
+.positive { color: #a6e3a1; }
+.negative { color: #f38ba8; }
+
+/* ── 투자 분석 카드 ── */
+.analysis-card {
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 10px;
+    padding: 16px; margin: 8px 0;
+}
+.analysis-card-title {
+    font-size: 0.95rem; font-weight: 600; color: #cdd6f4; margin-bottom: 12px;
+}
+.analysis-metric-row {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+}
+.analysis-chip {
+    background: #181825; border: 1px solid #45475a; border-radius: 6px;
+    padding: 6px 10px; min-width: 90px;
+}
+.chip-label { font-size: 0.68rem; color: #a6adc8; margin-bottom: 2px; }
+.chip-value { font-size: 0.9rem; font-weight: 600; color: #cdd6f4; }
+.chip-value.positive { color: #a6e3a1; }
+.chip-value.negative { color: #f38ba8; }
+
+/* ── 판정 뱃지 ── */
+.analysis-verdict {
+    border-radius: 6px; padding: 8px 12px;
+    font-size: 0.85rem; font-weight: 500; margin: 8px 0;
+}
+.verdict-buy  { background: #1a2e1a; color: #a6e3a1; }
+.verdict-watch{ background: #2e2a1a; color: #f9e2af; }
+.verdict-pass { background: #2e1a1a; color: #f38ba8; }
+.verdict-wait { background: #1e1e2e; color: #a6adc8; border: 1px solid #313244; }
+.analysis-hint-details summary {
+    font-size: 0.78rem; color: #7f849c; cursor: pointer; margin-top: 6px;
+}
+.analysis-hint { font-size: 0.8rem; color: #a6adc8; margin-top: 6px; line-height: 1.5; }
+
+/* ── 업종 배지 ── */
+.industry-badge {
+    display: inline-block; background: #313244; color: #a6adc8;
+    border-radius: 6px; padding: 3px 10px; font-size: 0.78rem; margin-bottom: 8px;
+}
+.industry-badge.overridden {
+    background: #2a2a45; color: #89b4fa; border: 1px solid #45475a;
+}
+
+/* ── Rule of 40 바 ── */
+.r40-bar-wrap {
+    background: #313244; border-radius: 4px; height: 8px;
+    width: 100%; margin: 6px 0; overflow: hidden;
+}
+.r40-bar-fill { height: 8px; border-radius: 4px; }
+.r40-bar-fill.pass  { background: #a6e3a1; }
+.r40-bar-fill.watch { background: #f9e2af; }
+.r40-bar-fill.fail  { background: #f38ba8; }
+
+/* ── 뉴스 카드 ── */
+.news-card {
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 10px;
+    padding: 14px 16px; margin: 8px 0;
+}
+.news-index { font-size: 0.72rem; color: #7f849c; }
+.news-title-kr { font-size: 0.95rem; font-weight: 600; color: #cdd6f4; margin: 4px 0; }
+.news-title-kr a { color: #89b4fa; text-decoration: none; }
+.news-title-kr a:hover { text-decoration: underline; }
+.news-title-en { font-size: 0.78rem; color: #7f849c; margin-bottom: 6px; }
+.news-summary { font-size: 0.82rem; color: #a6adc8; line-height: 1.55; margin: 6px 0; }
+.news-meta { font-size: 0.72rem; color: #7f849c; margin-top: 8px; }
+.badge-inferred {
+    background: #2a2a45; color: #89b4fa; border-radius: 4px;
+    padding: 1px 8px; font-size: 0.72rem;
+}
+
+/* ── 프리미엄 잠금 ── */
+.premium-lock-card {
+    background: #1e1e2e; border: 1px dashed #45475a; border-radius: 10px;
+    padding: 16px; margin: 8px 0; display: flex; align-items: center; gap: 14px;
+}
+.premium-lock-icon { font-size: 1.6rem; }
+.premium-lock-title { font-size: 0.9rem; font-weight: 600; color: #cdd6f4; }
+.premium-lock-desc { font-size: 0.78rem; color: #7f849c; margin-top: 3px; }
+.premium-lock-badge {
+    margin-left: auto; background: #313244; color: #a6adc8;
+    border-radius: 6px; padding: 3px 10px; font-size: 0.75rem;
+}
+
+.expander-section-label {
+    font-size: 0.75rem; font-weight: 600; color: #7f849c;
+    text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0 4px 0;
+}
+.rec-bar { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
+.rec-segment { height: 10px; }
+.rec-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.rec-label { font-size: 0.72rem; color: #a6adc8; display: flex; align-items: center; gap: 4px; }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+</style>
+""", unsafe_allow_html=True)
+
+# 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
     st.title("⚙️ 종목 관리")
     st.caption(f"업데이트: {kst_now_str()}")
-
     if st.button("🔄 새로고침", use_container_width=True):
         clear_cache()
         st.rerun()
-
     st.divider()
-
-    # ── 종목 추가 (티커 자동 조회) ───────────────────────────────
     st.subheader("➕ 종목 추가")
-
-    # session_state 초기화
-    if 'pending_ticker' not in st.session_state:
-        st.session_state['pending_ticker'] = ''
-    if 'pending_name' not in st.session_state:
-        st.session_state['pending_name'] = ''
-
+    if "pending_ticker" not in st.session_state:
+        st.session_state["pending_ticker"] = ""
+    if "pending_name" not in st.session_state:
+        st.session_state["pending_name"] = ""
     with st.form("ticker_lookup_form", clear_on_submit=False):
         ticker_input = st.text_input(
             "티커 입력 (예: AAPL, SOXL)",
             max_chars=10,
-            value=st.session_state['pending_ticker']
+            value=st.session_state["pending_ticker"]
         )
         lookup_clicked = st.form_submit_button("🔍 회사명 조회", use_container_width=True)
-
     if lookup_clicked:
         t = ticker_input.upper().strip()
         if t:
-            with st.spinner("조회 중..."):
-                name = lookup_company_name(t)
+            name = lookup_company_name(t)
+            st.session_state["pending_ticker"] = t
+            st.session_state["pending_name"] = name
             if name:
-                st.session_state['pending_ticker'] = t
-                st.session_state['pending_name'] = name
+                st.success(f"{t} → {name}")
             else:
-                st.warning("회사명을 찾을 수 없습니다. 티커를 확인해 주세요.")
-                st.session_state['pending_name'] = ''
-        else:
-            st.warning("티커를 입력해 주세요.")
-
-    if st.session_state['pending_name']:
-        st.info(f"**{st.session_state['pending_ticker']}** → {st.session_state['pending_name']}")
-        if st.button("➕ 종목 추가 확정", use_container_width=True, type="primary"):
+                st.warning(f"{t}: 회사명을 찾을 수 없습니다. 티커를 확인하세요.")
+    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+        t = st.session_state["pending_ticker"]
+        name = st.session_state["pending_name"]
+        if st.button(f"✅ {t} ({name}) 추가", use_container_width=True, type="primary"):
             try:
-                add_ticker(st.session_state['pending_ticker'], st.session_state['pending_name'])
+                add_ticker(t, name)
                 clear_cache()
-                st.success(f"{st.session_state['pending_ticker']} 추가 완료!")
-                st.session_state['pending_ticker'] = ''
-                st.session_state['pending_name'] = ''
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.success(f"{t} 추가 완료!")
                 st.rerun()
             except Exception as e:
                 st.error(f"추가 실패: {e}")
-
     st.divider()
-
-    # ── 종목 삭제 ────────────────────────────────────────────────
     st.subheader("🗑️ 종목 삭제")
     tickers_raw = load_tickers()
     if tickers_raw:
-        ticker_options = {f"{t['ticker']} ({t['company_name']})": t['ticker'] for t in tickers_raw}
+        ticker_options = {f"{t['ticker']} ({t['company_name']})": t["ticker"] for t in tickers_raw}
         selected_label = st.selectbox("삭제할 종목 선택", list(ticker_options.keys()))
         if st.button("삭제", use_container_width=True, type="secondary"):
             try:
@@ -974,42 +1075,33 @@ with st.sidebar:
     else:
         st.info("등록된 종목이 없습니다.")
 
-
-# ── 메인 ─────────────────────────────────────────────────────────
+# 메인 ─────────────────────────────────────────────────
 st.title("📰 Frank News Dashboard")
 st.caption("미국 주식 뉴스 자동 수집 대시보드 | Finnhub 기반 | 2시간마다 업데이트")
 st.divider()
-
 df = load_news()
 tickers = load_tickers()
-
 if df.empty or not tickers:
     st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
     st.stop()
-
-# 탭 레이블: 기empty and not tickers:
-    st.info("📭 등록된 종목이 없거나 오늘 수집된 기사가 없습니다. 사이드바에서 종목을 추가하세요.")
+ticker_list = tickers if tickers else []
+if not ticker_list:
+    st.info("사이드바에서 종목을 추가하세요.")
 else:
-    ticker_list = tickers if tickers else []
-    if not ticker_list:
-        st.info("사이드바에서 종목을 추가하세요.")
-    else:
-        counts = {}
-        if not df.empty and 'ticker' in df.columns:
-            counts = df.groupby('ticker').size().to_dict()
-
-        tab_labels = []
-        for t in ticker_list:
-            sym = t['ticker']
-            n   = counts.get(sym, 0)
-            tab_labels.append(f"{sym} ({n})" if n > 0 else sym)
-
-        tabs = st.tabs(tab_labels)
-        for tab, t in zip(tabs, ticker_list):
-            sym = t['ticker']
-            with tab:
-                if not df.empty and 'ticker' in df.columns:
-                    ticker_df = df[df['ticker'] == sym].copy()
-                else:
-                    ticker_df = pd.DataFrame()
-                render_ticker_content(sym, ticker_df)
+    counts = {}
+    if not df.empty and "ticker" in df.columns:
+        counts = df.groupby("ticker").size().to_dict()
+    tab_labels = []
+    for t in ticker_list:
+        sym = t["ticker"]
+        n = counts.get(sym, 0)
+        tab_labels.append(f"{sym} ({n})" if n > 0 else sym)
+    tabs = st.tabs(tab_labels)
+    for tab, t in zip(tabs, ticker_list):
+        sym = t["ticker"]
+        with tab:
+            if not df.empty and "ticker" in df.columns:
+                ticker_df = df[df["ticker"] == sym].copy()
+            else:
+                ticker_df = pd.DataFrame()
+            render_ticker_content(sym, ticker_df)
