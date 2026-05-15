@@ -6,6 +6,7 @@ Finnhub API 기반 + Gemini 번역/요약
 import hashlib
 import json
 import os
+import re
 import requests
 import time
 from datetime import datetime, timedelta
@@ -59,45 +60,73 @@ def translate_and_summarize(articles, model, ticker='', company_name=''):
     articles_text = ''
     for i, a in enumerate(articles):
         if a.get('content'):
-            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n스니펫: {a['content']}\n"
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n내용: {a['content']}\n"
         else:
-            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n스니펫: (없음 - 제목 기반으로 요약)\n"
+            articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n내용: (스니펫 없음)\n"
 
-    prompt = f"""다음은 {ticker}({company_name}) 관련 최신 미국 주식 뉴스입니다.
+    prompt = f"""다음은 Finnhub에서 수집한 {ticker}({company_name}) 관련 최신 뉴스입니다.
 {articles_text}
-아래 두 가지 작업을 수행하고, 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+위 Finnhub 기사들을 기반으로, Google 검색을 활용해 오늘 {ticker} 관련 추가 뉴스와 시장 분석을 보완하여 아래 JSON을 작성하세요.
+반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
 
 {{
   "articles": [
     {{
       "title_kr": "기사 0 제목을 자연스러운 한국어로 번역",
-      "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약 (스니펫 없으면 제목 기반으로 작성)"
+      "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약"
     }}
   ],
-  "summary_kr": "전체 기사를 종합 분석한 오늘의 뉴스 동향 (1000자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
+  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 오늘의 뉴스 브리핑 (1200자 이내)\\n\\n[핵심 이슈] 오늘 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
 }}"""
 
-    try:
-        response = model.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
-        text = response.text.strip()
-
+    def _parse_json(text):
+        """JSON 블록 추출 (grounding 인용 마커 등 전처리)"""
+        text = text.strip()
         if text.startswith('```'):
             lines = text.split('\n')
             text = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
             if text.startswith('json'):
                 text = text[4:].strip()
+        # grounding이 JSON 앞뒤에 텍스트를 추가한 경우 JSON 블록만 추출
+        m = re.search(r'\{[\s\S]*\}', text)
+        if m:
+            text = m.group(0)
+        return json.loads(text)
 
-        result = json.loads(text.strip())
+    # ── 1차 시도: Google Search Grounding ────────────────────────
+    try:
+        from google.genai import types
+        config = types.GenerateContentConfig(
+            tools=[types.Tool(google_search=types.GoogleSearch())]
+        )
+        response = model.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=config
+        )
+        result = _parse_json(response.text)
+        print(f"  [Gemini+Grounding] {ticker} 브리핑 완료 (Google Search 보완)")
         return {
             'articles': result.get('articles', empty['articles']),
             'summary_kr': result.get('summary_kr', '')
         }
+    except Exception as e1:
+        print(f"  [Gemini] Grounding 실패 ({e1}), 기본 모드로 재시도")
 
-    except Exception as e:
-        print(f"  [Gemini 오류] 번역/요약 실패: {e}")
+    # ── 2차 시도: Grounding 없이 기본 모드 ───────────────────────
+    try:
+        response = model.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        result = _parse_json(response.text)
+        print(f"  [Gemini] {ticker} 브리핑 완료 (기본 모드)")
+        return {
+            'articles': result.get('articles', empty['articles']),
+            'summary_kr': result.get('summary_kr', '')
+        }
+    except Exception as e2:
+        print(f"  [Gemini 오류] 번역/요약 실패: {e2}")
         return empty
 
 
@@ -171,22 +200,22 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         for i, a in enumerate(collected):
             g = gemini_articles[i] if i < len(gemini_articles) else {}
             news_items.append({
-                'ticker':           ticker,
-                'company':          company_name,
-                'title':            a['title'],
-                'link':             a['link'],
-                'published':        a['published'],
-                'collected_at':     now_kst_str,
-                'url_hash':         a['url_hash'],
-                'title_kr':         g.get('title_kr', ''),
-                'summary_kr':       summary_kr if i == 0 else '',
+                'ticker':             ticker,
+                'company':            company_name,
+                'title':              a['title'],
+                'link':               a['link'],
+                'published':          a['published'],
+                'collected_at':       now_kst_str,
+                'url_hash':           a['url_hash'],
+                'title_kr':           g.get('title_kr', ''),
+                'summary_kr':         summary_kr if i == 0 else '',
                 'article_summary_kr': g.get('article_summary_kr', ''),
             })
 
         return news_items
 
     except Exception as e:
-        print(f"  [ERROR] {ticker} 수집 실패: {e}")
+        print(f'  [ERROR] {ticker} 수집 실패: {e}')
         return []
 
 
