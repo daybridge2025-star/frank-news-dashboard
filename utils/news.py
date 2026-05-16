@@ -78,7 +78,7 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
       "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약"
     }}
   ],
-  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 최신 뉴스 브리핑 (1200자 이내)\\n\\n[핵심 이슈] 가장 중요한 이슈 2~3가지를 구체적으로 서술\\n\\n[투자 포인트] 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 전반적인 시장 및 종목 동향 평가"
+  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 최신 뉴스 브리핑. 불필요한 수식어 없이 핵심 위주로 각 섹션 2~3문장 간결하게 서술. 총 800자 이내.\\n\\n[핵심 이슈] 🔥 가장 중요한 이슈 2~3가지를 구체적 수치·사실 중심으로 서술\\n\\n[투자 포인트] 💡 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 📊 전반적인 시장 및 종목 동향 — 센티멘트 평가"
 }}"""
 
     def _parse_json(text):
@@ -195,7 +195,10 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
             gemini_input = [{'title': a['title'], 'content': a['content']} for a in collected]
             today_label = now_kst.strftime('%Y년 %m월 %d일')
             result = translate_and_summarize(gemini_input, model, ticker, company_name, today_str=today_label)
-            gemini_articles = result['articles']
+            raw_arts = result.get('articles', [])
+            # collected 수에 맞게 패딩 (Gemini가 적게 반환해도 안전)
+            gemini_articles = raw_arts + [{'title_kr': '', 'article_summary_kr': ''}
+                                          for _ in range(max(0, len(collected) - len(raw_arts)))]
             summary_kr = result['summary_kr']
 
         # news_items 조합
