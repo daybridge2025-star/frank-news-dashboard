@@ -374,10 +374,12 @@ def enrich_fundamentals(fundamentals: dict, industry_override: str = '') -> dict
     ind_wacc      = get_industry_wacc(damod_ind)
     ind_ev_ebitda = get_industry_ev_ebitda(damod_ind)
     ind_roic      = get_industry_roic(damod_ind)
+    ind_beta      = get_industry_beta_unlevered(damod_ind)
 
     f['industry_wacc']      = ind_wacc
     f['industry_ev_ebitda'] = ind_ev_ebitda
     f['industry_roic']      = ind_roic
+    f['industry_beta']      = ind_beta
 
     debt   = f.get('debt', 0) or 0
     equity = f.get('equity') or 0
