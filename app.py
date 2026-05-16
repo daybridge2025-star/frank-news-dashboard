@@ -1441,38 +1441,3 @@ else:
             else:
                 ticker_df = pd.DataFrame()
             render_ticker_content(sym, ticker_df)
-xception as e:
-                st.error(f"삭제 실패: {e}")
-    else:
-        st.info("등록된 종목이 없습니다.")
-
-# 메인 ─────────────────────────────────────────────────
-st.title("🎯 ValueHunter")
-st.caption("퀀트 기반 정량적 가치분석 대시보드 | EDGAR·Damodaran·Finnhub 연동 | 2시간마다 업데이트")
-st.divider()
-df = load_news()
-tickers = load_tickers()
-if df.empty or not tickers:
-    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
-    st.stop()
-ticker_list = tickers if tickers else []
-if not ticker_list:
-    st.info("사이드바에서 종목을 추가하세요.")
-else:
-    counts = {}
-    if not df.empty and "ticker" in df.columns:
-        counts = df.groupby("ticker").size().to_dict()
-    tab_labels = []
-    for t in ticker_list:
-        sym = t["ticker"]
-        n = counts.get(sym, 0)
-        tab_labels.append(f"{sym} ({n})" if n > 0 else sym)
-    tabs = st.tabs(tab_labels)
-    for tab, t in zip(tabs, ticker_list):
-        sym = t["ticker"]
-        with tab:
-            if not df.empty and "ticker" in df.columns:
-                ticker_df = df[df["ticker"] == sym].copy()
-            else:
-                ticker_df = pd.DataFrame()
-            render_ticker_content(sym, ticker_df)
