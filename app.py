@@ -206,6 +206,12 @@ def fetch_finnhub_data(ticker):
         r = requests.get(f'{BASE}/stock/earnings?symbol={ticker}&token={api_key}', headers=H, timeout=8)
         if r.ok:
             data['earnings'] = (r.json() or [])[:4]
+        # 6. 회사 프로필 (홈페이지 URL, 회사명, 로고 등)
+        r = requests.get(f'{BASE}/stock/profile2?symbol={ticker}&token={api_key}', headers=H, timeout=8)
+        if r.ok:
+            p = r.json()
+            data['company_weburl'] = p.get('weburl') or ''
+            data['company_name']   = p.get('name') or ''
     except Exception as e:
         print(f'[Finnhub] {ticker} 수집 오류: {e}')
     return data
@@ -257,6 +263,23 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         return f'${val:.0f}M'
 
     with st.expander('📈 기본 주가정보', expanded=False):
+        # ── 홈페이지 링크 ────────────────────────────────────────────
+        weburl = (data.get('company_weburl') or '').strip()
+        cname  = (data.get('company_name') or '').strip()
+        if weburl:
+            display_url = weburl.rstrip('/').replace('https://', '').replace('http://', '')
+            link_label  = cname if cname else display_url
+            st.markdown(
+                f'<div style="margin-bottom:10px;">'
+                f'<a href="{weburl}" target="_blank" rel="noopener noreferrer" '
+                f'style="font-size:0.78rem;color:#89b4fa;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">'
+                f'🌐 <span>{link_label}</span>'
+                f'<span style="font-size:0.65rem;opacity:0.6;">↗</span>'
+                f'</a>'
+                f'<span style="font-size:0.7rem;color:#585b70;margin-left:6px;">{display_url}</span>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
         # ── 안 A: 가격 4칩 ──────────────────────────────────────────
         chg_pct = data.get('change_pct')
         chg_cls = 'up' if (chg_pct or 0) > 0 else ('down' if (chg_pct or 0) < 0 else '')
@@ -1384,6 +1407,41 @@ with st.sidebar:
                 st.success(f"{ticker_options[selected_label]} 삭제 완료!")
                 st.rerun()
             except Exception as e:
+                st.error(f"삭제 실패: {e}")
+    else:
+        st.info("등록된 종목이 없습니다.")
+
+# 메인 ─────────────────────────────────────────────────
+st.title("🎯 ValueHunter")
+st.caption("퀀트 기반 정량적 가치분석 대시보드 | EDGAR·Damodaran·Finnhub 연동 | 2시간마다 업데이트")
+st.divider()
+df = load_news()
+tickers = load_tickers()
+if df.empty or not tickers:
+    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
+    st.stop()
+ticker_list = tickers if tickers else []
+if not ticker_list:
+    st.info("사이드바에서 종목을 추가하세요.")
+else:
+    counts = {}
+    if not df.empty and "ticker" in df.columns:
+        counts = df.groupby("ticker").size().to_dict()
+    tab_labels = []
+    for t in ticker_list:
+        sym = t["ticker"]
+        n = counts.get(sym, 0)
+        tab_labels.append(f"{sym} ({n})" if n > 0 else sym)
+    tabs = st.tabs(tab_labels)
+    for tab, t in zip(tabs, ticker_list):
+        sym = t["ticker"]
+        with tab:
+            if not df.empty and "ticker" in df.columns:
+                ticker_df = df[df["ticker"] == sym].copy()
+            else:
+                ticker_df = pd.DataFrame()
+            render_ticker_content(sym, ticker_df)
+xception as e:
                 st.error(f"삭제 실패: {e}")
     else:
         st.info("등록된 종목이 없습니다.")
