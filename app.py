@@ -1,5 +1,5 @@
 """
-Frank News Dashboard — Streamlit 웹 대시보드
+ValueHunter — 퀀트 기반 가치분석 대시보드
 Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별 탭으로 표시
 """
 
@@ -43,51 +43,70 @@ def et_date_str():
 
 def format_summary_html(text):
     """
-    summary_kr 텍스트를 섹션별 일관된 HTML로 변환.
-    - 라인별 처리로 헤더 직후 빈 줄 항상 제거 (종목별 공백 불일치 해소)
-    - 빈 줄은 단락 구분(</p><p>)으로, 연속 줄은 <br>로 처리
-    - [핵심 이슈] / [투자 포인트] / [시장 분위기] 헤더 스타일링
+    summary_kr → 섹션별 HTML 변환.
+    - 섹션 헤더 이전 종합 요약 텍스트 제거 (2a)
+    - 섹션 헤더에 이모지·색상 적용 (2b)
     """
     if not text:
         return ''
 
-    SECTION_HEADERS = {'[핵심 이슈]', '[투자 포인트]', '[시장 분위기]'}
+    # 이모지 포함 헤더 매핑
+    HEADER_MAP = {
+        '[핵심 이슈]':   ('🔥', '핵심 이슈',   '#f38ba8'),
+        '[투자 포인트]': ('💡', '투자 포인트', '#f9e2af'),
+        '[시장 분위기]': ('📊', '시장 분위기', '#89b4fa'),
+        # 이모지 이미 포함된 경우도 처리
+        '[핵심 이슈] 🔥': ('🔥', '핵심 이슈',   '#f38ba8'),
+        '[투자 포인트] 💡': ('💡', '투자 포인트', '#f9e2af'),
+        '[시장 분위기] 📊': ('📊', '시장 분위기', '#89b4fa'),
+    }
+    SECTION_KEYS = set(HEADER_MAP.keys())
 
-    # 연속 빈 줄 정규화
     text = re.sub(r'\n{3,}', '\n\n', text.strip())
-
     lines = text.split('\n')
-    processed = []  # (kind, value): kind = 'header' | 'blank' | 'text'
-    skip_empty = False  # 헤더 직후 빈 줄 스킵 플래그
+
+    processed = []
+    skip_empty = False
+    found_first_header = False  # 첫 헤더 이전 텍스트 무시 (2a)
 
     for line in lines:
         stripped = line.strip()
-        if stripped in SECTION_HEADERS:
-            processed.append(('header', stripped))
-            skip_empty = True          # 헤더 직후 빈 줄 무시 시작
+        # 헤더 감지 (이모지 포함/미포함 모두)
+        matched_key = None
+        for k in SECTION_KEYS:
+            if stripped.startswith(k) or stripped == k:
+                matched_key = k
+                break
+        if matched_key:
+            processed.append(('header', matched_key))
+            skip_empty = True
+            found_first_header = True
         elif not stripped:
-            if not skip_empty:
+            if not skip_empty and found_first_header:
                 processed.append(('blank', ''))
-            # skip_empty=True 이면 이 빈 줄을 무시(계속 루프)
         else:
-            skip_empty = False         # 실제 내용이 나오면 스킵 해제
-            processed.append(('text', stripped))
+            skip_empty = False
+            if found_first_header:           # 헤더 이전 텍스트 무시 (2a)
+                processed.append(('text', stripped))
 
-    # HTML 조합
     html_parts = []
     current_lines = []
 
     def flush_para():
         if current_lines:
             html_parts.append(
-                f'<p class="brief-para">{"<br>".join(current_lines)}</p>'
+                '<p class="brief-para">' + '<br>'.join(current_lines) + '</p>'
             )
             current_lines.clear()
 
     for kind, val in processed:
         if kind == 'header':
             flush_para()
-            html_parts.append(f'<p class="brief-section">{val}</p>')
+            emoji, label, color = HEADER_MAP.get(val, ('', val, '#cdd6f4'))
+            html_parts.append(
+                '<p class="brief-section" style="color:' + color + ';border-left:3px solid ' + color + ';">' +
+                emoji + ' ' + label + '</p>'
+            )
         elif kind == 'blank':
             flush_para()
         else:
@@ -138,6 +157,7 @@ def fetch_finnhub_data(ticker):
             data.update({
                 'prev_close': q.get('pc'), 'change': q.get('d'),
                 'change_pct': q.get('dp'), 'current': q.get('c'),
+                'quote_time': q.get('t'),  # unix timestamp (마지막 거래)
             })
         # 2. 펀더멘탈 지표 전체
         r = requests.get(f'{BASE}/stock/metric?symbol={ticker}&metric=all&token={api_key}', headers=H, timeout=8)
@@ -206,7 +226,7 @@ def render_premium_lock(icon, title, desc):
     )
 
 
-def render_stock_header(ticker_sym, data):
+def render_stock_header(ticker_sym, data, fundamentals=None):
     """
     안 A: 탭 상단 가격 4칩 + 핵심지표 6칩 (항상 표시)
     안 B: 성장률·애널리스트·어닝 히스토리 expander (접기/펼치기)
@@ -236,7 +256,7 @@ def render_stock_header(ticker_sym, data):
             return f'${val / 1_000:.0f}B'
         return f'${val:.0f}M'
 
-    with st.expander('📈 기본 주가정보', expanded=True):
+    with st.expander('📈 기본 주가정보', expanded=False):
         # ── 안 A: 가격 4칩 ──────────────────────────────────────────
         chg_pct = data.get('change_pct')
         chg_cls = 'up' if (chg_pct or 0) > 0 else ('down' if (chg_pct or 0) < 0 else '')
@@ -248,9 +268,22 @@ def render_stock_header(ticker_sym, data):
         l52  = _v(data.get('week52l'),    '.2f', '$')
         mcap = _fmt_mcap(data.get('mcap'))
 
+        # 기준일시 (ET 장 종료 기준)
+        qt = data.get('quote_time')
+        qt_str = ''
+        if qt:
+            try:
+                qt_dt  = datetime.fromtimestamp(qt, tz=ET)
+                wd     = KR_WEEKDAY[qt_dt.weekday()]
+                qt_str = qt_dt.strftime(f'%m/%d({wd}) %H:%M ET')
+            except Exception:
+                qt_str = ''
+
+        qt_span = ('<span class="fc-date">' + qt_str + '</span>') if qt_str else ''
         st.markdown(
             f'<div class="fin-grid">'
-            f'<div class="fin-chip"><div class="fc-label">전일 종가</div><div class="fc-value">{pc}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">전일 종가 {qt_span}</div>'
+            f'<div class="fc-value">{pc}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">등락률</div><div class="fc-value {chg_cls}">{chg_str}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 고</div><div class="fc-value">{h52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저</div><div class="fc-value">{l52}</div></div>'
@@ -268,6 +301,13 @@ def render_stock_header(ticker_sym, data):
         div     = f'{div_v:.2f}%' if div_v is not None else '—'
         beta    = _v(data.get('beta'),      '.2f')
 
+        # 업종 베타 + 업종명 (fundamentals에서)
+        ind_beta_val = (fundamentals.get('industry_beta') if fundamentals else None)
+        ind_name_s   = (fundamentals.get('damod_industry') or '') if fundamentals else ''
+        beta_label   = '베타'
+        if ind_beta_val is not None:
+            beta_label = f'베타  <span class="fc-date">업종 {round(ind_beta_val,2)} · {ind_name_s}</span>'
+
         st.markdown(
             f'<div class="fin-grid">'
             f'<div class="fin-chip"><div class="fc-label">PER (TTM)</div><div class="fc-value">{pe}</div></div>'
@@ -275,7 +315,7 @@ def render_stock_header(ticker_sym, data):
             f'<div class="fin-chip"><div class="fc-label">EPS (TTM)</div><div class="fc-value">{eps}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">목표주가 (평균)</div><div class="fc-value">{target}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">배당수익률</div><div class="fc-value">{div}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">베타</div><div class="fc-value">{beta}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">{beta_label}</div><div class="fc-value">{beta}</div></div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -390,7 +430,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
         except Exception:
             pass
 
-    with st.expander('🔬 투자 분석 (프리미엄)', expanded=True):
+    with st.expander('🔬 투자 분석 (프리미엄)', expanded=False):
 
         # ── 업종 배지 + 기업 유형 배지 + 업종 선택기 ────────────────
         if PREMIUM_UNLOCKED and fundamentals:
@@ -500,7 +540,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     + ind_c + '</div>'
                     + _warns(wlist)
                     + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -559,7 +599,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     + i_c + d_c + '</div>'
                     + _warns(wlist)
                     + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -617,7 +657,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     + p_c + m_c + w_c + '</div>'
                     + _warns(wlist)
                     + '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -692,7 +732,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     '<div class="chip-value">' + str(rdcf_g) + '%/yr</div></div>'
                     + f_c + w_c + '</div>'
                     '<div class="analysis-verdict ' + v_cls + '">' + v_txt + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -758,7 +798,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     '<div class="analysis-card-subtitle">성장 시나리오별 DCF 내재가치 — 낙관·기본·비관 범위 확인</div>'
                     '<div class="scenario-row">' + bear_h + base_h + bull_h + '</div>'
                     '<div class="analysis-verdict ' + v_cls5 + '">' + v_txt5 + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint5 + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -818,7 +858,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     '<div class="chip-value ' + p_cls + '">' + str(round(psr_v, 1)) + 'x</div></div>'
                     + rg_c + '</div>'
                     '<div class="analysis-verdict ' + v_cls6 + '">' + v_txt6 + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint6 + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -877,7 +917,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
                     + rg_c + fm_c + '</div>'
                     + r40_bar
                     + '<div class="analysis-verdict ' + v_cls7 + '">' + v_txt7 + '</div>'
-                    '<details class="analysis-hint-details"><summary>▶ 해석 보기</summary>'
+                    '<details class="analysis-hint-details" open><summary>▶ 해석 보기</summary>'
                     '<div class="analysis-hint">' + hint7 + '</div></details>'
                     '</div>', unsafe_allow_html=True
                 )
@@ -892,34 +932,9 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
             render_premium_lock('📐', 'Rule of 40 — 성장·수익성 균형',
                 '매출 성장률과 FCF 마진의 합이 40 이상이면 건강한 고성장 기업으로 판단합니다.')
 
-    # 디버그 expander (with 블록 밖)
-    if PREMIUM_UNLOCKED and fundamentals:
-        dbg = fundamentals.get('debug', {})
-        err = fundamentals.get('error', '')
-        with st.expander('🔍 EDGAR 데이터 연동 상태', expanded=False):
-            if err:
-                st.error('오류: ' + str(err))
-            cik    = dbg.get('cik', '—')
-            loaded = dbg.get('facts_loaded', False)
-            is_etf = dbg.get('is_etf', False)
-            tags   = dbg.get('tags_found', {})
-            cols   = st.columns(3)
-            cols[0].metric('CIK', cik or '미발견')
-            cols[1].metric('EDGAR 로드', '✅' if loaded else '❌')
-            cols[2].metric('ETF 여부', 'ETF' if is_etf else '일반주')
-            damod_ind = fundamentals.get('damod_industry', '')
-            wacc_u    = fundamentals.get('wacc_used')
-            ind_src   = fundamentals.get('industry_source', '')
-            src_info  = (damod_ind or 'None') + ' (' + ind_src + ')'
-            wacc_info = str(round(wacc_u, 2)) + '%' if wacc_u else '—'
-            st.caption('업종 매핑: ' + src_info + ' | WACC: ' + wacc_info)
-            if tags:
-                ok  = [t for t, v in tags.items() if v]
-                nok = [t for t, v in tags.items() if not v]
-                if ok:
-                    st.success('확인된 태그: ' + ', '.join(ok))
-                if nok:
-                    st.warning('미확인 태그: ' + ', '.join(nok))
+    # EDGAR 연동 상태: 오류 시에만 표시
+    if PREMIUM_UNLOCKED and fundamentals and fundamentals.get('error'):
+        st.warning('⚠️ EDGAR 연동 오류: ' + str(fundamentals['error']))
 
 
 
@@ -1000,18 +1015,19 @@ def render_ticker_content(ticker_sym, ticker_df):
     # ── 안 A + 안 B: 가격·지표 카드 + 상세 expander ────────────
     # 기사 유무와 무관하게 항상 표시
     fin_data = fetch_finnhub_data(ticker_sym)
-    render_stock_header(ticker_sym, fin_data)
 
-    # ── 프리미엄 분석 섹션 ──────────────────────────────────────
-    # 기사 유무와 무관하게 항상 표시 (EDGAR + Damodaran 연동, 24시간 캐시)
+    # 업종 베타·기준일시 등을 주가정보 카드에도 전달하기 위해 먼저 fetch
     if PREMIUM_UNLOCKED:
         _price  = float(fin_data.get('current') or fin_data.get('prev_close') or 0)
         _mcap   = float(fin_data.get('mcap') or 0)
-        # 업종 오버라이드: 사용자가 선택한 값이 있으면 캐시 키에 반영
         _ind_ov = st.session_state.get('ind_override_' + ticker_sym, '')
         fundamentals = fetch_premium_fundamentals(ticker_sym, _price, _mcap, _ind_ov)
     else:
         fundamentals = None
+
+    render_stock_header(ticker_sym, fin_data, fundamentals=fundamentals)
+
+    # ── 프리미엄 분석 섹션 ──────────────────────────────────────
     render_premium_analysis(ticker_sym, fundamentals=fundamentals if fundamentals else None)
 
     # 기사 없으면 안내 후 종료
@@ -1115,7 +1131,7 @@ def render_ticker_content(ticker_sym, ticker_df):
 
 
 # ── 페이지 설정 + CSS 주입 ───────────────────────────────────────
-st.set_page_config(page_title='Frank News Dashboard', page_icon='📰', layout='wide')
+st.set_page_config(page_title='ValueHunter', page_icon='🎯', layout='wide')
 
 st.markdown("""
 <style>
@@ -1164,9 +1180,9 @@ st.markdown("""
 .verdict-pass { background: #2e1a1a; color: #f38ba8; }
 .verdict-wait { background: #1e1e2e; color: #a6adc8; border: 1px solid #313244; }
 .analysis-hint-details summary {
-    font-size: 0.78rem; color: #7f849c; cursor: pointer; margin-top: 6px;
+    font-size: 0.82rem; color: #89b4fa; cursor: pointer; margin-top: 6px; font-weight: 500;
 }
-.analysis-hint { font-size: 0.8rem; color: #a6adc8; margin-top: 6px; line-height: 1.5; }
+.analysis-hint { font-size: 0.85rem; color: #a6adc8; margin-top: 6px; line-height: 1.6; }
 
 /* ── 업종 배지 ── */
 .industry-badge {
@@ -1266,6 +1282,49 @@ st.markdown("""
 /* ── 애널리스트 바 (rec-bar-wrap 별칭) ── */
 .rec-bar-wrap { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
 
+/* ── 탭 인덱스 색상 (책 인덱스 스타일) ── */
+[data-baseweb="tab-list"] button:nth-child(1)  { color: #89b4fa !important; border-bottom-color: #89b4fa !important; }
+[data-baseweb="tab-list"] button:nth-child(2)  { color: #a6e3a1 !important; border-bottom-color: #a6e3a1 !important; }
+[data-baseweb="tab-list"] button:nth-child(3)  { color: #fab387 !important; border-bottom-color: #fab387 !important; }
+[data-baseweb="tab-list"] button:nth-child(4)  { color: #f9e2af !important; border-bottom-color: #f9e2af !important; }
+[data-baseweb="tab-list"] button:nth-child(5)  { color: #cba6f7 !important; border-bottom-color: #cba6f7 !important; }
+[data-baseweb="tab-list"] button:nth-child(6)  { color: #94e2d5 !important; border-bottom-color: #94e2d5 !important; }
+[data-baseweb="tab-list"] button:nth-child(7)  { color: #eba0ac !important; border-bottom-color: #eba0ac !important; }
+[data-baseweb="tab-list"] button:nth-child(8)  { color: #89dceb !important; border-bottom-color: #89dceb !important; }
+[data-baseweb="tab-list"] button:nth-child(9)  { color: #b5e8b0 !important; border-bottom-color: #b5e8b0 !important; }
+[data-baseweb="tab-list"] button:nth-child(10) { color: #f2cdcd !important; border-bottom-color: #f2cdcd !important; }
+/* 선택된 탭 강조 */
+[data-baseweb="tab-list"] button[aria-selected="true"] {
+    font-weight: 700 !important; opacity: 1 !important;
+}
+[data-baseweb="tab-list"] button[aria-selected="false"] {
+    opacity: 0.6 !important;
+}
+/* 날짜·보조 텍스트 칩 */
+.fc-date {
+    font-size: 0.65rem; color: #7f849c; font-weight: 400;
+    margin-left: 6px; vertical-align: middle;
+}
+/* brief-section 개선 */
+.brief-section {
+    font-size: 0.88rem !important; font-weight: 700 !important;
+    margin: 14px 0 6px 0 !important; padding: 5px 12px !important;
+    border-radius: 5px !important; background: rgba(255,255,255,0.04) !important;
+    display: block !important;
+}
+.brief-para {
+    font-size: 0.85rem !important; color: #cdd6f4 !important;
+    line-height: 1.75 !important; margin: 4px 0 10px 0 !important;
+}
+
+/* ── 뉴스 종합 브리핑 박스 ── */
+.brief-box {
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 10px;
+    padding: 18px 22px; margin: 12px 0;
+}
+.brief-title { font-size: 1rem; font-weight: 700; color: #cdd6f4; margin-bottom: 4px; }
+.brief-time  { font-size: 0.75rem; color: #7f849c; margin-bottom: 14px; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1330,8 +1389,8 @@ with st.sidebar:
         st.info("등록된 종목이 없습니다.")
 
 # 메인 ─────────────────────────────────────────────────
-st.title("📰 Frank News Dashboard")
-st.caption("미국 주식 뉴스 자동 수집 대시보드 | Finnhub 기반 | 2시간마다 업데이트")
+st.title("🎯 ValueHunter")
+st.caption("퀀트 기반 정량적 가치분석 대시보드 | EDGAR·Damodaran·Finnhub 연동 | 2시간마다 업데이트")
 st.divider()
 df = load_news()
 tickers = load_tickers()
