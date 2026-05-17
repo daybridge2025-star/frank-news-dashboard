@@ -342,11 +342,23 @@ def fetch_fred_data():
             result['t10y']['value'] - result['t2y']['value'], 2)
 
     # Buffett Indicator: Wilshire5000 / GDP * 100
-    # WILL5000INDFC discontinued 2023 → fallback chain
-    for _wsid in ['WILL5000INDFC', 'WILL5000PR', 'WILL5000IND']:
-        w, wd = _latest(_wsid)
-        if w is not None:
-            break
+    # FRED removed all Wilshire data June 2024 → use Yahoo Finance ^W5000
+    try:
+        yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
+                '%5EW5000?interval=1d&range=5d')
+        yr = requests.get(yurl, headers=H, timeout=10)
+        if yr.ok:
+            _ch = yr.json().get('chart', {}).get('result', [{}])[0]
+            _closes = _ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+            _times  = _ch.get('timestamp', [])
+            _closes = [c for c in _closes if c is not None]
+            if _closes and _times:
+                w  = _closes[-1]
+                import datetime as _dt
+                wd = _dt.datetime.fromtimestamp(_times[-1]).strftime('%Y-%m-%d')
+    except Exception as _e:
+        print(f'[Buffett Yahoo] {_e}')
+        w = None
     g, _  = _latest('GDP')
     if w is not None and g is not None and g > 0:
         result['buffett'] = {'value': round(w / g * 100, 1), 'date': wd}
