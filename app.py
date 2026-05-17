@@ -1699,11 +1699,11 @@ with st.sidebar:
                 '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd)
         # 미국 국가부채
         if 'us_debt' in fred_data and 'krw_usd' in fred_data:
-            debt_b = fred_data['us_debt']['value']   # billions USD
+            debt_m = fred_data['us_debt']['value']   # millions USD (GFDEBTN unit)
             dd     = fred_data['us_debt']['date']
             krw_r  = fred_data['krw_usd']['value']
-            debt_t_usd = debt_b / 1000               # trillions USD
-            debt_t_krw = debt_b * 1e9 * krw_r / 1e16  # 경(京) KRW
+            debt_t_usd = debt_m / 1_000_000             # millions → trillions
+            debt_t_krw = debt_m * 1e6 * krw_r / 1e16   # millions USD → KRW → 경(京)
             rows_html += _macro_row(
                 '미국 국가부채',
                 f'${debt_t_usd:.1f}T / {debt_t_krw:.1f}경원',
