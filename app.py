@@ -333,8 +333,12 @@ def fetch_fred_data():
         result['spread'] = round(
             result['t10y']['value'] - result['t2y']['value'], 2)
 
-    # Buffett Indicator: WILL5000INDFC / GDP * 100
-    w, wd = _latest('WILL5000INDFC')
+    # Buffett Indicator: Wilshire5000 / GDP * 100
+    # WILL5000INDFC discontinued 2023 → fallback chain
+    for _wsid in ['WILL5000INDFC', 'WILL5000PR', 'WILL5000IND']:
+        w, wd = _latest(_wsid)
+        if w is not None:
+            break
     g, _  = _latest('GDP')
     if w is not None and g is not None and g > 0:
         result['buffett'] = {'value': round(w / g * 100, 1), 'date': wd}
@@ -353,12 +357,10 @@ def fetch_cape_data():
         r = requests.get('https://www.multpl.com/shiller-pe',
                          headers=H, timeout=10)
         if r.ok:
+            # HTML: <div id='current'><b>...</b>\n41.66\n...
             m = _re.search(
-                r'id=["\']current["\'][^>]*>\s*([\d.]+)', r.text)
-            if not m:
-                m = _re.search(
-                    r'<span[^>]*class=["\']answer["\'][^>]*>([\d.]+)',
-                    r.text)
+                r'id=["\']current["\'][^>]*>[\s\S]*?</b>\s*([\d.]+)',
+                r.text)
             if m:
                 current = float(m.group(1))
     except Exception as e:
@@ -368,12 +370,16 @@ def fetch_cape_data():
             'https://www.multpl.com/shiller-pe/table/by-year',
             headers=H, timeout=15)
         if r.ok:
+            # Format: <td>May 15, 2026</td><td>\n 41.66\n</td>
             rows = _re.findall(
-                r'<tr[^>]*>\s*<td[^>]*>([A-Z][a-z]+ \d{4})</td>'
-                r'\s*<td[^>]*>([\d.]+)', r.text)
+                r'<td>([A-Z][a-z]+ (?:\d{1,2}, )?\d{4})</td>'
+                r'\s*<td>\s*([\d.]+)', r.text)
             for date_str, val_str in rows:
                 try:
-                    history.append((date_str, float(val_str)))
+                    # Extract year only for chart label
+                    yr = _re.search(r'\d{4}', date_str)
+                    label = yr.group() if yr else date_str
+                    history.append((label, float(val_str)))
                 except Exception:
                     pass
     except Exception as e:
