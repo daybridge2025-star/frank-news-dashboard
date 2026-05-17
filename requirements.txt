@@ -6,3 +6,4 @@ pandas>=2.2.0
 pytz>=2024.1
 requests>=2.31.0
 google-genai>=1.0.0
+plotly>=5.0.0
