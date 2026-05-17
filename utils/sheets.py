@@ -1,6 +1,6 @@
 """
-Google Sheets 연동 유틸리티
-OAuth refresh token 방식으로 인증
+Google Sheets utility
+OAuth refresh token authentication
 """
 
 import os
@@ -19,14 +19,14 @@ SCOPES = [
 ]
 
 DEFAULT_TICKERS = [
-    {'ticker': 'TSLA', 'company_name': '테슬라'},
-    {'ticker': 'RKLB', 'company_name': '로켓랩'},
-    {'ticker': 'PLTR', 'company_name': '팔란티어'},
-    {'ticker': 'SATL', 'company_name': '세틀로직'},
-    {'ticker': 'VST',  'company_name': '비스트라 에너지'},
-    {'ticker': 'IONQ', 'company_name': '아이온큐'},
-    {'ticker': 'ONDS', 'company_name': '온다스'},
-    {'ticker': 'KTOS', 'company_name': '크라토스'},
+    {'ticker': 'TSLA', 'company_name': 'Tesla'},
+    {'ticker': 'RKLB', 'company_name': 'Rocket Lab'},
+    {'ticker': 'PLTR', 'company_name': 'Palantir'},
+    {'ticker': 'SATL', 'company_name': 'Satellogic'},
+    {'ticker': 'VST',  'company_name': 'Vistra'},
+    {'ticker': 'IONQ', 'company_name': 'IonQ'},
+    {'ticker': 'ONDS', 'company_name': 'Ondas'},
+    {'ticker': 'KTOS', 'company_name': 'Kratos'},
 ]
 
 TODAY_HEADERS = [
@@ -37,7 +37,6 @@ CONFIG_HEADERS = ['ticker', 'company_name', 'added_date']
 
 
 def get_gspread_client():
-    """OAuth refresh token으로 gspread 클라이언트 생성"""
     creds = Credentials(
         token=None,
         refresh_token=os.environ['GOOGLE_REFRESH_TOKEN'],
@@ -56,7 +55,6 @@ def get_spreadsheet():
 
 
 def _ensure_sheet(ss, name, headers, rows=2000, cols=10):
-    """시트가 없으면 생성 후 헤더 추가"""
     try:
         sheet = ss.worksheet(name)
     except gspread.WorksheetNotFound:
@@ -66,7 +64,6 @@ def _ensure_sheet(ss, name, headers, rows=2000, cols=10):
 
 
 def get_tickers():
-    """CONFIG 시트에서 종목 목록 반환. 없으면 기본값으로 초기화."""
     try:
         ss = get_spreadsheet()
         try:
@@ -89,7 +86,6 @@ def get_tickers():
 
 
 def add_ticker(ticker, company_name):
-    """종목 추가"""
     ss = get_spreadsheet()
     config = _ensure_sheet(ss, 'CONFIG', CONFIG_HEADERS, 200, 3)
     today_str = datetime.now(KST).strftime('%Y-%m-%d')
@@ -97,7 +93,6 @@ def add_ticker(ticker, company_name):
 
 
 def remove_ticker(ticker):
-    """종목 삭제"""
     ss = get_spreadsheet()
     try:
         config = ss.worksheet('CONFIG')
@@ -112,9 +107,9 @@ def remove_ticker(ticker):
 
 def reorder_tickers(ordered_list):
     """
-    종목 순서 변경 — CONFIG 시트를 새 순서로 전체 재작성.
-    ordered_list: [{'ticker': 'AAPL', 'company_name': '애플', 'added_date': '...'}, ...]
-    향후 확장(주요주주·섹터 등) 시 이 함수만 수정.
+    Reorder tickers by rewriting the entire CONFIG sheet.
+    ordered_list: list of dicts with 'ticker', 'company_name', 'added_date'
+    Extensible: add new fields (major shareholders, CEO, etc.) here only.
     """
     ss = get_spreadsheet()
     config = _ensure_sheet(ss, 'CONFIG', CONFIG_HEADERS, 200, 3)
@@ -129,7 +124,6 @@ def reorder_tickers(ordered_list):
 
 
 def get_today_news():
-    """TODAY 시트 전체 데이터를 DataFrame으로 반환"""
     try:
         ss = get_spreadsheet()
         try:
@@ -148,24 +142,20 @@ def get_today_news():
 
 
 def get_existing_hashes(today_sheet):
-    """TODAY 시트의 url_hash 집합 반환 (중복 방지용)"""
     try:
-        hashes = today_sheet.col_values(7)  # 7번째 열: url_hash
-        return set(hashes[1:])  # 헤더 제외
+        hashes = today_sheet.col_values(7)
+        return set(hashes[1:])
     except Exception:
         return set()
 
 
 def save_news_to_today(news_items):
-    """신규 뉴스를 TODAY 시트에 저장. 저장된 건수 반환."""
     if not news_items:
         return 0
-
     try:
         ss = get_spreadsheet()
         today_sheet = _ensure_sheet(ss, 'TODAY', TODAY_HEADERS, 2000, 10)
         existing = get_existing_hashes(today_sheet)
-
         new_rows = []
         for item in news_items:
             if item['url_hash'] not in existing:
@@ -176,12 +166,9 @@ def save_news_to_today(news_items):
                     item.get('article_summary_kr', '')
                 ])
                 existing.add(item['url_hash'])
-
         if new_rows:
             today_sheet.append_rows(new_rows, value_input_option='RAW')
-
         return len(new_rows)
-
     except Exception as e:
         print(f"[ERROR] save_news_to_today: {e}")
         return 0
@@ -189,10 +176,10 @@ def save_news_to_today(news_items):
 
 def archive_and_reset():
     """
-    자정 작업:
-    1. TODAY 시트 → 종목별 아카이브 시트로 이동
-    2. 각 아카이브 시트에서 90일 초과 데이터 삭제
-    3. TODAY 시트 초기화
+    Midnight job:
+    1. Move TODAY sheet -> per-ticker archive sheets
+    2. Delete rows older than 90 days from each archive
+    3. Clear TODAY sheet
     """
     ss = get_spreadsheet()
     cutoff = datetime.now(KST) - timedelta(days=90)
@@ -200,23 +187,20 @@ def archive_and_reset():
     try:
         today_sheet = ss.worksheet('TODAY')
     except gspread.WorksheetNotFound:
-        print("TODAY 시트 없음, 스킵")
+        print("TODAY sheet not found, skipping")
         return
 
     records = today_sheet.get_all_records()
     if not records:
-        print("TODAY 시트 비어있음, 초기화만 수행")
         today_sheet.clear()
         today_sheet.append_row(TODAY_HEADERS)
         return
 
     df = pd.DataFrame(records)
 
-    # 종목별 아카이브
     for ticker in df['ticker'].unique():
         ticker_df = df[df['ticker'] == ticker]
         archive = _ensure_sheet(ss, ticker, TODAY_HEADERS, 5000, 10)
-
         existing = get_existing_hashes(archive)
         new_rows = []
         for _, row in ticker_df.iterrows():
@@ -227,12 +211,9 @@ def archive_and_reset():
                     row.get('title_kr', ''), row.get('summary_kr', ''),
                     row.get('article_summary_kr', '')
                 ])
-
         if new_rows:
             archive.append_rows(new_rows, value_input_option='RAW')
-            print(f"  {ticker}: {len(new_rows)}건 아카이브")
 
-        # 90일 초과 삭제
         all_records = archive.get_all_records()
         keep, deleted = [], 0
         for r in all_records:
@@ -258,9 +239,7 @@ def archive_and_reset():
                     for r in keep
                 ]
                 archive.append_rows(rows, value_input_option='RAW')
-            print(f"  {ticker}: {deleted}건 90일 초과 삭제")
 
-    # TODAY 시트 초기화
     today_sheet.clear()
     today_sheet.append_row(TODAY_HEADERS)
-    print("TODAY 시트 초기화 완료")
+    print("TODAY sheet reset complete")
