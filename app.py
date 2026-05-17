@@ -332,10 +332,32 @@ def fetch_fred_data():
 
     for key, sid in [('fed_rate', 'FEDFUNDS'), ('t10y', 'DGS10'),
                      ('t2y', 'DGS2'), ('credit_spread', 'BAA10Y'),
-                     ('krw_usd', 'DEXKOUS'), ('us_debt', 'GFDEBTN')]:
+                     ('us_debt', 'GFDEBTN')]:
         v, d = _latest(sid)
         if v is not None:
             result[key] = {'value': v, 'date': d}
+
+    # 원/달러 환율: Yahoo Finance USDKRW=X (실시간) → DEXKOUS(FRED) 폴백
+    try:
+        _kurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
+                 'USDKRW%3DX?interval=1d&range=5d')
+        _kr = requests.get(_kurl, headers=H, timeout=10)
+        if _kr.ok:
+            _kch = _kr.json().get('chart', {}).get('result', [{}])[0]
+            _kc  = _kch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+            _kt  = _kch.get('timestamp', [])
+            _kc  = [c for c in _kc if c is not None]
+            if _kc and _kt:
+                import datetime as _dt2
+                _kdate = _dt2.datetime.fromtimestamp(_kt[-1]).strftime('%Y-%m-%d')
+                result['krw_usd'] = {'value': round(_kc[-1], 2), 'date': _kdate}
+    except Exception as _ke:
+        print(f'[KRW Yahoo] {_ke}')
+    # 폴백: FRED DEXKOUS (주 1회 업데이트)
+    if 'krw_usd' not in result:
+        _kv, _kd = _latest('DEXKOUS')
+        if _kv is not None:
+            result['krw_usd'] = {'value': _kv, 'date': _kd}
 
     if 't10y' in result and 't2y' in result:
         result['spread'] = round(
