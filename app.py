@@ -13,7 +13,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from utils.sheets import get_tickers, add_ticker, remove_ticker, get_today_news
+from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news
 from utils.edgar import get_edgar_fundamentals
 from utils.damodaran import enrich_fundamentals, INDUSTRY_CANDIDATES, INDUSTRY_OVERRIDE
 
@@ -217,6 +217,71 @@ def fetch_finnhub_data(ticker):
     return data
 
 
+@st.cache_data(ttl=86400)
+def fetch_fear_greed():
+    """
+    Fear & Greed Index 수집 (24시간 캐시).
+    1순위: CNN API  → production.dataviz.cnn.io
+    2순위: feargreedmeter.com 스크래핑
+    반환: {'score': int, 'rating': str, 'rating_kr': str, 'source': str} or None
+    """
+    H = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    RATING_KR = {
+        'Extreme Greed': '극단적 탐욕',
+        'Greed':         '탐욕',
+        'Neutral':       '중립',
+        'Fear':          '공포',
+        'Extreme Fear':  '극단적 공포',
+    }
+    def _rating_from_score(s):
+        if s >= 75: return 'Extreme Greed'
+        if s >= 55: return 'Greed'
+        if s >= 45: return 'Neutral'
+        if s >= 25: return 'Fear'
+        return 'Extreme Fear'
+    # 1. CNN API
+    try:
+        r = requests.get(
+            'https://production.dataviz.cnn.io/index/fearandgreed/graphdata',
+            headers=H, timeout=8
+        )
+        if r.ok:
+            fg = r.json().get('fear_and_greed', {})
+            score = fg.get('score')
+            rating = fg.get('rating', '')
+            if score is not None:
+                score = round(float(score))
+                if not rating:
+                    rating = _rating_from_score(score)
+                return {
+                    'score': score, 'rating': rating,
+                    'rating_kr': RATING_KR.get(rating, rating),
+                    'source': 'CNN'
+                }
+    except Exception as e:
+        print(f'[FearGreed] CNN 실패: {e}')
+    # 2. feargreedmeter.com 폴백
+    try:
+        r = requests.get('https://feargreedmeter.com/', headers=H, timeout=10)
+        if r.ok:
+            import re as _re
+            m = (_re.search(r'"(?:score|value)":\s*(\d{1,3})', r.text)
+                 or _re.search(r'class="[^"]*(?:score|value|number)[^"]*"[^>]*>(\d{1,3})', r.text)
+                 or _re.search(r'(?:Fear.*?Greed|Index)[^0-9]{0,30}(\d{1,3})', r.text, _re.IGNORECASE))
+            if m:
+                score = int(m.group(1))
+                if 0 <= score <= 100:
+                    rating = _rating_from_score(score)
+                    return {
+                        'score': score, 'rating': rating,
+                        'rating_kr': RATING_KR.get(rating, rating),
+                        'source': 'feargreedmeter.com'
+                    }
+    except Exception as e:
+        print(f'[FearGreed] feargreedmeter 폴백 실패: {e}')
+    return None
+
+
 def render_premium_lock(icon, title, desc):
     """프리미엄 잠금 플레이스홀더 카드."""
     st.markdown(
@@ -342,6 +407,29 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'</div>',
             unsafe_allow_html=True
         )
+
+        # ── 기업 정보 칩 (발행주식수·시총 / 향후: 주요주주·CEO 등) ──
+        company_chips = []
+        shares = (fundamentals.get('shares_outstanding') if fundamentals else None)
+        mcap_v = data.get('mcap')
+        if shares is not None:
+            if shares >= 1e9:
+                sh_str = f'{shares / 1e9:.2f}B주'
+            elif shares >= 1e6:
+                sh_str = f'{shares / 1e6:.0f}M주'
+            else:
+                sh_str = f'{shares:,.0f}주'
+            company_chips.append(('발행주식수', sh_str))
+        if mcap_v is not None:
+            company_chips.append(('시가총액', _fmt_mcap(mcap_v)))
+        # 향후 확장 예시: company_chips.append(('주요주주', '...'))
+        if company_chips:
+            chips_html = ''.join(
+                f'<div class="fin-chip"><div class="fc-label">{lbl}</div>'
+                f'<div class="fc-value">{val}</div></div>'
+                for lbl, val in company_chips
+            )
+            st.markdown(f'<div class="fin-grid">{chips_html}</div>', unsafe_allow_html=True)
 
         # ── 안 B: 상세 지표 expander ────────────────────────────────
         st.markdown('<hr style="border:none;border-top:1px solid #313244;margin:14px 0 6px 0">', unsafe_allow_html=True)
@@ -1013,6 +1101,7 @@ def clear_cache():
     load_tickers.clear()
     fetch_finnhub_data.clear()
     fetch_premium_fundamentals.clear()
+    fetch_fear_greed.clear()
 
 
 def render_ticker_content(ticker_sym, ticker_df):
@@ -1358,8 +1447,34 @@ with st.sidebar:
     if st.button("🔄 새로고침", use_container_width=True):
         clear_cache()
         st.rerun()
+    # Fear & Greed Index
+    fg = fetch_fear_greed()
+    if fg:
+        score  = fg['score']
+        rk     = fg['rating_kr']
+        src    = fg['source']
+        if score >= 75:   fg_color = '#f38ba8'
+        elif score >= 55: fg_color = '#fab387'
+        elif score >= 45: fg_color = '#f9e2af'
+        elif score >= 25: fg_color = '#94e2d5'
+        else:             fg_color = '#89b4fa'
+        st.markdown(
+            f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+            f'padding:10px 12px;margin:8px 0;">'
+            f'<div style="font-size:0.68rem;color:#7f849c;margin-bottom:4px;">공포탐욕지수</div>'
+            f'<div style="display:flex;align-items:center;gap:8px;">'
+            f'<span style="font-size:1.4rem;font-weight:700;color:{fg_color};">{score}</span>'
+            f'<span style="font-size:0.8rem;color:{fg_color};">{rk}</span>'
+            f'</div>'
+            f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
+            f'<div style="background:{fg_color};width:{score}%;height:4px;border-radius:3px;"></div>'
+            f'</div>'
+            f'<div style="font-size:0.62rem;color:#45475a;margin-top:4px;">출처: {src}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     st.divider()
-    st.subheader("➕ 종목 추가")
+    st.subheader("+ 종목 추가")
     if "pending_ticker" not in st.session_state:
         st.session_state["pending_ticker"] = ""
     if "pending_name" not in st.session_state:
@@ -1370,7 +1485,7 @@ with st.sidebar:
             max_chars=10,
             value=st.session_state["pending_ticker"]
         )
-        lookup_clicked = st.form_submit_button("🔍 회사명 조회", use_container_width=True)
+        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
     if lookup_clicked:
         t = ticker_input.upper().strip()
         if t:
@@ -1378,13 +1493,13 @@ with st.sidebar:
             st.session_state["pending_ticker"] = t
             st.session_state["pending_name"] = name
             if name:
-                st.success(f"{t} → {name}")
+                st.success(f"{t} -> {name}")
             else:
-                st.warning(f"{t}: 회사명을 찾을 수 없습니다. 티커를 확인하세요.")
+                st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
     if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
         t = st.session_state["pending_ticker"]
         name = st.session_state["pending_name"]
-        if st.button(f"✅ {t} ({name}) 추가", use_container_width=True, type="primary"):
+        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
             try:
                 add_ticker(t, name)
                 clear_cache()
@@ -1395,30 +1510,66 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"추가 실패: {e}")
     st.divider()
-    st.subheader("🗑️ 종목 삭제")
+    st.subheader("종목 순서 / 삭제")
     tickers_raw = load_tickers()
     if tickers_raw:
-        ticker_options = {f"{t['ticker']} ({t['company_name']})": t["ticker"] for t in tickers_raw}
-        selected_label = st.selectbox("삭제할 종목 선택", list(ticker_options.keys()))
-        if st.button("삭제", use_container_width=True, type="secondary"):
-            try:
-                remove_ticker(ticker_options[selected_label])
-                clear_cache()
-                st.success(f"{ticker_options[selected_label]} 삭제 완료!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"삭제 실패: {e}")
+        n = len(tickers_raw)
+        for i, t in enumerate(tickers_raw):
+            sym   = t['ticker']
+            cname = t.get('company_name', '')
+            col_nm, col_up, col_dn, col_dl = st.columns([3, 1, 1, 1])
+            with col_nm:
+                st.markdown(
+                    f'<div style="padding:5px 0;line-height:1.3;">'
+                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span><br>'
+                    f'<span style="font-size:0.7rem;color:#7f849c;">{cname}</span></div>',
+                    unsafe_allow_html=True
+                )
+            with col_up:
+                if i > 0:
+                    if st.button("up", key=f"up_{sym}_{i}", use_container_width=True):
+                        new_order = list(tickers_raw)
+                        new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
+                        try:
+                            reorder_tickers(new_order)
+                            load_tickers.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"순서 변경 실패: {e}")
+                else:
+                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
+            with col_dn:
+                if i < n - 1:
+                    if st.button("dn", key=f"dn_{sym}_{i}", use_container_width=True):
+                        new_order = list(tickers_raw)
+                        new_order[i], new_order[i + 1] = new_order[i + 1], new_order[i]
+                        try:
+                            reorder_tickers(new_order)
+                            load_tickers.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"순서 변경 실패: {e}")
+                else:
+                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
+            with col_dl:
+                if st.button("del", key=f"dl_{sym}_{i}", use_container_width=True):
+                    try:
+                        remove_ticker(sym)
+                        clear_cache()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"삭제 실패: {e}")
     else:
         st.info("등록된 종목이 없습니다.")
 
-# 메인 ─────────────────────────────────────────────────
-st.title("🎯 ValueHunter")
+# 메인
+st.title("ValueHunter")
 st.caption("퀀트 기반 정량적 가치분석 대시보드 | EDGAR·Damodaran·Finnhub 연동 | 2시간마다 업데이트")
 st.divider()
 df = load_news()
 tickers = load_tickers()
 if df.empty or not tickers:
-    st.info("📭 아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
+    st.info("아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
     st.stop()
 ticker_list = tickers if tickers else []
 if not ticker_list:
