@@ -178,6 +178,8 @@ def fetch_finnhub_data(ticker):
                 'rev5y':       m.get('revenueGrowth5Y'),
                 'eps3y':       m.get('epsGrowth3Y'),
                 'eps5y':       m.get('epsGrowth5Y'),
+                'rev1y':       m.get('revenueGrowthTTMYoy'),
+                'eps1y':       m.get('epsGrowthTTMYoy'),
             })
         # 3. 목표주가
         r = requests.get(f'{BASE}/stock/price-target?symbol={ticker}&token={api_key}', headers=H, timeout=8)
@@ -212,6 +214,21 @@ def fetch_finnhub_data(ticker):
             p = r.json()
             data['company_weburl'] = p.get('weburl') or ''
             data['company_name']   = p.get('name') or ''
+        # 7. prev day volume via daily candle
+        try:
+            import time as _t
+            _to = int(_t.time())
+            _fr = _to - 10 * 86400
+            r = requests.get(
+                f'{BASE}/stock/candle?symbol={ticker}&resolution=D'
+                f'&from={_fr}&to={_to}&token={api_key}',
+                headers=H, timeout=8)
+            if r.ok:
+                cv = r.json()
+                if cv.get('s') == 'ok' and cv.get('v'):
+                    data['prev_volume'] = int(cv['v'][-1])
+        except Exception:
+            pass
     except Exception as e:
         print(f'[Finnhub] {ticker} 수집 오류: {e}')
     return data
@@ -355,6 +372,20 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         h52  = _v(data.get('week52h'),    '.2f', '$')
         l52  = _v(data.get('week52l'),    '.2f', '$')
         mcap = _fmt_mcap(data.get('mcap'))
+        def _pct_vs(curr, ref):
+            if curr is None or ref is None or ref == 0: return '—', ''
+            p = (curr - ref) / ref * 100
+            return f'{p:+.1f}%', ('up' if p > 0 else 'down' if p < 0 else '')
+        _cp = data.get('current')
+        h52_chg, h52_cls = _pct_vs(_cp, data.get('week52h'))
+        l52_chg, l52_cls = _pct_vs(_cp, data.get('week52l'))
+        vol_v = data.get('prev_volume')
+        if vol_v is not None:
+            if vol_v >= 1_000_000: vol_str = f'{vol_v/1_000_000:.1f}M'
+            elif vol_v >= 1_000:   vol_str = f'{vol_v/1_000:.0f}K'
+            else:                  vol_str = f'{vol_v:,}'
+        else:
+            vol_str = '—'
 
         # 기준일시 (ET 장 종료 기준)
         qt = data.get('quote_time')
@@ -374,7 +405,10 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fc-value">{pc}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">등락률</div><div class="fc-value {chg_cls}">{chg_str}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 고</div><div class="fc-value">{h52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 고 대비</div><div class="fc-value {h52_cls}">{h52_chg}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저</div><div class="fc-value">{l52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 저 대비</div><div class="fc-value {l52_cls}">{l52_chg}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">전일 거래량</div><div class="fc-value">{vol_str}</div></div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -436,8 +470,10 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         st.markdown('<div class="expander-section-label" style="margin-top:4px">📊 상세 지표</div>', unsafe_allow_html=True)
 
         # 성장률·수익성
+        r1y = _v(data.get('rev1y'),       '.1f', suf='%')
         r3y = _v(data.get('rev3y'),       '.1f', suf='%')
         r5y = _v(data.get('rev5y'),       '.1f', suf='%')
+        e1y = _v(data.get('eps1y'),       '.1f', suf='%')
         e3y = _v(data.get('eps3y'),       '.1f', suf='%')
         e5y = _v(data.get('eps5y'),       '.1f', suf='%')
         nm  = _v(data.get('net_margin'),  '.1f', suf='%')
@@ -446,12 +482,14 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         st.markdown(
             '<div class="expander-section-label">성장률 · 수익성</div>'
             f'<div class="fin-grid">'
+            f'<div class="fin-chip"><div class="fc-label">매출성장 1Y (TTM)</div><div class="fc-value">{r1y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">매출성장 3Y</div><div class="fc-value">{r3y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">매출성장 5Y</div><div class="fc-value">{r5y}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">EPS성장 1Y (TTM)</div><div class="fc-value">{e1y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">EPS성장 3Y</div><div class="fc-value">{e3y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">EPS성장 5Y</div><div class="fc-value">{e5y}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">순이익률</div><div class="fc-value">{nm}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">매출총이익률</div><div class="fc-value">{gm}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">순이익률 (TTM)</div><div class="fc-value">{nm}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">매출총이익률 (TTM)</div><div class="fc-value">{gm}</div></div>'
             f'</div>',
             unsafe_allow_html=True
         )
