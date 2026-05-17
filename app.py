@@ -299,6 +299,101 @@ def fetch_fear_greed():
     return None
 
 
+@st.cache_data(ttl=3600)
+def fetch_fred_data():
+    """Fetch macro indicators from FRED API (1h cache)."""
+    api_key = os.environ.get('FRED_API_KEY', '')
+    if not api_key:
+        return {}
+    BASE = 'https://api.stlouisfed.org/fred/series/observations'
+    H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
+    result = {}
+
+    def _latest(sid):
+        try:
+            r = requests.get(BASE, params={
+                'series_id': sid, 'api_key': api_key,
+                'file_type': 'json', 'sort_order': 'desc', 'limit': 5,
+            }, headers=H, timeout=10)
+            if r.ok:
+                for o in r.json().get('observations', []):
+                    if o['value'] != '.':
+                        return float(o['value']), o['date']
+        except Exception as e:
+            print(f'[FRED] {sid}: {e}')
+        return None, None
+
+    for key, sid in [('fed_rate', 'FEDFUNDS'), ('t10y', 'DGS10'),
+                     ('t2y', 'DGS2'), ('credit_spread', 'BAA10Y')]:
+        v, d = _latest(sid)
+        if v is not None:
+            result[key] = {'value': v, 'date': d}
+
+    if 't10y' in result and 't2y' in result:
+        result['spread'] = round(
+            result['t10y']['value'] - result['t2y']['value'], 2)
+
+    # Buffett Indicator: WILL5000INDFC / GDP * 100
+    w, wd = _latest('WILL5000INDFC')
+    g, _  = _latest('GDP')
+    if w is not None and g is not None and g > 0:
+        result['buffett'] = {'value': round(w / g * 100, 1), 'date': wd}
+
+    return result
+
+
+@st.cache_data(ttl=86400)
+def fetch_cape_data():
+    """Shiller CAPE current + history from multpl.com (24h cache)."""
+    import re as _re
+    H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
+    current = None
+    history = []
+    try:
+        r = requests.get('https://www.multpl.com/shiller-pe',
+                         headers=H, timeout=10)
+        if r.ok:
+            m = _re.search(
+                r'id=["\']current["\'][^>]*>\s*([\d.]+)', r.text)
+            if not m:
+                m = _re.search(
+                    r'<span[^>]*class=["\']answer["\'][^>]*>([\d.]+)',
+                    r.text)
+            if m:
+                current = float(m.group(1))
+    except Exception as e:
+        print(f'[CAPE current] {e}')
+    try:
+        r = requests.get(
+            'https://www.multpl.com/shiller-pe/table/by-year',
+            headers=H, timeout=15)
+        if r.ok:
+            rows = _re.findall(
+                r'<tr[^>]*>\s*<td[^>]*>([A-Z][a-z]+ \d{4})</td>'
+                r'\s*<td[^>]*>([\d.]+)', r.text)
+            for date_str, val_str in rows:
+                try:
+                    history.append((date_str, float(val_str)))
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f'[CAPE history] {e}')
+    return {'current': current, 'history': history}
+
+
+def _macro_row(label, value_str, color='#cdd6f4', sub=''):
+    sub_html = (
+        f'<span style="font-size:0.6rem;color:#585b70;margin-left:4px;">'
+        f'{sub}</span>' if sub else '')
+    return (
+        f'<div style="display:flex;justify-content:space-between;'
+        f'align-items:center;padding:3px 0;border-bottom:1px solid #181825;">'
+        f'<span style="font-size:0.7rem;color:#a6adc8;">{label}</span>'
+        f'<span style="font-size:0.78rem;font-weight:600;color:{color};">'
+        f'{value_str}{sub_html}</span></div>'
+    )
+
+
 def render_premium_lock(icon, title, desc):
     """프리미엄 잠금 플레이스홀더 카드."""
     st.markdown(
@@ -1140,6 +1235,8 @@ def clear_cache():
     fetch_finnhub_data.clear()
     fetch_premium_fundamentals.clear()
     fetch_fear_greed.clear()
+    fetch_fred_data.clear()
+    fetch_cape_data.clear()
 
 
 def render_ticker_content(ticker_sym, ticker_df):
@@ -1511,6 +1608,66 @@ with st.sidebar:
             f'</div>',
             unsafe_allow_html=True
         )
+    # ── 매크로 지표 ──────────────────────────────────────────────
+    fred_data  = fetch_fred_data()
+    cape_info  = fetch_cape_data()
+    cape_curr  = cape_info.get('current')
+    if fred_data or cape_curr is not None:
+        st.markdown(
+            '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
+            'font-weight:600;">📊 시장 매크로 지표</div>',
+            unsafe_allow_html=True)
+        rows_html = ''
+        if 'buffett' in fred_data:
+            b  = fred_data['buffett']['value']
+            bd = fred_data['buffett']['date']
+            if b > 175:   bc, bl = '#f38ba8', '극도과열'
+            elif b > 125: bc, bl = '#fab387', '과열'
+            elif b > 100: bc, bl = '#f9e2af', '주의'
+            elif b > 75:  bc, bl = '#a6e3a1', '보통'
+            else:         bc, bl = '#89b4fa', '저평가'
+            rows_html += _macro_row('버핏지수', f'{b:.1f}% ({bl})', bc, bd)
+        if cape_curr is not None:
+            cc2 = ('#f38ba8' if cape_curr > 40 else
+                   '#fab387' if cape_curr > 30 else
+                   '#f9e2af' if cape_curr > 20 else '#a6e3a1')
+            rows_html += _macro_row('Shiller CAPE', f'{cape_curr:.1f}', cc2)
+        if 'fed_rate' in fred_data:
+            rows_html += _macro_row(
+                '기준금리 (FFR)',
+                f"{fred_data['fed_rate']['value']:.2f}%",
+                '#cdd6f4', fred_data['fed_rate']['date'])
+        if 't10y' in fred_data:
+            rows_html += _macro_row(
+                '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%")
+        if 't2y' in fred_data:
+            rows_html += _macro_row(
+                '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%")
+        if 'spread' in fred_data:
+            sp  = fred_data['spread']
+            sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
+            sl2 = '정상' if sp >= 0 else '역전'
+            rows_html += _macro_row(
+                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2)
+        if 'credit_spread' in fred_data:
+            cs  = fred_data['credit_spread']['value']
+            cc3 = ('#f38ba8' if cs > 3 else
+                   '#fab387' if cs > 2 else '#a6e3a1')
+            rows_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3)
+        if rows_html:
+            st.markdown(
+                f'<div style="background:#1e1e2e;border:1px solid #313244;'
+                f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
+                f'{rows_html}</div>',
+                unsafe_allow_html=True)
+        cape_hist = cape_info.get('history', [])
+        if cape_hist:
+            with st.expander('Shiller CAPE 역사 차트', expanded=False):
+                import pandas as _pd
+                df_c = _pd.DataFrame(cape_hist, columns=['date', 'CAPE'])
+                df_c = df_c.sort_values('date').set_index('date')
+                st.line_chart(df_c, height=220)
+                st.caption('출처: multpl.com / Robert Shiller')
     st.divider()
     st.subheader("+ 종목 추가")
     if "pending_ticker" not in st.session_state:
