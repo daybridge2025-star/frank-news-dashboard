@@ -225,8 +225,15 @@ def fetch_finnhub_data(ticker):
                 headers=H, timeout=8)
             if r.ok:
                 cv = r.json()
-                if cv.get('s') == 'ok' and cv.get('v'):
-                    data['prev_volume'] = int(cv['v'][-1])
+                if cv.get('s') == 'ok' and cv.get('v') and cv.get('t'):
+                    # Use [-2] if last bar is today (intraday), else [-1]
+                    from datetime import date as _date
+                    last_date = _date.fromtimestamp(cv['t'][-1])
+                    today = _date.today()
+                    if last_date == today and len(cv['v']) >= 2:
+                        data['prev_volume'] = int(cv['v'][-2])
+                    else:
+                        data['prev_volume'] = int(cv['v'][-1])
         except Exception:
             pass
     except Exception as e:
@@ -324,7 +331,8 @@ def fetch_fred_data():
         return None, None
 
     for key, sid in [('fed_rate', 'FEDFUNDS'), ('t10y', 'DGS10'),
-                     ('t2y', 'DGS2'), ('credit_spread', 'BAA10Y')]:
+                     ('t2y', 'DGS2'), ('credit_spread', 'BAA10Y'),
+                     ('krw_usd', 'DEXKOUS'), ('us_debt', 'GFDEBTN')]:
         v, d = _latest(sid)
         if v is not None:
             result[key] = {'value': v, 'date': d}
@@ -505,9 +513,9 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">전일 종가 {qt_span}</div>'
             f'<div class="fc-value">{pc}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">등락률</div><div class="fc-value {chg_cls}">{chg_str}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">52주 고</div><div class="fc-value">{h52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 최고가</div><div class="fc-value">{h52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 고 대비</div><div class="fc-value {h52_cls}">{h52_chg}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">52주 저</div><div class="fc-value">{l52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 최저가</div><div class="fc-value">{l52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저 대비</div><div class="fc-value {l52_cls}">{l52_chg}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">전일 거래량</div><div class="fc-value">{vol_str}</div></div>'
             f'</div>',
@@ -1637,7 +1645,18 @@ with st.sidebar:
             cc2 = ('#f38ba8' if cape_curr > 40 else
                    '#fab387' if cape_curr > 30 else
                    '#f9e2af' if cape_curr > 20 else '#a6e3a1')
-            rows_html += _macro_row('Shiller CAPE', f'{cape_curr:.1f}', cc2)
+            # 역사적 평균 계산 (히스토리에서)
+            cape_hist_now = cape_info.get('history', [])
+            if cape_hist_now:
+                hist_avg = sum(v for _, v in cape_hist_now) / len(cape_hist_now)
+                ratio = cape_curr / hist_avg
+                cape_sub = f'역사평균 {hist_avg:.1f} ({ratio:.1f}x)'
+            else:
+                hist_avg = 17.0  # long-term fallback
+                ratio = cape_curr / hist_avg
+                cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
+            rows_html += _macro_row(
+                'Shiller CAPE', f'{cape_curr:.1f}', cc2, cape_sub)
         if 'fed_rate' in fred_data:
             rows_html += _macro_row(
                 '기준금리 (FFR)',
@@ -1660,6 +1679,23 @@ with st.sidebar:
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rows_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3)
+        # 원달러 환율
+        if 'krw_usd' in fred_data:
+            krw = fred_data['krw_usd']['value']
+            kd  = fred_data['krw_usd']['date']
+            rows_html += _macro_row(
+                '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd)
+        # 미국 국가부채
+        if 'us_debt' in fred_data and 'krw_usd' in fred_data:
+            debt_b = fred_data['us_debt']['value']   # billions USD
+            dd     = fred_data['us_debt']['date']
+            krw_r  = fred_data['krw_usd']['value']
+            debt_t_usd = debt_b / 1000               # trillions USD
+            debt_t_krw = debt_b * 1e9 * krw_r / 1e16  # 경(京) KRW
+            rows_html += _macro_row(
+                '미국 국가부채',
+                f'${debt_t_usd:.1f}T / {debt_t_krw:.1f}경원',
+                '#a6adc8', dd)
         if rows_html:
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
