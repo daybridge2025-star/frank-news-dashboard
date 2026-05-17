@@ -429,6 +429,53 @@ def fetch_cape_data():
     return {'current': current, 'history': history}
 
 
+@st.cache_data(ttl=86400)
+def fetch_buffett_history():
+    """버핏지수 역사 데이터: Yahoo Finance ^W5000 분기 + FRED GDP 분기 병합 (24h cache)."""
+    import os as _os, datetime as _dt
+    H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
+    w_data = {}
+    try:
+        wurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
+                '%5EW5000?interval=3mo&range=max')
+        wr = requests.get(wurl, headers=H, timeout=20)
+        if wr.ok:
+            _wch = wr.json().get('chart', {}).get('result', [{}])[0]
+            _wt  = _wch.get('timestamp', [])
+            _wc  = _wch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+            for t, c in zip(_wt, _wc):
+                if c is not None:
+                    d = _dt.datetime.fromtimestamp(t)
+                    w_data[f"{d.year}Q{(d.month-1)//3+1}"] = c
+    except Exception as _we:
+        print(f'[BuffettHist W5000] {_we}')
+    g_data = {}
+    _api = _os.environ.get('FRED_API_KEY', '')
+    if _api:
+        try:
+            _gr = requests.get(
+                'https://api.stlouisfed.org/fred/series/observations',
+                params={'series_id': 'GDP', 'api_key': _api,
+                        'file_type': 'json', 'observation_start': '1971-01-01',
+                        'sort_order': 'asc', 'limit': 1000},
+                headers=H, timeout=15)
+            if _gr.ok:
+                for _o in _gr.json().get('observations', []):
+                    if _o['value'] != '.':
+                        _d = _o['date']
+                        _y, _m = int(_d[:4]), int(_d[5:7])
+                        g_data[f"{_y}Q{(_m-1)//3+1}"] = float(_o['value'])
+        except Exception as _ge:
+            print(f'[BuffettHist GDP] {_ge}')
+    result = []
+    for key in sorted(set(w_data) & set(g_data)):
+        g = g_data[key]
+        if g > 0:
+            result.append((key, round(w_data[key] / g * 100, 1)))
+    return result
+
+
+
 def _macro_row(label, value_str, color='#cdd6f4', sub=''):
     sub_html = (
         f'<span style="font-size:0.6rem;color:#585b70;margin-left:4px;">'
@@ -1740,10 +1787,77 @@ with st.sidebar:
         if cape_hist:
             with st.expander('Shiller CAPE 역사 차트', expanded=False):
                 import pandas as _pd
-                df_c = _pd.DataFrame(cape_hist, columns=['date', 'CAPE'])
-                df_c = df_c.sort_values('date').set_index('date')
-                st.line_chart(df_c, height=220)
+                import plotly.graph_objects as _go
+                df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
+                df_c = df_c.sort_values('year')
+                _cape_mean = round(sum(v for _, v in cape_hist) / len(cape_hist), 1)
+                _fig_c = _go.Figure()
+                _fig_c.add_trace(_go.Scatter(
+                    x=df_c['year'], y=df_c['CAPE'],
+                    mode='lines', name='CAPE',
+                    line=dict(color='#89b4fa', width=1.5)))
+                _fig_c.add_hline(
+                    y=_cape_mean, line_dash='dash',
+                    line_color='#f9e2af', line_width=1,
+                    annotation_text=f'평균 {_cape_mean}',
+                    annotation_font_color='#f9e2af',
+                    annotation_font_size=10)
+                if cape_curr is not None:
+                    _fig_c.add_trace(_go.Scatter(
+                        x=[df_c['year'].iloc[-1]], y=[cape_curr],
+                        mode='markers', name='현재',
+                        marker=dict(color='#f38ba8', size=7)))
+                _fig_c.update_layout(
+                    height=200, showlegend=False,
+                    margin=dict(l=30, r=10, t=8, b=30),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#cdd6f4', size=10),
+                    xaxis=dict(gridcolor='#313244', showgrid=True),
+                    yaxis=dict(gridcolor='#313244', showgrid=True))
+                st.plotly_chart(_fig_c, use_container_width=True, config={'displayModeBar': False})
                 st.caption('출처: multpl.com / Robert Shiller')
+        # 버핏지수 역사 차트
+        buffett_hist = fetch_buffett_history()
+        if buffett_hist:
+            with st.expander('버핏지수 역사 차트', expanded=False):
+                import plotly.graph_objects as _go2
+                import pandas as _pd2
+                df_b = _pd2.DataFrame(buffett_hist, columns=['quarter', '버핏지수'])
+                _curr_b = fred_data.get('buffett', {}).get('value')
+                _fig_b = _go2.Figure()
+                _fig_b.add_trace(_go2.Scatter(
+                    x=df_b['quarter'], y=df_b['버핏지수'],
+                    mode='lines', name='버핏지수',
+                    line=dict(color='#89b4fa', width=1.5)))
+                _fig_b.add_hline(
+                    y=100, line_dash='dash',
+                    line_color='#f9e2af', line_width=1,
+                    annotation_text='100% 기준',
+                    annotation_font_color='#f9e2af',
+                    annotation_font_size=10)
+                if _curr_b is not None:
+                    _fig_b.add_trace(_go2.Scatter(
+                        x=[df_b['quarter'].iloc[-1]], y=[_curr_b],
+                        mode='markers', name='현재',
+                        marker=dict(color='#f38ba8', size=7)))
+                # x축 레이블 간소화 (20개만 표시)
+                _all_q = df_b['quarter'].tolist()
+                _tick_step = max(1, len(_all_q) // 20)
+                _tickvals = _all_q[::_tick_step]
+                _ticktext = [q[:4] for q in _tickvals]
+                _fig_b.update_layout(
+                    height=200, showlegend=False,
+                    margin=dict(l=30, r=10, t=8, b=30),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#cdd6f4', size=10),
+                    xaxis=dict(gridcolor='#313244', showgrid=True,
+                               tickvals=_tickvals, ticktext=_ticktext),
+                    yaxis=dict(gridcolor='#313244', showgrid=True,
+                               ticksuffix='%'))
+                st.plotly_chart(_fig_b, use_container_width=True, config={'displayModeBar': False})
+                st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
     st.divider()
     st.subheader("+ 종목 추가")
     if "pending_ticker" not in st.session_state:
