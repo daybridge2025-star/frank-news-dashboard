@@ -110,6 +110,24 @@ def remove_ticker(ticker):
             return
 
 
+def reorder_tickers(ordered_list):
+    """
+    종목 순서 변경 — CONFIG 시트를 새 순서로 전체 재작성.
+    ordered_list: [{'ticker': 'AAPL', 'company_name': '애플', 'added_date': '...'}, ...]
+    향후 확장(주요주주·섹터 등) 시 이 함수만 수정.
+    """
+    ss = get_spreadsheet()
+    config = _ensure_sheet(ss, 'CONFIG', CONFIG_HEADERS, 200, 3)
+    config.clear()
+    config.append_row(CONFIG_HEADERS)
+    rows = [
+        [t['ticker'], t.get('company_name', ''), t.get('added_date', '')]
+        for t in ordered_list
+    ]
+    if rows:
+        config.append_rows(rows, value_input_option='RAW')
+
+
 def get_today_news():
     """TODAY 시트 전체 데이터를 DataFrame으로 반환"""
     try:
