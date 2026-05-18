@@ -1372,6 +1372,7 @@ def clear_cache():
     fetch_fear_greed.clear()
     fetch_fred_data.clear()
     fetch_cape_data.clear()
+    fetch_buffett_history.clear()
 
 
 def render_ticker_content(ticker_sym, ticker_df):
@@ -1659,7 +1660,7 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details[open] summar
     border-bottom: 1px solid #313244 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details summary span {
-    font-size: 0.8rem !important;
+    font-size: 0.73rem !important;
     color: #cdd6f4 !important;
     font-weight: 500 !important;
 }
@@ -1802,13 +1803,13 @@ with st.sidebar:
         if 'buffett' in fred_data:
             b  = fred_data['buffett']['value']
             bd = fred_data['buffett']['date']
-            if b > 175:   bc, bl = '#f38ba8', '극도과열'
-            elif b > 125: bc, bl = '#fab387', '과열'
-            elif b > 100: bc, bl = '#f9e2af', '주의'
-            elif b > 75:  bc, bl = '#a6e3a1', '보통'
-            else:         bc, bl = '#89b4fa', '저평가'
+            if b > 175:   bc, bl, be = '#f38ba8', '극도과열', '🔴'
+            elif b > 125: bc, bl, be = '#fab387', '과열',   '🟠'
+            elif b > 100: bc, bl, be = '#f9e2af', '주의',   '🟡'
+            elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
+            else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
             buffett_hist = fetch_buffett_history()
-            _buff_label = f'버핏지수   {b:.1f}% ({bl})   ·   {bd}'
+            _buff_label = f'{be} 버핏지수   {b:.1f}% ({bl})   ·   {bd}'
             if buffett_hist:
                 with st.expander(_buff_label, expanded=False):
                     df_b = _pd.DataFrame(buffett_hist, columns=['quarter', '버핏지수'])
@@ -1847,20 +1848,23 @@ with st.sidebar:
 
         # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
-            cc2 = ('#f38ba8' if cape_curr > 40 else
-                   '#fab387' if cape_curr > 30 else
-                   '#f9e2af' if cape_curr > 20 else '#a6e3a1')
+            if cape_curr > 40:   cc2, ce = '#f38ba8', '🔴'
+            elif cape_curr > 30: cc2, ce = '#fab387', '🟠'
+            elif cape_curr > 20: cc2, ce = '#f9e2af', '🟡'
+            else:                cc2, ce = '#a6e3a1', '🟢'
             cape_hist_now = cape_info.get('history', [])
-            if cape_hist_now:
-                hist_avg = sum(v for _, v in cape_hist_now) / len(cape_hist_now)
+            # 역사평균: 값이 50 미만인 것만 유효한 CAPE 값으로 판단
+            valid_hist = [(y, v) for y, v in cape_hist_now if v < 200]
+            if valid_hist:
+                hist_avg = sum(v for _, v in valid_hist) / len(valid_hist)
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 {hist_avg:.1f} ({ratio:.1f}x)'
             else:
                 hist_avg = 17.0
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
-            cape_hist = cape_info.get('history', [])
-            _cape_label = f'Shiller CAPE   {cape_curr:.1f}   ·   {cape_sub}'
+            cape_hist = [(y, v) for y, v in cape_info.get('history', []) if v < 200]
+            _cape_label = f'{ce} Shiller CAPE   {cape_curr:.1f}   ·   {cape_sub}'
             if cape_hist:
                 with st.expander(_cape_label, expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
