@@ -859,7 +859,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
         except Exception:
             pass
 
-    with st.expander('🔬 투자 분석 (프리미엄)', expanded=False):
+    with st.expander('🔬 가치분석', expanded=False):
 
         # ── 업종 배지 + 기업 유형 배지 + 업종 선택기 ────────────────
         if PREMIUM_UNLOCKED and fundamentals:
