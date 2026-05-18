@@ -612,8 +612,13 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         pe      = _v(data.get('pe'),        '.1f', suf='x')
         roe_v   = data.get('roe')
         roe     = f'{roe_v:.1f}%' if roe_v is not None else '—'
-        eps     = _v(data.get('eps'),       '.2f', '$')
-        target  = _v(data.get('target_mean'), '.1f', '$')
+        eps       = _v(data.get('eps'),        '.2f', '$')
+        t_mean_v  = data.get('target_mean')
+        t_low_v   = data.get('target_low')
+        t_high_v  = data.get('target_high')
+        t_mean    = _v(t_mean_v, '.1f', '$')
+        t_low     = _v(t_low_v,  '.1f', '$')
+        t_high    = _v(t_high_v, '.1f', '$')
         div_v   = data.get('div_yield')
         div     = f'{div_v:.2f}%' if div_v is not None else '—'
         beta    = _v(data.get('beta'),      '.2f')
@@ -630,7 +635,18 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">PER (TTM)</div><div class="fc-value">{pe}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">ROE</div><div class="fc-value">{roe}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">EPS (TTM)</div><div class="fc-value">{eps}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">목표주가 (평균)</div><div class="fc-value">{target}</div></div>'
+            f'<div class="fin-chip" style="min-width:170px;flex:2;">'
+            f'<div class="fc-label">목표주가</div>'
+            f'<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:3px;">'
+            f'<span style="font-size:0.68rem;color:#7f849c;">최저</span>'
+            f'<span style="font-size:0.85rem;font-weight:600;color:#a6e3a1;">{t_low}</span>'
+            f'<span style="color:#45475a;font-size:0.7rem;">·</span>'
+            f'<span style="font-size:0.68rem;color:#7f849c;">평균</span>'
+            f'<span style="font-size:0.85rem;font-weight:600;color:#89dceb;">{t_mean}</span>'
+            f'<span style="color:#45475a;font-size:0.7rem;">·</span>'
+            f'<span style="font-size:0.68rem;color:#7f849c;">최고</span>'
+            f'<span style="font-size:0.85rem;font-weight:600;color:#fab387;">{t_high}</span>'
+            f'</div></div>'
             f'<div class="fin-chip"><div class="fc-label">배당수익률</div><div class="fc-value">{div}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">{beta_label}</div><div class="fc-value">{beta}</div></div>'
             f'</div>',
@@ -1749,7 +1765,7 @@ with st.sidebar:
     if fred_data or cape_curr is not None:
         st.markdown(
             '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
-            'font-weight:600;">📊 시장 매크로 지표</div>',
+            'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
             unsafe_allow_html=True)
         # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
         def _rrow(label, value, color='#cdd6f4', sub=''):
