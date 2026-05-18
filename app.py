@@ -408,8 +408,9 @@ def fetch_cape_data():
     except Exception as e:
         print(f'[CAPE current] {e}')
     try:
+        # by-month 사용: by-year는 3컬럼 구조로 연도값이 잘못 파싱됨
         r = requests.get(
-            'https://www.multpl.com/shiller-pe/table/by-year',
+            'https://www.multpl.com/shiller-pe/table/by-month',
             headers=H, timeout=15)
         if r.ok:
             # Format: <td>May 15, 2026</td><td>\n \n41.66\n</td>
@@ -417,14 +418,17 @@ def fetch_cape_data():
                 r'<td>((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
                 r'[^<]+\d{4})</td>\s*<td[^>]*>[^<\d]*([\d.]+)',
                 r.text)
+            seen = {}   # year → first matched value (최신 월 우선, desc 순서)
             for date_str, val_str in rows:
                 try:
-                    # Extract year only for chart label
                     yr = _re.search(r'\d{4}', date_str)
                     label = yr.group() if yr else date_str
-                    history.append((label, float(val_str)))
+                    if label not in seen:          # 연도당 첫(최신) 값만 보관
+                        seen[label] = float(val_str)
                 except Exception:
                     pass
+            # 연도 오름차순 정렬
+            history = sorted(seen.items(), key=lambda x: x[0])
     except Exception as e:
         print(f'[CAPE history] {e}')
     return {'current': current, 'history': history}
@@ -1620,11 +1624,12 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details[open] summar
     border-bottom: 1px solid #313244 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details summary span {
-    font-size: 0.78rem !important;
-    color: #a6adc8 !important;
+    font-size: 0.8rem !important;
+    color: #cdd6f4 !important;
+    font-weight: 500 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details summary svg {
-    color: #45475a !important;
+    color: #7f849c !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
     background: #1e1e2e !important;
