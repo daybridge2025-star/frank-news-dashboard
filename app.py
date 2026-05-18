@@ -519,7 +519,7 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
     tip_html = ''
     if tip:
         tip_html = (
-            f'<span class="macro-tip">❓'
+            f'<span class="macro-tip">💡'
             f'<span class="tip-box">{tip}</span></span>')
     return (
         f'<div style="display:flex;justify-content:space-between;'
@@ -1667,7 +1667,7 @@ st.markdown("""
     background: #1e1e2e; border: 1px solid #45475a;
     color: #cdd6f4; border-radius: 7px;
     padding: 8px 10px; font-size: 0.67rem; line-height: 1.5;
-    position: absolute; right: 0; top: 130%;
+    position: absolute; left: 0; top: 130%;
     z-index: 9999; transition: opacity 0.15s;
     pointer-events: none; font-weight: 400;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
