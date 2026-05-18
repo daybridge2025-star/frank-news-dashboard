@@ -1849,7 +1849,7 @@ with st.sidebar:
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
             # 지표 행은 _rrow() 로 표시 → 다른 행과 동일한 폰트/색상
             _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd,
-                  tip='미국 주식시장 시가총액을 GDP로 나눈 비율입니다. 워런 버핏이 즐겨 사용해 버핏지수라 불립니다. 100%=공정가치, 125% 이상=과열, 175% 이상=극도과열로 해석합니다. ⚠️ 한계: 저금리·양적완화 환경에서는 높은 수치가 장기간 지속될 수 있어 단기 타이밍 도구로는 부적합합니다. 📌 활용: 장기 투자 진입 밸류에이션 참고 및 포트폴리오 비중 조절 기준으로 활용하세요.')
+                  tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 주식 시총 ÷ GDP 비율. 100%=공정가치, 125%↑=과열, 175%↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 저금리·QE 환경에서 고수치가 수년간 지속 가능. 단기 타이밍 예측 불가<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 투자 밸류에이션 참고 및 포트폴리오 비중 조절 기준으로 활용')
             # 차트는 별도 expander (라벨은 아이콘+텍스트만, 폰트 영향 최소화)
             buffett_hist = fetch_buffett_history()
             if buffett_hist:
@@ -1907,7 +1907,7 @@ with st.sidebar:
             cape_hist = cape_info.get('history', [])
             # 지표 행은 _rrow() 로 표시
             _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, cape_sub,
-                  tip='물가 조정 주가순이익비율(10년 평균 EPS 기준)입니다. 경기 사이클을 평활화해 장기 밸류에이션을 측정합니다. 역사 평균 약 17, 30 이상은 과열, 40 이상은 극도과열 구간입니다. ⚠️ 한계: 단기 시장 타이밍 예측에는 부적합하며, 과열 상태가 수년간 지속될 수 있습니다. 📌 활용: 장기(10년 이상) 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용하세요.')
+                  tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 물가조정 주가순이익비율(10년 평균 EPS). 역사 평균 ~17, 30↑=과열, 40↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 타이밍 예측 부적합. 과열 상태가 수년간 지속 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용')
             if cape_hist:
                 with st.expander('📈 Shiller CAPE 히스토리', expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
@@ -1946,34 +1946,34 @@ with st.sidebar:
                 '기준금리 (FFR)',
                 f"{fred_data['fed_rate']['value']:.2f}%",
                 '#cdd6f4', fred_data['fed_rate']['date'],
-                tip='연준(Fed)이 설정하는 단기 기준금리입니다. 금리 인상 시 주식 할인율이 높아져 주가에 하방 압력을 줍니다. ⚠️ 한계: 시장은 이미 금리 기대치를 선반영하므로, 실제 인상 발표 시 주가가 오히려 오를 수 있습니다. 📌 활용: FOMC 회의 일정과 함께 추세 방향을 확인하세요.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 연준(Fed)이 설정하는 단기 기준금리. 인상 시 주식 할인율 상승 → 주가 하방 압력<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 시장은 금리 기대치를 미리 선반영. 실제 인상 발표 시 주가가 오히려 상승 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : FOMC 회의 일정과 함께 금리 추세 방향 확인')
         if 't10y' in fred_data:
             rest_html += _macro_row(
                 '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
-                tip='미국 10년 만기 국채 수익률로 장기 경기 전망과 인플레이션 기대를 반영합니다. 상승 시 성장주 밸류에이션 압박이 커집니다. ⚠️ 한계: 중앙은행 채권 매입(QE) 등으로 금리가 인위적으로 억제될 수 있습니다. 📌 활용: 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용하세요.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 10년 만기 국채 수익률. 장기 경기 전망·인플레이션 기대 반영. 상승 시 성장주 압박<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행 채권 매입(QE)으로 금리가 인위적으로 억제될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용')
         if 't2y' in fred_data:
             rest_html += _macro_row(
                 '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
-                tip='미국 2년 만기 국채 수익률로 단기 금리 전망(연준 정책 방향)을 민감하게 반영합니다. ⚠️ 한계: 단기적으로 연준 발언에 과도하게 반응할 수 있습니다. 📌 활용: 10Y와의 차이(스프레드)로 경기침체 신호를 확인하세요.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 2년 만기 국채 수익률. 단기 금리 전망과 연준 정책 방향을 가장 민감하게 반영<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 연준 위원 발언 하나에도 과도하게 반응해 단기 변동성이 큼<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y와의 차이(장단기 스프레드)로 경기침체 선행 신호 확인')
         if 'spread' in fred_data:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
             sl2 = '정상' if sp >= 0 else '역전'
             rest_html += _macro_row(
                 '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
-                tip='10년물-2년물 국채 금리 차이입니다. 역전(마이너스) 시 과거 8회 중 7회 경기침체가 발생한 강력한 선행지표입니다. ⚠️ 한계: 역전 후 실제 침체까지 6~18개월의 시차가 있어 단기 타이밍 도구로는 부적합합니다. 📌 활용: 역전 진입 시점보다 역전 해소 후 주의가 필요합니다.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 10Y-2Y 국채 금리 차이. 역전(마이너스) 시 과거 8회 중 7회 경기침체 발생한 선행지표<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 역전 후 실제 침체까지 6~18개월 시차 존재. 단기 매매 타이밍 도구로 부적합<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 역전 진입보다 역전 해소 이후 주가 하락 리스크를 더 주의할 것')
         if 'credit_spread' in fred_data:
             cs  = fred_data['credit_spread']['value']
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
-                tip='회사채(BBB)와 미국 국채의 금리 차이로 기업 신용 위험도를 나타냅니다. 스프레드 확대는 시장 공포·유동성 위기 신호입니다. ⚠️ 한계: 중앙은행의 회사채 매입 등 정책 개입으로 위기 신호가 희석될 수 있습니다. 📌 활용: 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 봅니다.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 회사채(BBB)-국채 금리 차이. 스프레드 확대 = 기업 신용 위험 상승·시장 공포 신호<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행의 회사채 직접 매입 등 정책 개입으로 위기 신호가 희석될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 판단')
         if 'krw_usd' in fred_data:
             krw = fred_data['krw_usd']['value']
             kd  = fred_data['krw_usd']['date']
             rest_html += _macro_row(
                 '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd,
-                tip='1달러 기준 원화 환율입니다. 원화 약세(환율 상승)는 수출 기업에 유리하지만 수입 물가 상승과 외국인 투자자 이탈 요인이 됩니다. ⚠️ 한계: 환율은 단기 변동성이 크고 다양한 요인에 영향받습니다. 📌 활용: 1,400원 이상 고환율 지속 시 한국 시장 외국인 수급 주의가 필요합니다.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 1달러 기준 원화 환율. 원화 약세(↑)는 수출주 유리, 수입 물가 상승·외국인 이탈 요인<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 변동성이 매우 크고 지정학·금리차·수급 등 복합 요인에 영향받음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 1,400원 이상 고환율 지속 시 한국 시장 외국인 수급 악화 주의')
         if 'us_debt' in fred_data and 'krw_usd' in fred_data:
             debt_m     = fred_data['us_debt']['value']
             dd         = fred_data['us_debt']['date']
@@ -1984,7 +1984,7 @@ with st.sidebar:
                 '미국 국가부채',
                 f'${debt_t_usd:.1f}T / {debt_t_krw:.1f}경원',
                 '#a6adc8', dd,
-                tip='미국 연방정부 누적 부채입니다. GDP 대비 비율(현재 약 120% 이상)로 해석해야 의미가 있습니다. ⚠️ 한계: 기축통화국인 미국은 일반 국가와 달리 높은 부채를 장기간 유지할 수 있어 단순 수치 비교는 오해를 낳을 수 있습니다. 📌 활용: 부채한도 협상 시기(보통 연중)를 주시하세요.')
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 연방정부 누적 부채. 절대 금액보다 GDP 대비 비율(현재 약 120%↑)로 해석<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 기축통화국 미국은 높은 부채를 장기 유지 가능. 단순 수치 비교는 오해 소지 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 부채한도 협상 시기(보통 연중) 전후 시장 변동성 확대 주의')
         if rest_html:
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
@@ -2079,34 +2079,3 @@ with st.sidebar:
                         st.error(f"삭제 실패: {e}")
     else:
         st.info("등록된 종목이 없습니다.")
-
-# 메인
-st.title("ValueHunter")
-st.caption("퀀트 기반 정량적 가치분석 대시보드 | EDGAR·Damodaran·Finnhub 연동 | 2시간마다 업데이트")
-st.divider()
-df = load_news()
-tickers = load_tickers()
-if df.empty or not tickers:
-    st.info("아직 수집된 뉴스가 없습니다. GitHub Actions가 2시간마다 뉴스를 수집합니다.")
-    st.stop()
-ticker_list = tickers if tickers else []
-if not ticker_list:
-    st.info("사이드바에서 종목을 추가하세요.")
-else:
-    counts = {}
-    if not df.empty and "ticker" in df.columns:
-        counts = df.groupby("ticker").size().to_dict()
-    tab_labels = []
-    for t in ticker_list:
-        sym = t["ticker"]
-        n = counts.get(sym, 0)
-        tab_labels.append(f"{sym} ({n})" if n > 0 else sym)
-    tabs = st.tabs(tab_labels)
-    for tab, t in zip(tabs, ticker_list):
-        sym = t["ticker"]
-        with tab:
-            if not df.empty and "ticker" in df.columns:
-                ticker_df = df[df["ticker"] == sym].copy()
-            else:
-                ticker_df = pd.DataFrame()
-            render_ticker_content(sym, ticker_df)
