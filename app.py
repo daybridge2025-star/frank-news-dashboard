@@ -181,7 +181,7 @@ def fetch_finnhub_data(ticker):
                 'rev1y':       m.get('revenueGrowthTTMYoy'),
                 'eps1y':       m.get('epsGrowthTTMYoy'),
             })
-        # 3. 목표주가
+        # 3. 목표주가 (Finnhub → Yahoo Finance 폴백)
         r = requests.get(f'{BASE}/stock/price-target?symbol={ticker}&token={api_key}', headers=H, timeout=8)
         if r.ok:
             pt = r.json()
@@ -190,6 +190,25 @@ def fetch_finnhub_data(ticker):
                 'target_high': pt.get('targetHigh'),
                 'target_low':  pt.get('targetLow'),
             })
+        # Finnhub 미제공 시 Yahoo Finance quoteSummary financialData 폴백
+        if not data.get('target_mean'):
+            try:
+                yurl = (f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}'
+                        f'?modules=financialData')
+                yr = requests.get(yurl, headers=H, timeout=8)
+                if yr.ok:
+                    fd = (yr.json().get('quoteSummary', {})
+                             .get('result', [{}])[0]
+                             .get('financialData', {}))
+                    tm = fd.get('targetMeanPrice',   {}).get('raw')
+                    tl = fd.get('targetLowPrice',    {}).get('raw')
+                    th = fd.get('targetHighPrice',   {}).get('raw')
+                    if tm:
+                        data.update({'target_mean': tm,
+                                     'target_low':  tl,
+                                     'target_high': th})
+            except Exception as _ye:
+                print(f'[YF price-target] {_ye}')
         # 4. 애널리스트 투자의견
         r = requests.get(f'{BASE}/stock/recommendation?symbol={ticker}&token={api_key}', headers=H, timeout=8)
         if r.ok:
