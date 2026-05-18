@@ -593,7 +593,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             return f'${val / 1_000:.0f}B'
         return f'${val:.0f}M'
 
-    with st.expander('📈 기본 주가정보', expanded=False):
+    with st.expander('📈 주가정보', expanded=False):
         # ── 홈페이지 링크 ────────────────────────────────────────────
         weburl = (data.get('company_weburl') or '').strip()
         cname  = (data.get('company_name') or '').strip()
@@ -859,7 +859,7 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
         except Exception:
             pass
 
-    with st.expander('🔬 가치분석', expanded=False):
+    with st.expander('🔬 가치평가', expanded=False):
 
         # ── 업종 배지 + 기업 유형 배지 + 업종 선택기 ────────────────
         if PREMIUM_UNLOCKED and fundamentals:
