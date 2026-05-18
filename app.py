@@ -412,10 +412,11 @@ def fetch_cape_data():
             'https://www.multpl.com/shiller-pe/table/by-year',
             headers=H, timeout=15)
         if r.ok:
-            # Format: <td>May 15, 2026</td><td>\n 41.66\n</td>
+            # Format: <td>May 15, 2026</td><td>\n \n41.66\n</td>
             rows = _re.findall(
-                r'<td>([A-Z][a-z]+ (?:\d{1,2}, )?\d{4})</td>'
-                r'\s*<td>\s*([\d.]+)', r.text)
+                r'<td>((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
+                r'[^<]+\d{4})</td>\s*<td[^>]*>[^<\d]*([\d.]+)',
+                r.text)
             for date_str, val_str in rows:
                 try:
                     # Extract year only for chart label
@@ -1597,6 +1598,39 @@ st.markdown("""
     background: #1a2e3a; color: #89dceb; border: 1px solid #3a6a7a;
 }
 
+/* ── 사이드바 매크로 차트 expander 다크 스타일 ── */
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin: 2px 0 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details {
+    border: 1px solid #313244 !important;
+    border-radius: 8px !important;
+    background: #1e1e2e !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details summary {
+    padding: 6px 12px !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details[open] summary {
+    border-bottom: 1px solid #313244 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details summary span {
+    font-size: 0.78rem !important;
+    color: #a6adc8 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details summary svg {
+    color: #45475a !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
+    background: #1e1e2e !important;
+    padding: 4px 8px 8px 8px !important;
+}
+
 /* ── 분석카드 서브타이틀 ── */
 .analysis-card-subtitle {
     font-size: 0.75rem; color: #7f849c; margin-bottom: 10px; margin-top: -4px;
@@ -1733,10 +1767,10 @@ with st.sidebar:
             elif b > 100: bc, bl = '#f9e2af', '주의'
             elif b > 75:  bc, bl = '#a6e3a1', '보통'
             else:         bc, bl = '#89b4fa', '저평가'
-            _rrow('버핏지수', f'{b:.1f}% ({bl})', bc, bd)
             buffett_hist = fetch_buffett_history()
+            _buff_label = f'버핏지수   {b:.1f}% ({bl})   ·   {bd}'
             if buffett_hist:
-                with st.expander('📈 버핏지수 차트', expanded=False):
+                with st.expander(_buff_label, expanded=False):
                     df_b = _pd.DataFrame(buffett_hist, columns=['quarter', '버핏지수'])
                     _fig_b = _go.Figure()
                     _fig_b.add_trace(_go.Scatter(
@@ -1768,6 +1802,8 @@ with st.sidebar:
                     st.plotly_chart(_fig_b, use_container_width=True,
                                     config={'displayModeBar': False})
                     st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
+            else:
+                _rrow('버핏지수', f'{b:.1f}% ({bl})', bc, bd)
 
         # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
@@ -1783,10 +1819,10 @@ with st.sidebar:
                 hist_avg = 17.0
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
-            _rrow('Shiller CAPE', f'{cape_curr:.1f}', cc2, cape_sub)
             cape_hist = cape_info.get('history', [])
+            _cape_label = f'Shiller CAPE   {cape_curr:.1f}   ·   {cape_sub}'
             if cape_hist:
-                with st.expander('📈 CAPE 역사 차트', expanded=False):
+                with st.expander(_cape_label, expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
                     df_c = df_c.sort_values('year')
                     _cape_mean = round(sum(v for _, v in cape_hist) / len(cape_hist), 1)
@@ -1815,6 +1851,8 @@ with st.sidebar:
                     st.plotly_chart(_fig_c, use_container_width=True,
                                     config={'displayModeBar': False})
                     st.caption('출처: multpl.com / Robert Shiller')
+            else:
+                _rrow('Shiller CAPE', f'{cape_curr:.1f}', cc2, cape_sub)
 
         # ── 나머지 지표 (하나의 블록) ────────────────────────────
         rest_html = ''
