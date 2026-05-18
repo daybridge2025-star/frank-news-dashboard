@@ -169,8 +169,10 @@ def fetch_finnhub_data(ticker):
                 'eps':         m.get('epsExclExtraItemsTTM'),
                 'div_yield':   m.get('dividendYieldIndicatedAnnual'),
                 'beta':        m.get('beta'),
-                'week52h':     m.get('52WeekHigh'),
-                'week52l':     m.get('52WeekLow'),
+                'week52h':      m.get('52WeekHigh'),
+                'week52l':      m.get('52WeekLow'),
+                'week52h_date': m.get('52WeekHighDate'),
+                'week52l_date': m.get('52WeekLowDate'),
                 'mcap':        m.get('marketCapitalization'),
                 'net_margin':  m.get('netProfitMarginTTM'),
                 'gross_margin':m.get('grossMarginTTM'),
@@ -192,23 +194,39 @@ def fetch_finnhub_data(ticker):
             })
         # Finnhub 미제공 시 Yahoo Finance quoteSummary financialData 폴백
         if not data.get('target_mean'):
-            try:
-                yurl = (f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}'
-                        f'?modules=financialData')
-                yr = requests.get(yurl, headers=H, timeout=8)
-                if yr.ok:
-                    fd = (yr.json().get('quoteSummary', {})
-                             .get('result', [{}])[0]
-                             .get('financialData', {}))
-                    tm = fd.get('targetMeanPrice',   {}).get('raw')
-                    tl = fd.get('targetLowPrice',    {}).get('raw')
-                    th = fd.get('targetHighPrice',   {}).get('raw')
-                    if tm:
-                        data.update({'target_mean': tm,
-                                     'target_low':  tl,
-                                     'target_high': th})
-            except Exception as _ye:
-                print(f'[YF price-target] {_ye}')
+            _YF_H = {
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/124.0.0.0 Safari/537.36'
+                ),
+                'Accept': 'application/json,text/plain,*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://finance.yahoo.com/',
+            }
+            for _yhost in ('query2', 'query1'):
+                try:
+                    yurl = (f'https://{_yhost}.finance.yahoo.com/v10/finance/'
+                            f'quoteSummary/{ticker}?modules=financialData&formatted=false')
+                    yr = requests.get(yurl, headers=_YF_H, timeout=8)
+                    if yr.ok:
+                        fd = (yr.json().get('quoteSummary', {})
+                                 .get('result', [{}])[0]
+                                 .get('financialData', {}))
+                        # formatted=false → 값이 직접 숫자로 옴
+                        def _yf_raw(v):
+                            if v is None: return None
+                            return v.get('raw') if isinstance(v, dict) else v
+                        tm = _yf_raw(fd.get('targetMeanPrice'))
+                        tl = _yf_raw(fd.get('targetLowPrice'))
+                        th = _yf_raw(fd.get('targetHighPrice'))
+                        if tm:
+                            data.update({'target_mean': tm,
+                                         'target_low':  tl,
+                                         'target_high': th})
+                            break
+                except Exception as _ye:
+                    print(f'[YF price-target/{_yhost}] {_ye}')
         # 4. 애널리스트 투자의견
         r = requests.get(f'{BASE}/stock/recommendation?symbol={ticker}&token={api_key}', headers=H, timeout=8)
         if r.ok:
@@ -602,6 +620,21 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         pc   = _v(data.get('prev_close'), '.2f', '$')
         h52  = _v(data.get('week52h'),    '.2f', '$')
         l52  = _v(data.get('week52l'),    '.2f', '$')
+        def _w52_date(raw):
+            """Finnhub 52WeekHighDate/LowDate → 'MM/DD' 형식 또는 ''"""
+            if not raw: return ''
+            try:
+                # 형식 예: '2024-05-01' or '2024-05-01 00:00:00'
+                d = str(raw)[:10]
+                from datetime import datetime as _dt
+                dt = _dt.strptime(d, '%Y-%m-%d')
+                return dt.strftime('%y/%m/%d')
+            except Exception:
+                return str(raw)[:10]
+        h52_date = _w52_date(data.get('week52h_date'))
+        l52_date = _w52_date(data.get('week52l_date'))
+        h52_date_span = (f' <span class="fc-date">{h52_date}</span>' if h52_date else '')
+        l52_date_span = (f' <span class="fc-date">{l52_date}</span>' if l52_date else '')
         mcap = _fmt_mcap(data.get('mcap'))
         def _pct_vs(curr, ref):
             if curr is None or ref is None or ref == 0: return '—', ''
@@ -635,9 +668,9 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">전일 종가 {qt_span}</div>'
             f'<div class="fc-value">{pc}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">등락률</div><div class="fc-value {chg_cls}">{chg_str}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">52주 최고가</div><div class="fc-value">{h52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 최고가{h52_date_span}</div><div class="fc-value">{h52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 고 대비</div><div class="fc-value {h52_cls}">{h52_chg}</div></div>'
-            f'<div class="fin-chip"><div class="fc-label">52주 최저가</div><div class="fc-value">{l52}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">52주 최저가{l52_date_span}</div><div class="fc-value">{l52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저 대비</div><div class="fc-value {l52_cls}">{l52_chg}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">전일 거래량</div><div class="fc-value">{vol_str}</div></div>'
             f'</div>',
@@ -1328,9 +1361,13 @@ def render_premium_analysis(ticker_sym, fundamentals=None):
             render_premium_lock('📐', 'Rule of 40 — 성장·수익성 균형',
                 '매출 성장률과 FCF 마진의 합이 40 이상이면 건강한 고성장 기업으로 판단합니다.')
 
-    # EDGAR 연동 상태: 오류 시에만 표시
+    # EDGAR 연동 상태: 오류 시 소형 캡션으로만 표시 (노란 박스 제거)
     if PREMIUM_UNLOCKED and fundamentals and fundamentals.get('error'):
-        st.warning('⚠️ EDGAR 연동 오류: ' + str(fundamentals['error']))
+        err_msg = str(fundamentals['error'])
+        if 'data load failed' in err_msg.lower():
+            st.caption('ℹ️ EDGAR 미등록 종목 — 투자 분석 데이터를 불러올 수 없습니다.')
+        else:
+            st.caption(f'ℹ️ EDGAR: {err_msg}')
 
 
 
@@ -1392,6 +1429,33 @@ def clear_cache():
     fetch_buffett_history.clear()
 
 
+def _sort_tickers_by_mcap():
+    """등록된 종목을 시가총액 내림차순으로 자동 재정렬한다."""
+    try:
+        tickers = get_tickers()
+        if not tickers or len(tickers) <= 1:
+            return
+        api_key = os.environ.get('FINNHUB_API_KEY', '')
+        if not api_key:
+            return
+        H_s = {'User-Agent': 'Mozilla/5.0'}
+        BASE_s = 'https://finnhub.io/api/v1'
+        def _get_mcap(sym):
+            try:
+                r = requests.get(
+                    f'{BASE_s}/stock/metric?symbol={sym}&metric=all&token={api_key}',
+                    headers=H_s, timeout=6)
+                if r.ok:
+                    return r.json().get('metric', {}).get('marketCapitalization') or 0
+            except Exception:
+                pass
+            return 0
+        sorted_tickers = sorted(tickers, key=lambda x: _get_mcap(x['ticker']), reverse=True)
+        reorder_tickers(sorted_tickers)
+    except Exception as e:
+        print(f'[mcap_sort] {e}')
+
+
 def render_ticker_content(ticker_sym, ticker_df):
     """종목별 브리핑 + 기사 카드 + 페이지네이션 렌더링"""
     no_news = ticker_df.empty
@@ -1430,24 +1494,24 @@ def render_ticker_content(ticker_sym, ticker_df):
     # ── 프리미엄 분석 섹션 ──────────────────────────────────────
     render_premium_analysis(ticker_sym, fundamentals=fundamentals if fundamentals else None)
 
-    # 기사 없으면 안내 후 종료
-    if no_news:
-        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
-        return
-
-    # 종합 브리핑 박스
+    # 종합 브리핑 박스 (기사 유무와 무관하게 summary_kr 있으면 표시)
     summary_kr = ''
-    if 'summary_kr' in ticker_df.columns:
+    if not no_news and 'summary_kr' in ticker_df.columns:
         for val in ticker_df['summary_kr']:
             if val and str(val).strip():
                 summary_kr = str(val).strip()
                 break
 
+    # 기사 없으면 안내 후 종료 (브리핑은 이미 위에서 처리)
+    if no_news:
+        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
+        return
+
     if summary_kr:
         body_html = format_summary_html(summary_kr)
         st.markdown(
             f'<div class="brief-box">'
-            f'<div class="brief-title">📋 오늘의 {ticker_sym} 뉴스 종합 브리핑</div>'
+            f'<div class="brief-title">📋 최근 {ticker_sym} 뉴스 종합 브리핑</div>'
             f'<div class="brief-time">📅 {et_date_str()}</div>'
             f'{body_html}'
             f'</div>',
@@ -2026,10 +2090,11 @@ with st.sidebar:
         if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
             try:
                 add_ticker(t, name)
+                _sort_tickers_by_mcap()
                 clear_cache()
                 st.session_state["pending_ticker"] = ""
                 st.session_state["pending_name"] = ""
-                st.success(f"{t} 추가 완료!")
+                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
                 st.rerun()
             except Exception as e:
                 st.error(f"추가 실패: {e}")
@@ -2062,23 +2127,11 @@ with st.sidebar:
                             st.error(f"순서 변경 실패: {e}")
                 else:
                     st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
-            with col_dn:
-                if i < n - 1:
-                    if st.button("↓", key=f"dn_{sym}_{i}", use_container_width=True):
-                        new_order = list(tickers_raw)
-                        new_order[i], new_order[i + 1] = new_order[i + 1], new_order[i]
-                        try:
-                            reorder_tickers(new_order)
-                            load_tickers.clear()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"순서 변경 실패: {e}")
-                else:
-                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
             with col_dl:
                 if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
                     try:
                         remove_ticker(sym)
+                        _sort_tickers_by_mcap()
                         clear_cache()
                         st.rerun()
                     except Exception as e:
