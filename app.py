@@ -1456,7 +1456,7 @@ def _sort_tickers_by_mcap():
         print(f'[mcap_sort] {e}')
 
 
-def render_ticker_content(ticker_sym, ticker_df):
+def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
     """종목별 브리핑 + 기사 카드 + 페이지네이션 렌더링"""
     no_news = ticker_df.empty
 
@@ -1578,7 +1578,7 @@ def render_ticker_content(ticker_sym, ticker_df):
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             if current_page > 0:
-                if st.button("◀ 이전", key=f"prev_{ticker_sym}"):
+                if st.button("◀ 이전", key=f"prev_{ticker_sym}_{tab_idx}"):
                     st.session_state['page'][page_key] -= 1
                     st.rerun()
         with col2:
@@ -1589,7 +1589,7 @@ def render_ticker_content(ticker_sym, ticker_df):
             )
         with col3:
             if current_page < total_pages - 1:
-                if st.button("다음 ▶", key=f"next_{ticker_sym}"):
+                if st.button("다음 ▶", key=f"next_{ticker_sym}_{tab_idx}"):
                     st.session_state['page'][page_key] += 1
                     st.rerun()
 
@@ -2154,11 +2154,11 @@ else:
     if news_df is None:
         news_df = pd.DataFrame()
 
-    for tab, ticker_info in zip(tabs, tickers_list):
+    for i, (tab, ticker_info) in enumerate(zip(tabs, tickers_list)):
         sym = ticker_info['ticker']
         with tab:
             if not news_df.empty and 'ticker' in news_df.columns:
                 ticker_df = news_df[news_df['ticker'] == sym].copy()
             else:
                 ticker_df = pd.DataFrame()
-            render_ticker_content(sym, ticker_df)
+            render_ticker_content(sym, ticker_df, tab_idx=i)
