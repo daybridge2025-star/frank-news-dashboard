@@ -2077,13 +2077,19 @@ with st.sidebar:
     if lookup_clicked:
         t = ticker_input.upper().strip()
         if t:
-            name = lookup_company_name(t)
-            st.session_state["pending_ticker"] = t
-            st.session_state["pending_name"] = name
-            if name:
-                st.success(f"{t} -> {name}")
+            existing_tickers = [r['ticker'] for r in load_tickers()]
+            if t in existing_tickers:
+                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
             else:
-                st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+                name = lookup_company_name(t)
+                st.session_state["pending_ticker"] = t
+                st.session_state["pending_name"] = name
+                if name:
+                    st.success(f"{t} -> {name}")
+                else:
+                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
     if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
         t = st.session_state["pending_ticker"]
         name = st.session_state["pending_name"]
