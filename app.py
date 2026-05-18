@@ -432,21 +432,33 @@ def fetch_cape_data():
             'https://www.multpl.com/shiller-pe/table/by-month',
             headers=H, timeout=15)
         if r.ok:
-            # Format: <td>May 15, 2026</td><td>\n \n41.66\n</td>
-            rows = _re.findall(
-                r'<td>((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
-                r'[^<]+\d{4})</td>\s*<td[^>]*>[^<\d]*([\d.]+)',
-                r.text)
-            seen = {}   # year → first matched value (최신 월 우선, desc 순서)
-            for date_str, val_str in rows:
+            # 태그 제거 방식으로 파싱 (regex보다 강건)
+            seen = {}
+            for row_raw in _re.split(r'</tr>', r.text, flags=_re.IGNORECASE):
+                cells = _re.findall(
+                    r'<td[^>]*>([\s\S]*?)</td>', row_raw, _re.IGNORECASE)
+                if len(cells) < 2:
+                    continue
+                # 태그 제거 후 순수 텍스트 추출
+                date_text = _re.sub(r'<[^>]+>', '', cells[0]).strip()
+                val_text  = _re.sub(r'<[^>]+>', '', cells[1]).strip()
+                # 날짜 셀: 월 이름으로 시작해야 함
+                if not _re.match(
+                    r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)',
+                    date_text):
+                    continue
+                yr_m = _re.search(r'\d{4}', date_text)
+                if not yr_m:
+                    continue
                 try:
-                    yr = _re.search(r'\d{4}', date_str)
-                    label = yr.group() if yr else date_str
-                    if label not in seen:          # 연도당 첫(최신) 값만 보관
-                        seen[label] = float(val_str)
-                except Exception:
+                    val = float(val_text.replace(',', ''))
+                    if not (1.0 <= val <= 100.0):  # CAPE 유효 범위 (연도값 제외)
+                        continue
+                    label = yr_m.group()
+                    if label not in seen:           # 연도당 최신 월 1개
+                        seen[label] = val
+                except (ValueError, TypeError):
                     pass
-            # 연도 오름차순 정렬
             history = sorted(seen.items(), key=lambda x: x[0])
     except Exception as e:
         print(f'[CAPE history] {e}')
@@ -500,14 +512,19 @@ def fetch_buffett_history():
 
 
 
-def _macro_row(label, value_str, color='#cdd6f4', sub=''):
+def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
     sub_html = (
         f'<span style="font-size:0.6rem;color:#585b70;margin-left:4px;">'
         f'{sub}</span>' if sub else '')
+    tip_html = ''
+    if tip:
+        tip_html = (
+            f'<span class="macro-tip">❓'
+            f'<span class="tip-box">{tip}</span></span>')
     return (
         f'<div style="display:flex;justify-content:space-between;'
         f'align-items:center;padding:3px 0;border-bottom:1px solid #181825;">'
-        f'<span style="font-size:0.7rem;color:#a6adc8;">{label}</span>'
+        f'<span style="font-size:0.7rem;color:#a6adc8;">{label}{tip_html}</span>'
         f'<span style="font-size:0.78rem;font-weight:600;color:{color};">'
         f'{value_str}{sub_html}</span></div>'
     )
@@ -1638,6 +1655,25 @@ st.markdown("""
     background: #1a2e3a; color: #89dceb; border: 1px solid #3a6a7a;
 }
 
+/* ── 매크로 지표 툴팁 ── */
+.macro-tip {
+    position: relative; display: inline-block;
+    cursor: help; margin-left: 3px;
+    font-size: 0.65rem; color: #45475a; vertical-align: middle;
+}
+.macro-tip .tip-box {
+    visibility: hidden; opacity: 0;
+    width: 210px;
+    background: #1e1e2e; border: 1px solid #45475a;
+    color: #cdd6f4; border-radius: 7px;
+    padding: 8px 10px; font-size: 0.67rem; line-height: 1.5;
+    position: absolute; right: 0; top: 130%;
+    z-index: 9999; transition: opacity 0.15s;
+    pointer-events: none; font-weight: 400;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.macro-tip:hover .tip-box { visibility: visible; opacity: 1; }
+
 /* ── 사이드바 매크로 차트 expander 다크 스타일 ── */
 section[data-testid="stSidebar"] [data-testid="stExpander"] {
     margin: 2px 0 !important;
@@ -1791,11 +1827,11 @@ with st.sidebar:
             'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
             unsafe_allow_html=True)
         # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
-        def _rrow(label, value, color='#cdd6f4', sub=''):
+        def _rrow(label, value, color='#cdd6f4', sub='', tip=''):
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
                 f'border-radius:8px;padding:8px 12px;margin:2px 0;">'
-                f'{_macro_row(label, value, color, sub)}'
+                f'{_macro_row(label, value, color, sub, tip)}'
                 f'</div>',
                 unsafe_allow_html=True)
 
@@ -1812,7 +1848,8 @@ with st.sidebar:
             elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
             # 지표 행은 _rrow() 로 표시 → 다른 행과 동일한 폰트/색상
-            _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd)
+            _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd,
+                  tip='미국 주식시장 시가총액을 GDP로 나눈 비율입니다. 워런 버핏이 즐겨 사용해 버핏지수라 불립니다. 100%=공정가치, 125% 이상=과열, 175% 이상=극도과열로 해석합니다. ⚠️ 한계: 저금리·양적완화 환경에서는 높은 수치가 장기간 지속될 수 있어 단기 타이밍 도구로는 부적합합니다. 📌 활용: 장기 투자 진입 밸류에이션 참고 및 포트폴리오 비중 조절 기준으로 활용하세요.')
             # 차트는 별도 expander (라벨은 아이콘+텍스트만, 폰트 영향 최소화)
             buffett_hist = fetch_buffett_history()
             if buffett_hist:
@@ -1851,10 +1888,10 @@ with st.sidebar:
 
         # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
-            if cape_curr > 40:   cc2, ce = '#f38ba8', '🔴'
-            elif cape_curr > 30: cc2, ce = '#fab387', '🟠'
-            elif cape_curr > 20: cc2, ce = '#f9e2af', '🟡'
-            else:                cc2, ce = '#a6e3a1', '🟢'
+            if cape_curr > 40:   cc2, ce, cl = '#f38ba8', '🔴', '극도과열'
+            elif cape_curr > 30: cc2, ce, cl = '#fab387', '🟠', '과열'
+            elif cape_curr > 20: cc2, ce, cl = '#f9e2af', '🟡', '주의'
+            else:                cc2, ce, cl = '#a6e3a1', '🟢', '저평가'
             cape_hist_now = cape_info.get('history', [])
             # 역사평균: 값이 50 미만인 것만 유효한 CAPE 값으로 판단
             valid_hist = [(y, v) for y, v in cape_hist_now if v < 200]
@@ -1869,7 +1906,8 @@ with st.sidebar:
             # 차트용 cape_hist: 필터 없이 원본 사용 (차트는 항상 표시)
             cape_hist = cape_info.get('history', [])
             # 지표 행은 _rrow() 로 표시
-            _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce}', cc2, cape_sub)
+            _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, cape_sub,
+                  tip='물가 조정 주가순이익비율(10년 평균 EPS 기준)입니다. 경기 사이클을 평활화해 장기 밸류에이션을 측정합니다. 역사 평균 약 17, 30 이상은 과열, 40 이상은 극도과열 구간입니다. ⚠️ 한계: 단기 시장 타이밍 예측에는 부적합하며, 과열 상태가 수년간 지속될 수 있습니다. 📌 활용: 장기(10년 이상) 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용하세요.')
             if cape_hist:
                 with st.expander('📈 Shiller CAPE 히스토리', expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
@@ -1907,29 +1945,35 @@ with st.sidebar:
             rest_html += _macro_row(
                 '기준금리 (FFR)',
                 f"{fred_data['fed_rate']['value']:.2f}%",
-                '#cdd6f4', fred_data['fed_rate']['date'])
+                '#cdd6f4', fred_data['fed_rate']['date'],
+                tip='연준(Fed)이 설정하는 단기 기준금리입니다. 금리 인상 시 주식 할인율이 높아져 주가에 하방 압력을 줍니다. ⚠️ 한계: 시장은 이미 금리 기대치를 선반영하므로, 실제 인상 발표 시 주가가 오히려 오를 수 있습니다. 📌 활용: FOMC 회의 일정과 함께 추세 방향을 확인하세요.')
         if 't10y' in fred_data:
             rest_html += _macro_row(
-                '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%")
+                '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
+                tip='미국 10년 만기 국채 수익률로 장기 경기 전망과 인플레이션 기대를 반영합니다. 상승 시 성장주 밸류에이션 압박이 커집니다. ⚠️ 한계: 중앙은행 채권 매입(QE) 등으로 금리가 인위적으로 억제될 수 있습니다. 📌 활용: 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용하세요.')
         if 't2y' in fred_data:
             rest_html += _macro_row(
-                '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%")
+                '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
+                tip='미국 2년 만기 국채 수익률로 단기 금리 전망(연준 정책 방향)을 민감하게 반영합니다. ⚠️ 한계: 단기적으로 연준 발언에 과도하게 반응할 수 있습니다. 📌 활용: 10Y와의 차이(스프레드)로 경기침체 신호를 확인하세요.')
         if 'spread' in fred_data:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
             sl2 = '정상' if sp >= 0 else '역전'
             rest_html += _macro_row(
-                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2)
+                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
+                tip='10년물-2년물 국채 금리 차이입니다. 역전(마이너스) 시 과거 8회 중 7회 경기침체가 발생한 강력한 선행지표입니다. ⚠️ 한계: 역전 후 실제 침체까지 6~18개월의 시차가 있어 단기 타이밍 도구로는 부적합합니다. 📌 활용: 역전 진입 시점보다 역전 해소 후 주의가 필요합니다.')
         if 'credit_spread' in fred_data:
             cs  = fred_data['credit_spread']['value']
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
-            rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3)
+            rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
+                tip='회사채(BBB)와 미국 국채의 금리 차이로 기업 신용 위험도를 나타냅니다. 스프레드 확대는 시장 공포·유동성 위기 신호입니다. ⚠️ 한계: 중앙은행의 회사채 매입 등 정책 개입으로 위기 신호가 희석될 수 있습니다. 📌 활용: 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 봅니다.')
         if 'krw_usd' in fred_data:
             krw = fred_data['krw_usd']['value']
             kd  = fred_data['krw_usd']['date']
             rest_html += _macro_row(
-                '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd)
+                '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd,
+                tip='1달러 기준 원화 환율입니다. 원화 약세(환율 상승)는 수출 기업에 유리하지만 수입 물가 상승과 외국인 투자자 이탈 요인이 됩니다. ⚠️ 한계: 환율은 단기 변동성이 크고 다양한 요인에 영향받습니다. 📌 활용: 1,400원 이상 고환율 지속 시 한국 시장 외국인 수급 주의가 필요합니다.')
         if 'us_debt' in fred_data and 'krw_usd' in fred_data:
             debt_m     = fred_data['us_debt']['value']
             dd         = fred_data['us_debt']['date']
@@ -1939,7 +1983,8 @@ with st.sidebar:
             rest_html += _macro_row(
                 '미국 국가부채',
                 f'${debt_t_usd:.1f}T / {debt_t_krw:.1f}경원',
-                '#a6adc8', dd)
+                '#a6adc8', dd,
+                tip='미국 연방정부 누적 부채입니다. GDP 대비 비율(현재 약 120% 이상)로 해석해야 의미가 있습니다. ⚠️ 한계: 기축통화국인 미국은 일반 국가와 달리 높은 부채를 장기간 유지할 수 있어 단순 수치 비교는 오해를 낳을 수 있습니다. 📌 활용: 부채한도 협상 시기(보통 연중)를 주시하세요.')
         if rest_html:
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
