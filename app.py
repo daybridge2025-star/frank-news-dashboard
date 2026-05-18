@@ -1802,7 +1802,7 @@ with st.sidebar:
         import pandas as _pd
         import plotly.graph_objects as _go
 
-        # ── 버핏지수 + 인라인 차트 ────────────────────────────────
+        # ── 버핏지수 + 차트 ──────────────────────────────────────
         if 'buffett' in fred_data:
             b  = fred_data['buffett']['value']
             bd = fred_data['buffett']['date']
@@ -1811,10 +1811,12 @@ with st.sidebar:
             elif b > 100: bc, bl, be = '#f9e2af', '주의',   '🟡'
             elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
+            # 지표 행은 _rrow() 로 표시 → 다른 행과 동일한 폰트/색상
+            _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd)
+            # 차트는 별도 expander (라벨은 아이콘+텍스트만, 폰트 영향 최소화)
             buffett_hist = fetch_buffett_history()
-            _buff_label = f'버핏지수   {b:.1f}% ({be} {bl})   ·   {bd}'
             if buffett_hist:
-                with st.expander(_buff_label, expanded=False):
+                with st.expander('📈 버핏지수 히스토리', expanded=False):
                     df_b = _pd.DataFrame(buffett_hist, columns=['quarter', '버핏지수'])
                     _fig_b = _go.Figure()
                     _fig_b.add_trace(_go.Scatter(
@@ -1846,8 +1848,6 @@ with st.sidebar:
                     st.plotly_chart(_fig_b, use_container_width=True,
                                     config={'displayModeBar': False})
                     st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
-            else:
-                _rrow('버핏지수', f'{b:.1f}% ({bl})', bc, bd)
 
         # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
@@ -1866,10 +1866,12 @@ with st.sidebar:
                 hist_avg = 17.0
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
-            cape_hist = [(y, v) for y, v in cape_info.get('history', []) if v < 200]
-            _cape_label = f'Shiller CAPE   {cape_curr:.1f} ({ce})   ·   {cape_sub}'
+            # 차트용 cape_hist: 필터 없이 원본 사용 (차트는 항상 표시)
+            cape_hist = cape_info.get('history', [])
+            # 지표 행은 _rrow() 로 표시
+            _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce}', cc2, cape_sub)
             if cape_hist:
-                with st.expander(_cape_label, expanded=False):
+                with st.expander('📈 Shiller CAPE 히스토리', expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
                     df_c = df_c.sort_values('year')
                     _cape_mean = round(sum(v for _, v in cape_hist) / len(cape_hist), 1)
@@ -1898,8 +1900,6 @@ with st.sidebar:
                     st.plotly_chart(_fig_c, use_container_width=True,
                                     config={'displayModeBar': False})
                     st.caption('출처: multpl.com / Robert Shiller')
-            else:
-                _rrow('Shiller CAPE', f'{cape_curr:.1f}', cc2, cape_sub)
 
         # ── 나머지 지표 (하나의 블록) ────────────────────────────
         rest_html = ''
