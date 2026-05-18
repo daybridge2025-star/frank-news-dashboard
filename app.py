@@ -1659,10 +1659,13 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details summary {
 section[data-testid="stSidebar"] [data-testid="stExpander"] details[open] summary {
     border-bottom: 1px solid #313244 !important;
 }
-section[data-testid="stSidebar"] [data-testid="stExpander"] details summary span {
+section[data-testid="stSidebar"] [data-testid="stExpander"] details summary span,
+section[data-testid="stSidebar"] [data-testid="stExpander"] details summary p {
     font-size: 0.73rem !important;
     color: #cdd6f4 !important;
-    font-weight: 500 !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details summary svg {
     color: #7f849c !important;
@@ -1809,7 +1812,7 @@ with st.sidebar:
             elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
             buffett_hist = fetch_buffett_history()
-            _buff_label = f'{be} 버핏지수   {b:.1f}% ({bl})   ·   {bd}'
+            _buff_label = f'버핏지수   {b:.1f}% ({be} {bl})   ·   {bd}'
             if buffett_hist:
                 with st.expander(_buff_label, expanded=False):
                     df_b = _pd.DataFrame(buffett_hist, columns=['quarter', '버핏지수'])
@@ -1864,7 +1867,7 @@ with st.sidebar:
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
             cape_hist = [(y, v) for y, v in cape_info.get('history', []) if v < 200]
-            _cape_label = f'{ce} Shiller CAPE   {cape_curr:.1f}   ·   {cape_sub}'
+            _cape_label = f'Shiller CAPE   {cape_curr:.1f} ({ce})   ·   {cape_sub}'
             if cape_hist:
                 with st.expander(_cape_label, expanded=False):
                     df_c = _pd.DataFrame(cape_hist, columns=['year', 'CAPE'])
