@@ -2034,7 +2034,7 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"추가 실패: {e}")
     st.divider()
-    st.subheader("종목 순서 / 삭제")
+    st.subheader("종목 순서 변경 / 삭제")
     tickers_raw = load_tickers()
     if tickers_raw:
         n = len(tickers_raw)
@@ -2051,7 +2051,7 @@ with st.sidebar:
                 )
             with col_up:
                 if i > 0:
-                    if st.button("up", key=f"up_{sym}_{i}", use_container_width=True):
+                    if st.button("↑", key=f"up_{sym}_{i}", use_container_width=True):
                         new_order = list(tickers_raw)
                         new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
                         try:
@@ -2064,7 +2064,7 @@ with st.sidebar:
                     st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
             with col_dn:
                 if i < n - 1:
-                    if st.button("dn", key=f"dn_{sym}_{i}", use_container_width=True):
+                    if st.button("↓", key=f"dn_{sym}_{i}", use_container_width=True):
                         new_order = list(tickers_raw)
                         new_order[i], new_order[i + 1] = new_order[i + 1], new_order[i]
                         try:
@@ -2076,7 +2076,7 @@ with st.sidebar:
                 else:
                     st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
             with col_dl:
-                if st.button("del", key=f"dl_{sym}_{i}", use_container_width=True):
+                if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
                     try:
                         remove_ticker(sym)
                         clear_cache()
@@ -2085,3 +2085,27 @@ with st.sidebar:
                         st.error(f"삭제 실패: {e}")
     else:
         st.info("등록된 종목이 없습니다.")
+
+
+# ── 메인 영역 ────────────────────────────────────────────────────
+tickers_list = load_tickers()
+
+if not tickers_list:
+    st.title("📰 ValueHunter")
+    st.info("👈 왼쪽 사이드바에서 종목을 추가해주세요.")
+else:
+    tab_labels = [t['ticker'] for t in tickers_list]
+    tabs = st.tabs(tab_labels)
+
+    news_df = load_news()
+    if news_df is None:
+        news_df = pd.DataFrame()
+
+    for tab, ticker_info in zip(tabs, tickers_list):
+        sym = ticker_info['ticker']
+        with tab:
+            if not news_df.empty and 'ticker' in news_df.columns:
+                ticker_df = news_df[news_df['ticker'] == sym].copy()
+            else:
+                ticker_df = pd.DataFrame()
+            render_ticker_content(sym, ticker_df)
