@@ -13,7 +13,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news
+from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news, get_sentiment
 from utils.edgar import get_edgar_fundamentals
 from utils.damodaran import enrich_fundamentals, INDUSTRY_CANDIDATES, INDUSTRY_OVERRIDE
 
@@ -1382,6 +1382,12 @@ def load_news():
 
 
 @st.cache_data(ttl=300)
+def load_sentiment_data():
+    """SENTIMENT 시트 전체 로드 (5분 캐시)."""
+    return get_sentiment()
+
+
+@st.cache_data(ttl=300)
 def load_tickers():
     return get_tickers()
 
@@ -1456,6 +1462,134 @@ def _sort_tickers_by_mcap():
         print(f'[mcap_sort] {e}')
 
 
+def render_sentiment_card(ticker_sym, sentiment_df):
+    """
+    Finnhub 감성 데이터 카드 렌더링.
+    sentiment_df: load_sentiment_data() 반환값 (전체 SENTIMENT 시트)
+    데이터 없으면 카드 미표시.
+    """
+    if sentiment_df is None or sentiment_df.empty:
+        return
+
+    if 'ticker' not in sentiment_df.columns:
+        return
+
+    # 해당 종목 최신 행 추출
+    t_df = sentiment_df[sentiment_df['ticker'] == ticker_sym.upper()]
+    if t_df.empty:
+        return
+
+    # date 컬럼 기준 최신 행
+    if 'date' in t_df.columns:
+        t_df = t_df.sort_values('date', ascending=False)
+    row = t_df.iloc[0]
+
+    def _pct(val):
+        """0~1 float → '72%' 문자열, 없으면 '—'"""
+        try:
+            v = float(val)
+            return f'{v * 100:.0f}%'
+        except (TypeError, ValueError):
+            return '—'
+
+    def _int(val):
+        try:
+            return f'{int(float(val)):,}'
+        except (TypeError, ValueError):
+            return '—'
+
+    def _float(val):
+        try:
+            return f'{float(val):.2f}'
+        except (TypeError, ValueError):
+            return '—'
+
+    news_bull = _pct(row.get('news_bull_pct'))
+    news_bear = _pct(row.get('news_bear_pct'))
+    news_buzz = _float(row.get('news_buzz'))
+
+    reddit_pos     = _pct(row.get('reddit_pos'))
+    reddit_neg     = _pct(row.get('reddit_neg'))
+    reddit_mention = _int(row.get('reddit_mention'))
+
+    twitter_pos     = _pct(row.get('twitter_pos'))
+    twitter_neg     = _pct(row.get('twitter_neg'))
+    twitter_mention = _int(row.get('twitter_mention'))
+
+    collected = str(row.get('collected_at', ''))[:16]
+    date_str  = str(row.get('date', ''))
+
+    # 뉴스 감성 색상
+    try:
+        bull_v = float(row.get('news_bull_pct') or 0)
+        news_color = '#a6e3a1' if bull_v >= 0.55 else ('#f38ba8' if bull_v <= 0.40 else '#f9e2af')
+    except (TypeError, ValueError):
+        news_color = '#cdd6f4'
+
+    with st.expander('📊 감성 분석', expanded=False):
+        st.markdown(
+            f'<div style="font-size:0.7rem;color:#585b70;margin-bottom:8px;">'
+            f'기준일: {date_str} &nbsp;|&nbsp; 수집: {collected}</div>',
+            unsafe_allow_html=True
+        )
+
+        # ── 뉴스 감성 ──────────────────────────────────────────
+        st.markdown(
+            '<div style="font-size:0.75rem;color:#a6adc8;margin:6px 0 4px 0;">'
+            '📰 뉴스 감성 (Finnhub)</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div class="fin-grid">'
+            f'<div class="fin-chip"><div class="fc-label">Bullish</div>'
+            f'<div class="fc-value" style="color:{news_color};">{news_bull}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">Bearish</div>'
+            f'<div class="fc-value">{news_bear}</div></div>'
+            f'<div class="fin-chip"><div class="fc-label">Buzz 지수</div>'
+            f'<div class="fc-value">{news_buzz}</div></div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+        # ── Reddit 감성 ─────────────────────────────────────────
+        if reddit_mention != '—':
+            st.markdown(
+                '<div style="font-size:0.75rem;color:#a6adc8;margin:6px 0 4px 0;">'
+                '🔴 Reddit</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f'<div class="fin-grid">'
+                f'<div class="fin-chip"><div class="fc-label">긍정</div>'
+                f'<div class="fc-value positive">{reddit_pos}</div></div>'
+                f'<div class="fin-chip"><div class="fc-label">부정</div>'
+                f'<div class="fc-value negative">{reddit_neg}</div></div>'
+                f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
+                f'<div class="fc-value">{reddit_mention}</div></div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        # ── Twitter/X 감성 ──────────────────────────────────────
+        if twitter_mention != '—':
+            st.markdown(
+                '<div style="font-size:0.75rem;color:#a6adc8;margin:6px 0 4px 0;">'
+                '🐦 Twitter / X</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f'<div class="fin-grid">'
+                f'<div class="fin-chip"><div class="fc-label">긍정</div>'
+                f'<div class="fc-value positive">{twitter_pos}</div></div>'
+                f'<div class="fin-chip"><div class="fc-label">부정</div>'
+                f'<div class="fc-value negative">{twitter_neg}</div></div>'
+                f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
+                f'<div class="fc-value">{twitter_mention}</div></div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+
 def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
     """종목별 브리핑 + 기사 카드 + 페이지네이션 렌더링"""
     no_news = ticker_df.empty
@@ -1493,6 +1627,10 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
 
     # ── 프리미엄 분석 섹션 ──────────────────────────────────────
     render_premium_analysis(ticker_sym, fundamentals=fundamentals if fundamentals else None)
+
+    # ── 감성 분석 카드 ──────────────────────────────────────────
+    _sentiment_df = load_sentiment_data()
+    render_sentiment_card(ticker_sym, _sentiment_df)
 
     # 종합 브리핑 박스 (기사 유무와 무관하게 summary_kr 있으면 표시)
     summary_kr = ''
