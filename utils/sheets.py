@@ -35,6 +35,14 @@ TODAY_HEADERS = [
 ]
 CONFIG_HEADERS = ['ticker', 'company_name', 'added_date']
 
+SENTIMENT_HEADERS = [
+    'ticker', 'date',
+    'news_bull_pct', 'news_bear_pct', 'news_buzz',
+    'reddit_pos', 'reddit_neg', 'reddit_mention',
+    'twitter_pos', 'twitter_neg', 'twitter_mention',
+    'collected_at',
+]
+
 
 def get_gspread_client():
     creds = Credentials(
@@ -172,6 +180,86 @@ def save_news_to_today(news_items):
     except Exception as e:
         print(f"[ERROR] save_news_to_today: {e}")
         return 0
+
+
+def save_sentiment(sentiment_items: list) -> int:
+    """
+    감성 수집 결과를 SENTIMENT 시트에 저장.
+    동일 ticker+date 행이 있으면 업데이트, 없으면 추가.
+    반환: 저장된 행 수
+    """
+    if not sentiment_items:
+        return 0
+    try:
+        ss = get_spreadsheet()
+        sheet = _ensure_sheet(ss, 'SENTIMENT', SENTIMENT_HEADERS, 500, len(SENTIMENT_HEADERS))
+
+        today_str = datetime.now(KST).strftime('%Y-%m-%d')
+
+        # 기존 데이터 로드 (ticker+date 키로 행 번호 인덱스)
+        all_values = sheet.get_all_values()
+        header_row = all_values[0] if all_values else SENTIMENT_HEADERS
+        # ticker col=0, date col=1
+        existing_keys = {}  # (ticker, date) -> row_number (1-based, 헤더=1이므로 +2)
+        for row_idx, row in enumerate(all_values[1:], start=2):
+            if len(row) >= 2:
+                key = (row[0], row[1])
+                existing_keys[key] = row_idx
+
+        saved = 0
+        for item in sentiment_items:
+            key = (item['ticker'].upper(), today_str)
+            row_data = [
+                item['ticker'].upper(),
+                today_str,
+                item.get('news_bull_pct', ''),
+                item.get('news_bear_pct', ''),
+                item.get('news_buzz', ''),
+                item.get('reddit_pos', ''),
+                item.get('reddit_neg', ''),
+                item.get('reddit_mention', ''),
+                item.get('twitter_pos', ''),
+                item.get('twitter_neg', ''),
+                item.get('twitter_mention', ''),
+                item.get('collected_at', ''),
+            ]
+            # None → 빈 문자열 변환
+            row_data = ['' if v is None else v for v in row_data]
+
+            if key in existing_keys:
+                # 기존 행 업데이트
+                sheet.update(f'A{existing_keys[key]}', [row_data])
+            else:
+                # 신규 행 추가
+                sheet.append_row(row_data, value_input_option='RAW')
+            saved += 1
+
+        return saved
+    except Exception as e:
+        print(f'[ERROR] save_sentiment: {e}')
+        return 0
+
+
+def get_sentiment() -> 'pd.DataFrame':
+    """
+    SENTIMENT 시트 전체를 DataFrame으로 반환.
+    시트 없으면 빈 DataFrame 반환.
+    """
+    import pandas as pd
+    try:
+        ss = get_spreadsheet()
+        try:
+            sheet = ss.worksheet('SENTIMENT')
+        except Exception:
+            return pd.DataFrame(columns=SENTIMENT_HEADERS)
+
+        records = sheet.get_all_records()
+        if not records:
+            return pd.DataFrame(columns=SENTIMENT_HEADERS)
+        return pd.DataFrame(records)
+    except Exception as e:
+        print(f'[ERROR] get_sentiment: {e}')
+        return pd.DataFrame(columns=SENTIMENT_HEADERS)
 
 
 def archive_and_reset():
