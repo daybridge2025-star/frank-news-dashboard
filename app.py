@@ -13,7 +13,12 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news, get_sentiment
+from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news
+try:
+    from utils.sheets import get_sentiment
+except ImportError:
+    def get_sentiment():
+        return pd.DataFrame()
 from utils.edgar import get_edgar_fundamentals
 from utils.damodaran import enrich_fundamentals, INDUSTRY_CANDIDATES, INDUSTRY_OVERRIDE
 
@@ -2183,6 +2188,130 @@ with st.sidebar:
                 '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 1달러 기준 원화 환율. 원화 약세(↑)는 수출주 유리, 수입 물가 상승·외국인 이탈 요인<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 변동성이 매우 크고 지정학·금리차·수급 등 복합 요인에 영향받음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 1,400원 이상 고환율 지속 시 한국 시장 외국인 수급 악화 주의')
         if 'us_debt' in fred_data and 'krw_usd' in fred_data:
+            debt_m     = fred_data['us_debt']['value']
+            dd         = fred_data['us_debt']['date']
+            krw_r      = fred_data['krw_usd']['value']
+            debt_t_usd = debt_m / 1_000_000
+            debt_t_krw = debt_m * 1e6 * krw_r / 1e16
+            rest_html += _macro_row(
+                '미국 국가부채',
+                f'${debt_t_usd:.1f}T / {debt_t_krw:.1f}경원',
+                '#a6adc8', dd,
+                tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 연방정부 누적 부채. 절대 금액보다 GDP 대비 비율(현재 약 120%↑)로 해석<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 기축통화국 미국은 높은 부채를 장기 유지 가능. 단순 수치 비교는 오해 소지 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 부채한도 협상 시기(보통 연중) 전후 시장 변동성 확대 주의')
+        if rest_html:
+            st.markdown(
+                f'<div style="background:#1e1e2e;border:1px solid #313244;'
+                f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
+                f'{rest_html}</div>',
+                unsafe_allow_html=True)
+    st.divider()
+    st.subheader("+ 종목 추가")
+    if "pending_ticker" not in st.session_state:
+        st.session_state["pending_ticker"] = ""
+    if "pending_name" not in st.session_state:
+        st.session_state["pending_name"] = ""
+    with st.form("ticker_lookup_form", clear_on_submit=False):
+        ticker_input = st.text_input(
+            "티커 입력 (예: AAPL, SOXL)",
+            max_chars=10,
+            value=st.session_state["pending_ticker"]
+        )
+        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if lookup_clicked:
+        t = ticker_input.upper().strip()
+        if t:
+            existing_tickers = [r['ticker'] for r in load_tickers()]
+            if t in existing_tickers:
+                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+            else:
+                name = lookup_company_name(t)
+                st.session_state["pending_ticker"] = t
+                st.session_state["pending_name"] = name
+                if name:
+                    st.success(f"{t} -> {name}")
+                else:
+                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+        t = st.session_state["pending_ticker"]
+        name = st.session_state["pending_name"]
+        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
+            try:
+                add_ticker(t, name)
+                _sort_tickers_by_mcap()
+                clear_cache()
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
+                st.rerun()
+            except Exception as e:
+                st.error(f"추가 실패: {e}")
+    st.divider()
+    st.subheader("종목 순서 변경 / 삭제")
+    tickers_raw = load_tickers()
+    if tickers_raw:
+        n = len(tickers_raw)
+        for i, t in enumerate(tickers_raw):
+            sym   = t['ticker']
+            cname = t.get('company_name', '')
+            col_nm, col_up, col_dn, col_dl = st.columns([3, 1, 1, 1])
+            with col_nm:
+                st.markdown(
+                    f'<div style="padding:5px 0;line-height:1.3;">'
+                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span><br>'
+                    f'<span style="font-size:0.7rem;color:#7f849c;">{cname}</span></div>',
+                    unsafe_allow_html=True
+                )
+            with col_up:
+                if i > 0:
+                    if st.button("↑", key=f"up_{sym}_{i}", use_container_width=True):
+                        new_order = list(tickers_raw)
+                        new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
+                        try:
+                            reorder_tickers(new_order)
+                            load_tickers.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"순서 변경 실패: {e}")
+                else:
+                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
+            with col_dl:
+                if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
+                    try:
+                        remove_ticker(sym)
+                        _sort_tickers_by_mcap()
+                        clear_cache()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"삭제 실패: {e}")
+    else:
+        st.info("등록된 종목이 없습니다.")
+
+
+# ── 메인 영역 ────────────────────────────────────────────────────
+tickers_list = load_tickers()
+
+if not tickers_list:
+    st.title("📰 ValueHunter")
+    st.info("👈 왼쪽 사이드바에서 종목을 추가해주세요.")
+else:
+    tab_labels = [t['ticker'] for t in tickers_list]
+    tabs = st.tabs(tab_labels)
+
+    news_df = load_news()
+    if news_df is None:
+        news_df = pd.DataFrame()
+
+    for i, (tab, ticker_info) in enumerate(zip(tabs, tickers_list)):
+        sym = ticker_info['ticker']
+        with tab:
+            if not news_df.empty and 'ticker' in news_df.columns:
+                ticker_df = news_df[news_df['ticker'] == sym].copy()
+            else:
+                ticker_df = pd.DataFrame()
+            render_ticker_content(sym, ticker_df, tab_idx=i)
+us_debt' in fred_data and 'krw_usd' in fred_data:
             debt_m     = fred_data['us_debt']['value']
             dd         = fred_data['us_debt']['date']
             krw_r      = fred_data['krw_usd']['value']
