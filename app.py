@@ -1250,7 +1250,7 @@ def render_economic_calendar():
 
         html_out = (
             '<style>'
-            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;overflow-x:hidden}'
+            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;overflow-x:auto}'
             '.eco-tbl{width:100%;border-collapse:collapse}'
             '.eco-tbl thead th{font-size:0.65rem;color:#6c7086;padding:5px 4px;'
             'border-bottom:1px solid #45475a;font-weight:500;white-space:nowrap}'
@@ -2802,14 +2802,17 @@ section[data-testid="stSidebar"] > div:first-child {
 
 # 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(
-        '<div style="font-size:1.05rem;font-weight:700;color:#cdd6f4;margin:4px 0 1px 0;">⚙️ 종목 관리</div>'
-        f'<div style="font-size:0.65rem;color:#7f849c;margin-bottom:6px;">{kst_now_str()}</div>',
-        unsafe_allow_html=True
-    )
-    if st.button("🔄 새로고침", use_container_width=True):
-        clear_cache()
-        st.rerun()
+    _sb_btn_col, _sb_ts_col = st.columns([3, 2])
+    with _sb_btn_col:
+        if st.button("🔄 새로고침", use_container_width=True):
+            clear_cache()
+            st.rerun()
+    with _sb_ts_col:
+        st.markdown(
+            f'<div style="font-size:0.6rem;color:#7f849c;line-height:1.5;padding:5px 0;">'
+            f'{kst_now_str()}</div>',
+            unsafe_allow_html=True
+        )
 
     # ── 종목 추가 / 삭제 (매크로 지표 위에 배치) ─────────────────────
     st.markdown(
@@ -2881,40 +2884,12 @@ with st.sidebar:
 
     st.markdown('<hr style="margin:10px 0;border-color:#313244;">', unsafe_allow_html=True)
 
-    # ── Fear & Greed Index ─────────────────────────────────────────
-    fg = fetch_fear_greed()
-    if fg:
-        score  = fg['score']
-        rk     = fg['rating_kr']
-        src    = fg['source']
-        if score >= 75:   fg_color = '#f38ba8'
-        elif score >= 55: fg_color = '#fab387'
-        elif score >= 45: fg_color = '#f9e2af'
-        elif score >= 25: fg_color = '#94e2d5'
-        else:             fg_color = '#89b4fa'
-        st.markdown(
-            f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
-            f'padding:10px 12px;margin:4px 0;">'
-            f'<div style="font-size:0.68rem;color:#7f849c;margin-bottom:4px;">공포탐욕지수'
-            f'<span class="macro-tip">💡<span class="tip-box">'
-            f'<span style="color:#89dceb;font-weight:600">📊 설명</span> : CNN이 산출하는 0~100 시장 심리 지수. 25↓=극도공포, 75↑=극도탐욕. 주가 모멘텀·옵션·채권 수요 등 7개 지표 합산<br>'
-            f'<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
-            f'<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
-            f'</span></span>'
-            f'<div style="display:flex;align-items:center;gap:8px;">'
-            f'<span style="font-size:1.4rem;font-weight:700;color:{fg_color};">{score}</span>'
-            f'<span style="font-size:0.8rem;color:{fg_color};">{rk}</span>'
-            f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
-            f'<div style="background:{fg_color};width:{score}%;height:4px;border-radius:3px;"></div>'
-            f'<div style="font-size:0.62rem;color:#45475a;margin-top:4px;">출처: {src}</div>'
-,
-            unsafe_allow_html=True
-        )
-    # ── 매크로 지표 ──────────────────────────────────────────────
+    # ── 매크로 지표 (공포탐욕지수 포함) ──────────────────────────
+    fg         = fetch_fear_greed()
     fred_data  = fetch_fred_data()
     cape_info  = fetch_cape_data()
     cape_curr  = cape_info.get('current')
-    if fred_data or cape_curr is not None:
+    if fg or fred_data or cape_curr is not None:
         st.markdown(
             '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
             'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
@@ -2926,6 +2901,35 @@ with st.sidebar:
                 f'{_macro_row(label, value, color, sub, tip)}'
     ,
                 unsafe_allow_html=True)
+        # ── 공포탐욕지수 (버핏지수와 동일 스타일 + 바 그래프) ──────
+        if fg:
+            _fg_score  = fg['score']
+            _fg_rating = fg['rating']
+            _fg_src    = fg['source']
+            if _fg_score >= 75:   _fg_color = '#f38ba8'
+            elif _fg_score >= 55: _fg_color = '#fab387'
+            elif _fg_score >= 45: _fg_color = '#f9e2af'
+            elif _fg_score >= 25: _fg_color = '#94e2d5'
+            else:                 _fg_color = '#89b4fa'
+            _fg_tip = (
+                '<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
+                'CNN이 산출하는 0~100 시장 심리 지수. 25↓=극도공포, 75↑=극도탐욕. '
+                '주가 모멘텀·옵션·채권 수요 등 7개 지표 합산<br>'
+                '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
+                '단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
+                '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
+                '극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
+            )
+            _fg_now = kst_now_str()
+            st.markdown(
+                f'<div style="background:#1e1e2e;border:1px solid #313244;'
+                f'border-radius:8px;padding:8px 12px;margin:2px 0;">'
+                f'{_macro_row("공포탐욕지수", f"{_fg_score}  {_fg_rating}", _fg_color, _fg_now, _fg_tip)}'
+                f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
+                f'<div style="background:{_fg_color};width:{_fg_score}%;height:4px;border-radius:3px;"></div>'
+                f'</div></div>',
+                unsafe_allow_html=True
+            )
 
         import pandas as _pd
         import plotly.graph_objects as _go
