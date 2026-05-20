@@ -2785,23 +2785,43 @@ with st.sidebar:
             value=st.session_state["pending_ticker"]
         )
         lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if "pending_action" not in st.session_state:
+        st.session_state["pending_action"] = ""
     if lookup_clicked:
         t = ticker_input.upper().strip()
         if t:
             existing_tickers = [r['ticker'] for r in load_tickers()]
             if t in existing_tickers:
-                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
-                st.session_state["pending_ticker"] = ""
+                # 이미 등록된 종목 → 삭제 옵션 표시
+                st.session_state["pending_ticker"] = t
                 st.session_state["pending_name"] = ""
+                st.session_state["pending_action"] = "delete"
             else:
                 name = lookup_company_name(t)
                 st.session_state["pending_ticker"] = t
                 st.session_state["pending_name"] = name
+                st.session_state["pending_action"] = "add"
                 if name:
                     st.success(f"{t} → {name}")
                 else:
                     st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
-    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+    # 삭제 확인 버튼 (이미 등록된 종목)
+    if st.session_state.get("pending_action") == "delete" and st.session_state.get("pending_ticker"):
+        t = st.session_state["pending_ticker"]
+        st.warning(f"**{t}** 는 이미 등록된 종목입니다.")
+        if st.button(f"🗑 {t} 삭제", use_container_width=True, type="primary"):
+            try:
+                remove_ticker(t)
+                clear_cache()
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.session_state["pending_action"] = ""
+                st.success(f"{t} 삭제 완료!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"삭제 실패: {e}")
+    # 추가 확인 버튼 (미등록 종목)
+    if st.session_state.get("pending_action") == "add" and st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
         t    = st.session_state["pending_ticker"]
         name = st.session_state["pending_name"]
         if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
@@ -2811,39 +2831,12 @@ with st.sidebar:
                 clear_cache()
                 st.session_state["pending_ticker"] = ""
                 st.session_state["pending_name"] = ""
+                st.session_state["pending_action"] = ""
                 st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
                 st.rerun()
             except Exception as e:
                 st.error(f"추가 실패: {e}")
 
-    # ── 등록 종목 목록 + 삭제 (↑↓ 제거, 삭제만 유지) ──────────────────
-    tickers_raw = load_tickers()
-    if tickers_raw:
-        st.markdown(
-            '<div style="font-size:0.68rem;color:#7f849c;margin:6px 0 3px 0;">'
-            '등록 종목 (시총순 자동정렬)</div>',
-            unsafe_allow_html=True
-        )
-        for i, t in enumerate(tickers_raw):
-            sym   = t['ticker']
-            cname = t.get('company_name', '')
-            col_nm, col_dl = st.columns([5, 1])
-            with col_nm:
-                st.markdown(
-                    f'<div style="padding:3px 0;line-height:1.3;">'
-                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span> '
-                    f'<span style="font-size:0.68rem;color:#7f849c;">{cname}</span></div>',
-                    unsafe_allow_html=True
-                )
-            with col_dl:
-                if st.button("✕", key=f"dl_{sym}_{i}", use_container_width=True):
-                    try:
-                        remove_ticker(sym)
-                        _sort_tickers_by_mcap()
-                        clear_cache()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"삭제 실패: {e}")
     st.markdown('<hr style="margin:10px 0;border-color:#313244;">', unsafe_allow_html=True)
 
     # ── Fear & Greed Index ─────────────────────────────────────────
