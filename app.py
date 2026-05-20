@@ -5,6 +5,7 @@ Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별 탭으로 표시
 
 import re
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import requests
 from datetime import datetime
@@ -551,6 +552,71 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
         f'<span style="font-size:0.78rem;font-weight:600;color:{color};">'
         f'{value_str}{sub_html}</span></div>'
     )
+
+
+def render_economic_calendar():
+    """경제 캘린더 사이드바 섹션 — Investing.com 무료 iframe 위젯."""
+    st.markdown(
+        '<div style="font-size:0.72rem;color:#7f849c;font-weight:600;'
+        'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
+        unsafe_allow_html=True,
+    )
+
+    IMP_OPTIONS     = ['★ 고영향',  '★★ 고+중',  '전체']
+    COUNTRY_OPTIONS = ['🇺🇸 미국',  '🇺🇸+🇰🇷 미국·한국',  '🌐 전체']
+    IMP_PARAMS = {
+        '★ 고영향':   '&importance%5B%5D=3',
+        '★★ 고+중':  '&importance%5B%5D=3&importance%5B%5D=2',
+        '전체':       '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
+    }
+    COUNTRY_PARAMS = {
+        '🇺🇸 미국':          '&countries=5',
+        '🇺🇸+🇰🇷 미국·한국': '&countries=5%2C11',
+        '🌐 전체':            '',
+    }
+
+    with st.expander('📋 이번 주 주요 경제 일정', expanded=False):
+        col_l, col_r = st.columns(2)
+        with col_l:
+            imp = st.selectbox(
+                '중요도', IMP_OPTIONS, index=0,
+                key='cal_imp', label_visibility='collapsed',
+            )
+        with col_r:
+            ctry = st.selectbox(
+                '국가', COUNTRY_OPTIONS, index=0,
+                key='cal_ctry', label_visibility='collapsed',
+            )
+
+        imp_p  = IMP_PARAMS.get(imp, '&importance%5B%5D=3')
+        ctry_p = COUNTRY_PARAMS.get(ctry, '&countries=5')
+
+        src = (
+            'https://sslecal2.investing.com'
+            '?columns=exc_flags%2Cexc_currency%2Cexc_importance'
+            '%2Cexc_actual%2Cexc_forecast%2Cexc_previous'
+            + imp_p
+            + '&features=datepicker%2Ctimezone'
+            + ctry_p
+            + '&calType=week&timeZone=55&lang=18'
+        )
+
+        components.html(
+            f'<style>'
+            f'  body {{ margin:0; padding:0; background:transparent; }}'
+            f'  iframe {{ display:block; border:none; }}'
+            f'</style>'
+            f'<iframe src="{src}" width="100%" height="410"'
+            f' frameborder="0" allowtransparency="true"'
+            f' marginwidth="0" marginheight="0"></iframe>'
+            f'<div style="font-size:0.6rem;color:#6c7086;'
+            f'text-align:right;padding:2px 4px 0 0;">'
+            f'출처: <a href="https://kr.investing.com/" target="_blank"'
+            f' style="color:#89b4fa;text-decoration:none;">Investing.com</a>'
+            f'</div>',
+            height=430,
+            scrolling=False,
+        )
 
 
 def render_premium_lock(icon, title, desc):
@@ -2204,6 +2270,8 @@ with st.sidebar:
                 f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
                 f'{rest_html}</div>',
                 unsafe_allow_html=True)
+
+    render_economic_calendar()
     st.divider()
     st.subheader("+ 종목 추가")
     if "pending_ticker" not in st.session_state:
