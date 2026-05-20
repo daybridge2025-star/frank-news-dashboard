@@ -604,11 +604,14 @@ def render_economic_calendar():
         components.html(
             f'<style>'
             f'  body {{ margin:0; padding:0; background:transparent; }}'
+            f'  .cal-wrap {{ overflow-x:auto; overflow-y:hidden; width:100%; }}'
             f'  iframe {{ display:block; border:none; }}'
             f'</style>'
-            f'<iframe src="{src}" width="100%" height="410"'
+            f'<div class="cal-wrap">'
+            f'<iframe src="{src}" width="700" height="400"'
             f' frameborder="0" allowtransparency="true"'
             f' marginwidth="0" marginheight="0"></iframe>'
+            f'</div>'
             f'<div style="font-size:0.6rem;color:#6c7086;'
             f'text-align:right;padding:2px 4px 0 0;">'
             f'출처: <a href="https://kr.investing.com/" target="_blank"'
@@ -1808,6 +1811,22 @@ st.set_page_config(page_title='ValueHunter', page_icon='🎯', layout='wide')
 
 st.markdown("""
 <style>
+/* ── 경제 캘린더 selectbox 스타일 ── */
+div[data-testid="stSelectbox"][data-key="cal_imp"] > div > div,
+div[data-testid="stSelectbox"][data-key="cal_ctry"] > div > div {
+    font-size: 0.72rem !important;
+    color: #a6adc8 !important;
+    background: #1e1e2e !important;
+    border: 1px solid #313244 !important;
+    border-radius: 6px !important;
+    min-height: 28px !important;
+    padding: 2px 8px !important;
+}
+div[data-testid="stSelectbox"][data-key="cal_imp"] svg,
+div[data-testid="stSelectbox"][data-key="cal_ctry"] svg {
+    fill: #a6adc8 !important;
+}
+
 /* ── 칩 그리드 ── */
 .fin-grid {
     display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;
