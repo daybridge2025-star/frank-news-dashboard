@@ -8,7 +8,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import sys
 import os
@@ -554,72 +554,166 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
     )
 
 
+
+@st.cache_data(ttl=1800)
+def fetch_economic_calendar():
+    """Finnhub 경제캘린더 API — 이번 주 (월~일) 데이터 fetch."""
+    api_key = os.environ.get('FINNHUB_API_KEY', '')
+    if not api_key:
+        return None, 'no_key'
+    today  = datetime.now(KST).date()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+    url = (
+        'https://finnhub.io/api/v1/calendar/economic'
+        f'?from={monday}&to={sunday}&token={api_key}'
+    )
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code == 403:
+            return None, '403'
+        r.raise_for_status()
+        return r.json().get('economicCalendar', []), 'ok'
+    except Exception as e:
+        return None, str(e)
+
 def render_economic_calendar():
-    """경제 캘린더 사이드바 섹션 — Investing.com 무료 iframe 위젯."""
+    """경제 캘린더 사이드바 섹션 — Finnhub API 기반 테이블."""
     st.markdown(
         '<div style="font-size:0.7rem;color:#a6adc8;font-weight:600;'
         'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
         unsafe_allow_html=True,
     )
 
-    IMP_OPTIONS     = ['🔴 고영향',  '🟠 고+중',  '⚪ 전체']
-    COUNTRY_OPTIONS = ['🇺🇸 미국',  '🇺🇸+🇰🇷 미국·한국',  '🌐 전체']
-    IMP_PARAMS = {
-        '🔴 고영향':   '&importance%5B%5D=3',
-        '🟠 고+중':  '&importance%5B%5D=3&importance%5B%5D=2',
-        '⚪ 전체':       '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
-    }
-    COUNTRY_PARAMS = {
-        '🇺🇸 미국':          '&countries=5',
-        '🇺🇸+🇰🇷 미국·한국': '&countries=5%2C11',
-        '🌐 전체':            '',
-    }
+    IMP_OPTIONS     = ['🔴 고영향', '🟠 고+중', '⚪ 전체']
+    COUNTRY_OPTIONS = ['🇺🇸 미국', '🇺🇸+🇰🇷 미국·한국', '🌐 전체']
+    IMP_MAP  = {'🔴 고영향': ['high'], '🟠 고+중': ['high', 'medium'], '⚪ 전체': ['high', 'medium', 'low']}
+    CTRY_MAP = {'🇺🇸 미국': ['US'], '🇺🇸+🇰🇷 미국·한국': ['US', 'KR'], '🌐 전체': None}
+    FLAG_MAP = {'US':'🇺🇸','KR':'🇰🇷','EU':'🇪🇺','GB':'🇬🇧','JP':'🇯🇵','CN':'🇨🇳','DE':'🇩🇪','CA':'🇨🇦','AU':'🇦🇺'}
+    DOT_CLR  = {'high':'#f38ba8', 'medium':'#f9e2af', 'low':'#585b70'}
 
     with st.expander('📋 이번 주 주요 경제 일정', expanded=False):
         col_l, col_r = st.columns(2)
         with col_l:
-            imp = st.selectbox(
-                '중요도', IMP_OPTIONS, index=0,
-                key='cal_imp', label_visibility='collapsed',
-            )
+            imp = st.selectbox('중요도', IMP_OPTIONS, index=0,
+                               key='cal_imp', label_visibility='collapsed')
         with col_r:
-            ctry = st.selectbox(
-                '국가', COUNTRY_OPTIONS, index=0,
-                key='cal_ctry', label_visibility='collapsed',
+            ctry = st.selectbox('국가', COUNTRY_OPTIONS, index=0,
+                                key='cal_ctry', label_visibility='collapsed')
+
+        imp_set  = IMP_MAP.get(imp, ['high'])
+        ctry_set = CTRY_MAP.get(ctry)
+
+        cal_data, status = fetch_economic_calendar()
+
+        if status == 'no_key':
+            st.caption('⚠️ FINNHUB_API_KEY 시크릿이 설정되지 않았습니다.')
+            return
+        if status == '403':
+            st.caption('⚠️ Finnhub 무료 플랜에서 경제캘린더 API가 제한됩니다. (Paid plan 필요)')
+            return
+        if status != 'ok' or not cal_data:
+            st.caption(f'⚠️ 데이터 로드 실패: {status}')
+            return
+
+        # ── 필터링 ─────────────────────────────────────────────────
+        filtered = []
+        for ev in cal_data:
+            ev_imp = (ev.get('impact') or '').lower()
+            if ev_imp not in imp_set:
+                continue
+            if ctry_set and ev.get('country', '') not in ctry_set:
+                continue
+            filtered.append(ev)
+
+        # ── 날짜 내림차순 정렬 ──────────────────────────────────────
+        filtered.sort(key=lambda x: x.get('time', ''), reverse=True)
+
+        if not filtered:
+            st.caption('해당하는 일정이 없습니다.')
+            return
+
+        # ── HTML 테이블 빌드 ────────────────────────────────────────
+        today_str = datetime.now(KST).strftime('%Y-%m-%d')
+        rows = ''
+        last_date = None
+        for ev in filtered:
+            t      = ev.get('time', '')
+            dpart  = t[:10] if len(t) >= 10 else ''
+            tpart  = t[11:16] if len(t) >= 16 else ''
+            is_today = (dpart == today_str)
+            show_date = (dpart != last_date)
+            last_date = dpart
+
+            try:
+                dt_obj   = datetime.strptime(dpart, '%Y-%m-%d')
+                mmdd     = dt_obj.strftime('%m/%d')
+                if is_today:
+                    date_cell = f'<span style="color:#89b4fa;font-weight:600">{mmdd} 오늘</span>'
+                else:
+                    date_cell = f'<span style="color:#a6adc8">{mmdd}</span>'
+            except Exception:
+                date_cell = f'<span style="color:#a6adc8">{dpart}</span>'
+
+            flag    = FLAG_MAP.get(ev.get('country',''), '🌐')
+            ev_imp  = (ev.get('impact') or '').lower()
+            dot_c   = DOT_CLR.get(ev_imp, '#585b70')
+            evname  = ev.get('event', '')
+            actual  = str(ev.get('actual') or '').strip() or '—'
+            est     = str(ev.get('estimate') or '').strip() or '—'
+            prev    = str(ev.get('prev') or '').strip() or '—'
+
+            # 발표값 vs 예측값 색상
+            act_color = '#cdd6f4'
+            if actual != '—' and est != '—':
+                try:
+                    def _num(s):
+                        return float(s.replace('%','').replace('K','e3').replace('M','e6').replace('B','e9').replace(',',''))
+                    a, e = _num(actual), _num(est)
+                    act_color = '#a6e3a1' if a >= e else '#f38ba8'
+                except Exception:
+                    pass
+
+            date_td = f'<td style="padding:5px 4px;white-space:nowrap;font-size:0.7rem">{date_cell if show_date else ""}</td>'
+            rows += (
+                f'<tr style="border-bottom:1px solid #313244">'
+                f'{date_td}'
+                f'<td style="padding:5px 4px;font-size:0.68rem;color:#7f849c;white-space:nowrap">{tpart} ET</td>'
+                f'<td style="padding:5px 4px;font-size:0.82rem;text-align:center">{flag}</td>'
+                f'<td style="padding:5px 4px;text-align:center">'
+                f'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{dot_c}"></span>'
+                f'</td>'
+                f'<td style="padding:5px 6px;font-size:0.7rem;color:#cdd6f4">{evname}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:{act_color};text-align:right;white-space:nowrap">{actual}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:#7f849c;text-align:right;white-space:nowrap">{est}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:#585b70;text-align:right;white-space:nowrap">{prev}</td>'
+                f'</tr>'
             )
 
-        imp_p  = IMP_PARAMS.get(imp, '&importance%5B%5D=3')
-        ctry_p = COUNTRY_PARAMS.get(ctry, '&countries=5')
-
-        # importance / countries 를 먼저 → Investing.com 필터 작동에 필요
-        import hashlib as _hl
-        _buster = _hl.md5(f"{imp}{ctry}".encode()).hexdigest()[:6]
-        src = (
-            'https://sslecal2.investing.com'
-            '?calType=week&timeZone=55&lang=18'
-            + imp_p
-            + ctry_p
-            + '&columns=exc_flags%2Cexc_currency%2Cexc_importance'
-              '%2Cexc_actual%2Cexc_forecast%2Cexc_previous'
-            + '&features=datepicker%2Ctimezone'
-            + f'&_k={_buster}'
+        html_out = (
+            '<style>'
+            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif}'
+            '.eco-tbl{width:100%;border-collapse:collapse}'
+            '.eco-tbl thead th{font-size:0.65rem;color:#6c7086;padding:5px 4px;'
+            'border-bottom:1px solid #45475a;font-weight:500;white-space:nowrap}'
+            '.eco-tbl thead th.r{text-align:right}'
+            '</style>'
+            '<table class="eco-tbl"><thead><tr>'
+            '<th>날짜</th><th>시간</th><th></th><th></th>'
+            '<th>이벤트</th>'
+            '<th class="r">발표</th><th class="r">예측</th><th class="r">이전</th>'
+            '</tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
         )
 
-        components.html(
-            f'<style>'
-            f'  body {{ margin:0; padding:0; background:transparent; }}'
-            f'  iframe {{ display:block; border:none; }}'
-            f'</style>'
-            f'<iframe src="{src}" width="100%" height="410"'
-            f' frameborder="0" allowtransparency="true"'
-            f' marginwidth="0" marginheight="0"></iframe>'
-            f'<div style="font-size:0.6rem;color:#6c7086;'
-            f'text-align:right;padding:2px 4px 0 0;">'
-            f'출처: <a href="https://kr.investing.com/" target="_blank"'
-            f' style="color:#89b4fa;text-decoration:none;">Investing.com</a>'
-            f'</div>',
-            height=430,
-            scrolling=False,
+        row_h  = max(220, min(len(filtered) * 34 + 50, 480))
+        components.html(html_out, height=row_h, scrolling=True)
+
+        st.markdown(
+            '<div style="font-size:0.6rem;color:#6c7086;text-align:right;padding:2px 4px 0 0;">'
+            '출처: <a href="https://finnhub.io/" target="_blank"'
+            ' style="color:#89b4fa;text-decoration:none;">Finnhub</a></div>',
+            unsafe_allow_html=True,
         )
 
 
@@ -701,7 +795,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             try:
                 # 형식 예: '2024-05-01' or '2024-05-01 00:00:00'
                 d = str(raw)[:10]
-                from datetime import datetime as _dt
+                from datetime import datetime, timedelta as _dt
                 dt = _dt.strptime(d, '%Y-%m-%d')
                 return dt.strftime('%y/%m/%d')
             except Exception:
