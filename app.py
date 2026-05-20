@@ -1117,7 +1117,7 @@ def fetch_economic_calendar():
         return None, str(e)
 
 def render_economic_calendar():
-    """경제 캘린더 사이드바 섹션 — Finnhub API 기반 테이블."""
+    """경제 캘린더 사이드바 섹션 — Finnhub API 기반 테이블 (한글명 + 클릭 팝업)."""
     st.markdown(
         '<div style="font-size:0.7rem;color:#a6adc8;font-weight:600;'
         'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
@@ -1198,7 +1198,8 @@ def render_economic_calendar():
             ev_imp  = (ev.get('impact') or '').lower()
             dot_c   = DOT_CLR.get(ev_imp, '#585b70')
             _raw    = ev.get('event', '')
-            evname  = _raw
+            # ── 한글 번역 ──────────────────────────────────────────
+            evname  = _translate_eco_event(_raw)
             actual  = str(ev.get('actual') or '').strip() or '—'
             est     = str(ev.get('estimate') or '').strip() or '—'
             prev    = str(ev.get('prev') or '').strip() or '—'
@@ -1216,6 +1217,22 @@ def render_economic_calendar():
                     pass
 
             date_td = f'<td style="padding:5px 4px;white-space:nowrap;font-size:0.7rem">{date_cell if show_date else ""}</td>'
+
+            # ── 이벤트 셀: 툴팁 있으면 클릭 가능 span, 없으면 일반 텍스트 ──
+            if _tip:
+                def _esc(s): return s.replace('"', '&quot;').replace("'", '&#39;')
+                evt_cell = (
+                    f'<span class="evn"'
+                    f' data-kr="{_esc(_tip[0])}"'
+                    f' data-en="{_esc(_raw)}"'
+                    f' data-desc="{_esc(_tip[1])}"'
+                    f' data-up="{_esc(_tip[2])}"'
+                    f' data-dn="{_esc(_tip[3])}"'
+                    f'>{evname}</span>'
+                )
+            else:
+                evt_cell = f'<span style="color:#cdd6f4">{evname}</span>'
+
             rows += (
                 f'<tr style="border-bottom:1px solid #313244">'
                 f'{date_td}'
@@ -1224,20 +1241,7 @@ def render_economic_calendar():
                 f'<td style="padding:5px 4px;text-align:center">'
                 f'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{dot_c}"></span>'
                 f'</td>'
-                f'<td style="padding:5px 6px;font-size:0.7rem;position:relative">'
-                + (
-                    f'<span class="evn">{evname}</span>'
-                    f'<div class="tip">'
-                    f'<div class="tph">{_tip[0]}</div>'
-                    f'<div class="tpd">{_tip[1]}</div>'
-                    f'<hr class="tphr">'
-                    f'<div class="tpu"><span class="up">▲</span> {_tip[2]}</div>'
-                    f'<div class="tpu"><span class="dn">▼</span> {_tip[3]}</div>'
-                    f'</div>'
-                    if _tip else
-                    f'<span style="color:#cdd6f4">{evname}</span>'
-                )
-                + f'</td>'
+                f'<td style="padding:5px 6px;font-size:0.7rem">{evt_cell}</td>'
                 f'<td style="padding:5px 4px;font-size:0.7rem;color:{act_color};text-align:right;white-space:nowrap">{actual}</td>'
                 f'<td style="padding:5px 4px;font-size:0.7rem;color:#7f849c;text-align:right;white-space:nowrap">{est}</td>'
                 f'<td style="padding:5px 4px;font-size:0.7rem;color:#585b70;text-align:right;white-space:nowrap">{prev}</td>'
@@ -1246,24 +1250,29 @@ def render_economic_calendar():
 
         html_out = (
             '<style>'
-            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif}'
+            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;overflow-x:hidden}'
             '.eco-tbl{width:100%;border-collapse:collapse}'
             '.eco-tbl thead th{font-size:0.65rem;color:#6c7086;padding:5px 4px;'
             'border-bottom:1px solid #45475a;font-weight:500;white-space:nowrap}'
             '.eco-tbl thead th.r{text-align:right}'
-            '.evn{font-size:0.7rem;color:#cdd6f4;border-bottom:1px dashed #45475a;'
-            'cursor:default;display:inline}'
-            'td{position:relative}'
-            '.tip{display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:9999;'
-            'width:260px;background:#24273a;border:1px solid #45475a;'
-            'border-radius:8px;padding:10px 12px;pointer-events:none}'
-            'td:hover .tip{display:block}'
-            '.tph{font-size:0.68rem;font-weight:600;color:#89b4fa;margin-bottom:5px}'
-            '.tpd{font-size:0.67rem;color:#a6adc8;line-height:1.55;margin-bottom:5px}'
-            '.tphr{border:none;border-top:1px solid #313244;margin:5px 0}'
-            '.tpu{font-size:0.66rem;color:#a6adc8;line-height:1.6}'
-            '.up{color:#a6e3a1;margin-right:3px}'
-            '.dn{color:#f38ba8;margin-right:3px}'
+            '.evn{font-size:0.7rem;color:#89b4fa;border-bottom:1px dashed #45475a;'
+            'cursor:pointer;display:inline;transition:opacity 0.15s}'
+            '.evn:hover{opacity:0.75}'
+            '#eco-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;'
+            'background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center}'
+            '#eco-modal.open{display:flex}'
+            '.modal-card{background:#24273a;border:1px solid #45475a;border-radius:10px;'
+            'padding:16px 18px;width:90%;max-width:300px;position:relative;box-sizing:border-box}'
+            '#eco-m-close{position:absolute;top:8px;right:10px;background:none;border:none;'
+            'color:#a6adc8;font-size:18px;cursor:pointer;line-height:1;padding:0}'
+            '#eco-m-close:hover{color:#cdd6f4}'
+            '#eco-m-kr{font-size:0.65rem;color:#7f849c;margin-bottom:2px}'
+            '#eco-m-en{font-size:0.78rem;font-weight:600;color:#cdd6f4;margin-bottom:8px;'
+            'padding-bottom:8px;border-bottom:1px solid #313244}'
+            '#eco-m-desc{font-size:0.68rem;color:#a6adc8;line-height:1.55;margin-bottom:10px}'
+            '.m-row{font-size:0.67rem;line-height:1.6;margin-top:3px}'
+            '.m-up{color:#a6e3a1}'
+            '.m-dn{color:#f38ba8}'
             '</style>'
             '<table class="eco-tbl"><thead><tr>'
             '<th>날짜</th><th>시간</th><th></th><th></th>'
@@ -1271,9 +1280,42 @@ def render_economic_calendar():
             '<th class="r">발표</th><th class="r">예측</th><th class="r">이전</th>'
             '</tr></thead>'
             f'<tbody>{rows}</tbody></table>'
+            '<div id="eco-modal">'
+            '<div class="modal-card">'
+            '<button id="eco-m-close">✕</button>'
+            '<div id="eco-m-kr"></div>'
+            '<div id="eco-m-en"></div>'
+            '<div id="eco-m-desc"></div>'
+            '<div class="m-row" id="eco-m-up"></div>'
+            '<div class="m-row" id="eco-m-dn"></div>'
+            '</div></div>'
+            '<script>'
+            'var modal=document.getElementById("eco-modal");'
+            'var mKr=document.getElementById("eco-m-kr");'
+            'var mEn=document.getElementById("eco-m-en");'
+            'var mDesc=document.getElementById("eco-m-desc");'
+            'var mUp=document.getElementById("eco-m-up");'
+            'var mDn=document.getElementById("eco-m-dn");'
+            'document.querySelectorAll(".evn").forEach(function(el){'
+            '  el.addEventListener("click",function(){'
+            '    mKr.textContent=el.dataset.kr;'
+            '    mEn.textContent=el.dataset.en;'
+            '    mDesc.textContent=el.dataset.desc;'
+            '    mUp.innerHTML="<span class=\'m-up\'>▲</span> "+el.dataset.up;'
+            '    mDn.innerHTML="<span class=\'m-dn\'>▼</span> "+el.dataset.dn;'
+            '    modal.classList.add("open");'
+            '  });'
+            '});'
+            'document.getElementById("eco-m-close").addEventListener("click",function(){'
+            '  modal.classList.remove("open");});'
+            'modal.addEventListener("click",function(e){'
+            '  if(e.target===modal) modal.classList.remove("open");});'
+            'document.addEventListener("keydown",function(e){'
+            '  if(e.key==="Escape") modal.classList.remove("open");});'
+            '</script>'
         )
 
-        row_h  = max(220, min(len(filtered) * 34 + 50, 480))
+        row_h  = max(220, min(len(filtered) * 34 + 80, 500))
         components.html(html_out, height=row_h, scrolling=True)
 
         st.markdown(
