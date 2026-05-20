@@ -555,6 +555,199 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
 
 
 
+# ── 경제 캘린더 이벤트명 영→한 번역 사전 (현업 용어) ─────────────────
+_ECO_KR_EXACT = {
+    # ── 고용 ───────────────────────────────────────────────────────
+    "Initial Jobless Claims":              "신규 실업수당 청구건수",
+    "Continuing Jobless Claims":           "연속 실업수당 청구건수",
+    "Nonfarm Payrolls":                    "비농업부문 고용지수",
+    "Unemployment Rate":                   "실업률",
+    "Participation Rate":                  "경제활동참가율",
+    "ADP Employment Change":               "ADP 민간고용변화",
+    "Average Hourly Earnings":             "평균 시간당 임금",
+    "Average Weekly Hours":                "평균 주당 근로시간",
+    "JOLTS Job Openings":                  "JOLTS 구인건수",
+    "JOLTS Quits":                         "JOLTS 자발적 이직",
+    "Job Openings":                        "구인건수",
+    "Challenger Job Cuts":                 "챌린저 감원 발표",
+    # ── 물가 ───────────────────────────────────────────────────────
+    "CPI":                                 "소비자물가지수",
+    "Core CPI":                            "근원 소비자물가지수",
+    "PPI":                                 "생산자물가지수",
+    "Core PPI":                            "근원 생산자물가지수",
+    "PCE Price Index":                     "PCE 물가지수",
+    "Core PCE Price Index":                "근원 PCE 물가지수",
+    "PCE":                                 "개인소비지출 물가지수",
+    "Import Price Index":                  "수입물가지수",
+    "Export Price Index":                  "수출물가지수",
+    "GDP Price Index":                     "GDP 디플레이터",
+    "GDP Deflator":                        "GDP 디플레이터",
+    "Trimmed Mean PCE":                    "절사평균 PCE 물가지수",
+    # ── GDP · 성장 ─────────────────────────────────────────────────
+    "GDP Growth Rate":                     "GDP 성장률",
+    "GDP":                                 "GDP",
+    "GNP":                                 "국민총생산",
+    "Real GDP":                            "실질 GDP",
+    # ── 소비 ───────────────────────────────────────────────────────
+    "Retail Sales":                        "소매판매",
+    "Core Retail Sales":                   "근원 소매판매",
+    "Personal Income":                     "개인소득",
+    "Personal Spending":                   "개인지출",
+    "Consumer Credit":                     "소비자신용",
+    "Consumer Confidence":                 "소비자신뢰지수",
+    "Michigan Consumer Sentiment":         "미시건 소비자심리지수",
+    "Michigan Consumer Expectations":      "미시건 소비자기대지수",
+    "Michigan Inflation Expectations":     "미시건 기대인플레이션",
+    "CB Consumer Confidence":              "콘퍼런스보드 소비자신뢰지수",
+    # ── 제조업 · 생산 ───────────────────────────────────────────────
+    "ISM Manufacturing PMI":               "ISM 제조업 PMI",
+    "ISM Non-Manufacturing PMI":           "ISM 비제조업 PMI",
+    "ISM Services PMI":                    "ISM 서비스업 PMI",
+    "S&P Global Manufacturing PMI":        "S&P 글로벌 제조업 PMI",
+    "S&P Global Services PMI":             "S&P 글로벌 서비스업 PMI",
+    "S&P Global Composite PMI":            "S&P 글로벌 종합 PMI",
+    "Markit Manufacturing PMI":            "마킷 제조업 PMI",
+    "Markit Services PMI":                 "마킷 서비스업 PMI",
+    "Empire State Manufacturing Index":    "엠파이어스테이트 제조업지수",
+    "Philadelphia Fed Manufacturing Index":"필라델피아 연준 제조업지수",
+    "Chicago PMI":                         "시카고 PMI",
+    "Industrial Production":               "산업생산지수",
+    "Manufacturing Production":            "제조업 생산지수",
+    "Capacity Utilization Rate":           "설비가동률",
+    "Factory Orders":                      "공장주문",
+    "Durable Goods Orders":                "내구재 주문",
+    "Core Durable Goods Orders":           "근원 내구재 주문",
+    # ── 주택 ───────────────────────────────────────────────────────
+    "NAHB Housing Market Index":           "NAHB 주택시장지수",
+    "Housing Starts":                      "주택착공건수",
+    "Building Permits":                    "건축허가건수",
+    "Existing Home Sales":                 "기존주택판매건수",
+    "New Home Sales":                      "신규주택판매건수",
+    "Pending Home Sales":                  "주택매매 계약건수",
+    "S&P/CS HPI Composite":               "케이스-실러 주택가격지수",
+    "Case-Shiller Home Price Index":       "케이스-실러 주택가격지수",
+    "FHFA House Price Index":              "FHFA 주택가격지수",
+    # ── 무역 · 국제수지 ─────────────────────────────────────────────
+    "Trade Balance":                       "무역수지",
+    "Current Account":                     "경상수지",
+    "Current Account Balance":             "경상수지",
+    "Goods Trade Balance":                 "상품 무역수지",
+    "Balance of Trade":                    "무역수지",
+    # ── 금리 · 통화정책 ─────────────────────────────────────────────
+    "Fed Interest Rate Decision":          "연준 금리결정",
+    "Federal Funds Rate":                  "연방기금금리",
+    "FOMC Meeting Minutes":                "FOMC 의사록",
+    "FOMC Minutes":                        "FOMC 의사록",
+    "Fed Chair Press Conference":          "연준 의장 기자회견",
+    "Fed Press Conference":                "연준 기자회견",
+    "BoK Interest Rate Decision":          "한국은행 금리결정",
+    "BoJ Interest Rate Decision":          "일본은행 금리결정",
+    "ECB Interest Rate Decision":          "유럽중앙은행 금리결정",
+    "Bank of England Interest Rate":       "영란은행 금리결정",
+    "RBA Interest Rate Decision":          "호주중앙은행 금리결정",
+    # ── 재정 ───────────────────────────────────────────────────────
+    "Federal Budget Balance":              "연방 재정수지",
+    "Government Budget":                   "정부 재정수지",
+    "Public Sector Net Borrowing":         "공공부문 순차입",
+    # ── 에너지 ─────────────────────────────────────────────────────
+    "EIA Crude Oil Inventories":           "EIA 원유재고",
+    "EIA Gasoline Inventories":            "EIA 휘발유재고",
+    "EIA Distillate Inventories":          "EIA 정제유재고",
+    "Crude Oil Inventories":               "원유재고",
+    "Baker Hughes Oil Rig Count":          "베이커휴즈 오일 리그수",
+    "Baker Hughes Total Rig Count":        "베이커휴즈 총 리그수",
+    "Natural Gas Storage":                 "천연가스 재고",
+    # ── 국채 입찰 ───────────────────────────────────────────────────
+    "3-Month Bill Auction":                "3개월물 국채 입찰",
+    "6-Month Bill Auction":                "6개월물 국채 입찰",
+    "2-Year Note Auction":                 "2년물 국채 입찰",
+    "3-Year Note Auction":                 "3년물 국채 입찰",
+    "5-Year Note Auction":                 "5년물 국채 입찰",
+    "7-Year Note Auction":                 "7년물 국채 입찰",
+    "10-Year Note Auction":                "10년물 국채 입찰",
+    "20-Year Bond Auction":                "20년물 국채 입찰",
+    "30-Year Bond Auction":                "30년물 국채 입찰",
+    # ── 재고 ───────────────────────────────────────────────────────
+    "Wholesale Inventories":               "도매재고",
+    "Business Inventories":                "기업재고",
+    "Retail Inventories":                  "소매재고",
+    # ── 한국 주요 지표 ───────────────────────────────────────────────
+    "Export Price Index (YoY)":            "수출물가지수(전년비)",
+    "Import Price Index (YoY)":            "수입물가지수(전년비)",
+    "KR Unemployment Rate":                "한국 실업률",
+    "KR Trade Balance":                    "한국 무역수지",
+    "KR GDP Growth Rate":                  "한국 GDP 성장률",
+    "KR CPI":                              "한국 소비자물가지수",
+    # ── 기타 ───────────────────────────────────────────────────────
+    "Nonfarm Business Sector Labor Productivity":  "비농업부문 노동생산성",
+    "Unit Labor Costs":                    "단위 노동비용",
+    "Productivity":                        "노동생산성",
+    "Leading Index":                       "경기선행지수",
+    "Conference Board Leading Index":      "콘퍼런스보드 경기선행지수",
+    "Chicago Fed National Activity Index": "시카고 연준 전국활동지수",
+    "Kansas City Fed Manufacturing Index": "캔자스시티 연준 제조업지수",
+    "Richmond Fed Manufacturing Index":    "리치먼드 연준 제조업지수",
+    "Dallas Fed Manufacturing Index":      "달라스 연준 제조업지수",
+    "Dallas Fed Services Index":           "달라스 연준 서비스업지수",
+    "Senior Loan Officer Survey":          "고위 대출담당자 설문",
+    "Beige Book":                          "베이지북",
+    "Redbook":                             "레드북 소매판매",
+    "API Weekly Crude Oil Stock":          "API 주간 원유재고",
+    "S&P Global PMI":                      "S&P 글로벌 PMI",
+    "Flash Manufacturing PMI":             "제조업 PMI (속보치)",
+    "Flash Services PMI":                  "서비스업 PMI (속보치)",
+    "Flash Composite PMI":                 "종합 PMI (속보치)",
+    "Foreign Bond Investment":             "외국인 채권 투자",
+    "Foreign Stock Investment":            "외국인 주식 투자",
+    "Money Supply M2":                     "통화량(M2)",
+    "Money Supply M3":                     "통화량(M3)",
+    "Treasury International Capital":     "재무부 국제 자본흐름",
+}
+
+_ECO_SUFFIX = [
+    (" (MoM)",    " (전월비)"),
+    (" (YoY)",    " (전년비)"),
+    (" (QoQ)",    " (전분기비)"),
+    (" (Prelim)", " (예비치)"),
+    (" (Prel)",   " (예비치)"),
+    (" (Final)",  " (확정치)"),
+    (" (Adv)",    " (속보치)"),
+    (" (Flash)",  " (속보치)"),
+    (" (2nd Est)","(2차 추정치)"),
+    (" (3rd Est)","(3차 추정치)"),
+    (" (Revised)","(수정치)"),
+    (" (Actual)", " (실제)"),
+    (" (SAR)",    " (계절조정)"),
+]
+
+
+def _translate_eco_event(name: str) -> str:
+    """경제 이벤트명 영→한 변환 (현업 용어). 미매칭시 원문 반환."""
+    if not name:
+        return name
+    # 1) 완전 일치
+    if name in _ECO_KR_EXACT:
+        return _ECO_KR_EXACT[name]
+    # 2) 접미사 분리 후 기본명 조회
+    stripped, suffix_kr = name, ''
+    for sfx_en, sfx_kr in _ECO_SUFFIX:
+        if stripped.endswith(sfx_en):
+            stripped = stripped[: -len(sfx_en)]
+            suffix_kr = sfx_kr
+            break
+    if stripped in _ECO_KR_EXACT:
+        return _ECO_KR_EXACT[stripped] + suffix_kr
+    # 3) 추가 접미사 제거 후 재시도
+    for sfx_en, sfx_kr in _ECO_SUFFIX:
+        if stripped.endswith(sfx_en):
+            stripped2 = stripped[: -len(sfx_en)]
+            suffix_kr = sfx_kr + suffix_kr
+            if stripped2 in _ECO_KR_EXACT:
+                return _ECO_KR_EXACT[stripped2] + suffix_kr
+    return name  # 미매칭 → 원문
+
+
+
 @st.cache_data(ttl=1800)
 def fetch_economic_calendar():
     """Finnhub 경제캘린더 API — 이번 주 (월~일) 데이터 fetch."""
@@ -658,7 +851,8 @@ def render_economic_calendar():
             flag    = FLAG_MAP.get(ev.get('country',''), '🌐')
             ev_imp  = (ev.get('impact') or '').lower()
             dot_c   = DOT_CLR.get(ev_imp, '#585b70')
-            evname  = ev.get('event', '')
+            _raw    = ev.get('event', '')
+            evname  = _translate_eco_event(_raw)
             actual  = str(ev.get('actual') or '').strip() or '—'
             est     = str(ev.get('estimate') or '').strip() or '—'
             prev    = str(ev.get('prev') or '').strip() or '—'
