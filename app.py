@@ -591,14 +591,18 @@ def render_economic_calendar():
         imp_p  = IMP_PARAMS.get(imp, '&importance%5B%5D=3')
         ctry_p = COUNTRY_PARAMS.get(ctry, '&countries=5')
 
+        # importance / countries 를 먼저 → Investing.com 필터 작동에 필요
+        import hashlib as _hl
+        _buster = _hl.md5(f"{imp}{ctry}".encode()).hexdigest()[:6]
         src = (
             'https://sslecal2.investing.com'
-            '?columns=exc_flags%2Cexc_currency%2Cexc_importance'
-            '%2Cexc_actual%2Cexc_forecast%2Cexc_previous'
+            '?calType=week&timeZone=55&lang=18'
             + imp_p
-            + '&features=datepicker%2Ctimezone'
             + ctry_p
-            + '&calType=week&timeZone=55&lang=18'
+            + '&columns=exc_flags%2Cexc_currency%2Cexc_importance'
+              '%2Cexc_actual%2Cexc_forecast%2Cexc_previous'
+            + '&features=datepicker%2Ctimezone'
+            + f'&_k={_buster}'
         )
 
         components.html(
@@ -1810,14 +1814,17 @@ st.markdown("""
 <style>
 
 /* ── 경제 캘린더 selectbox 스타일 (버핏지수 레이블 동일) ── */
-div[data-testid="stSelectbox"][data-key="cal_imp"] > div > div,
-div[data-testid="stSelectbox"][data-key="cal_ctry"] > div > div {
-    font-size: 0.7rem !important;
-    color: #a6adc8 !important;
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] {
     background: #1e1e2e !important;
     border: 1px solid #313244 !important;
     border-radius: 6px !important;
-    padding: 2px 6px !important;
+    min-height: 28px !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div,
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] span {
+    font-size: 0.7rem !important;
+    color: #a6adc8 !important;
+    line-height: 1.4 !important;
 }
 /* ── 칩 그리드 ── */
 .fin-grid {
