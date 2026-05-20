@@ -557,7 +557,7 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
 def render_economic_calendar():
     """경제 캘린더 사이드바 섹션 — Investing.com 무료 iframe 위젯."""
     st.markdown(
-        '<div style="font-size:0.72rem;color:#7f849c;font-weight:600;'
+        '<div style="font-size:0.7rem;color:#a6adc8;font-weight:600;'
         'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
         unsafe_allow_html=True,
     )
@@ -565,9 +565,9 @@ def render_economic_calendar():
     IMP_OPTIONS     = ['🔴 고영향',  '🟠 고+중',  '⚪ 전체']
     COUNTRY_OPTIONS = ['🇺🇸 미국',  '🇺🇸+🇰🇷 미국·한국',  '🌐 전체']
     IMP_PARAMS = {
-        '🔴 고영향':  '&importance%5B%5D=3',
+        '🔴 고영향':   '&importance%5B%5D=3',
         '🟠 고+중':  '&importance%5B%5D=3&importance%5B%5D=2',
-        '⚪ 전체':   '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
+        '⚪ 전체':       '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
     }
     COUNTRY_PARAMS = {
         '🇺🇸 미국':          '&countries=5',
@@ -604,14 +604,11 @@ def render_economic_calendar():
         components.html(
             f'<style>'
             f'  body {{ margin:0; padding:0; background:transparent; }}'
-            f'  .cal-wrap {{ overflow-x:auto; overflow-y:hidden; width:100%; }}'
             f'  iframe {{ display:block; border:none; }}'
             f'</style>'
-            f'<div class="cal-wrap">'
-            f'<iframe src="{src}" width="700" height="400"'
+            f'<iframe src="{src}" width="100%" height="410"'
             f' frameborder="0" allowtransparency="true"'
             f' marginwidth="0" marginheight="0"></iframe>'
-            f'</div>'
             f'<div style="font-size:0.6rem;color:#6c7086;'
             f'text-align:right;padding:2px 4px 0 0;">'
             f'출처: <a href="https://kr.investing.com/" target="_blank"'
@@ -682,7 +679,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
                 f'<span style="font-size:0.65rem;opacity:0.6;">↗</span>'
                 f'</a>'
                 f'<span style="font-size:0.7rem;color:#585b70;margin-left:6px;">{display_url}</span>'
-                f'</div>',
+    ,
                 unsafe_allow_html=True
             )
         # ── 안 A: 가격 4칩 ──────────────────────────────────────────
@@ -747,7 +744,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">52주 최저가{l52_date_span}</div><div class="fc-value">{l52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저 대비</div><div class="fc-value {l52_cls}">{l52_chg}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">전일 거래량</div><div class="fc-value">{vol_str}</div></div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -792,7 +789,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'</div></div>'
             f'<div class="fin-chip"><div class="fc-label">배당수익률</div><div class="fc-value">{div}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">{beta_label}</div><div class="fc-value">{beta}</div></div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -844,7 +841,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">EPS성장 5Y</div><div class="fc-value">{e5y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">순이익률 (TTM)</div><div class="fc-value">{nm}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">매출총이익률 (TTM)</div><div class="fc-value">{gm}</div></div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -872,19 +869,19 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
                 f'<div class="rec-segment" style="width:{_pw(h)};background:#585b70;"></div>'
                 f'<div class="rec-segment" style="width:{_pw(s)};background:#fab387;"></div>'
                 f'<div class="rec-segment" style="width:{_pw(ss)};background:#f38ba8;"></div>'
-                f'</div>'
+    
                 f'<div class="rec-labels">'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#a6e3a1;"></span>강력매수 {sb}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#94e2d5;"></span>매수 {b}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#585b70;"></span>중립 {h}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#fab387;"></span>매도 {s}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#f38ba8;"></span>강력매도 {ss}</span>'
-                f'</div>'
+    
                 f'<div style="margin-top:10px;font-size:0.8rem;color:#a6adc8;">'
                 f'목표주가 &nbsp;최저 <b>{t_low}</b>&nbsp;·&nbsp;'
                 f'평균 <b style="color:#89dceb">{t_mean}</b>&nbsp;·&nbsp;'
                 f'최고 <b>{t_high}</b>'
-                f'</div>',
+    ,
                 unsafe_allow_html=True
             )
 
@@ -1621,7 +1618,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
             f'<div class="fc-value">{news_bear}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">Buzz 지수</div>'
             f'<div class="fc-value">{news_buzz}</div></div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -1640,7 +1637,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
                 f'<div class="fc-value negative">{reddit_neg}</div></div>'
                 f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
                 f'<div class="fc-value">{reddit_mention}</div></div>'
-                f'</div>',
+    ,
                 unsafe_allow_html=True
             )
 
@@ -1659,7 +1656,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
                 f'<div class="fc-value negative">{twitter_neg}</div></div>'
                 f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
                 f'<div class="fc-value">{twitter_mention}</div></div>'
-                f'</div>',
+    ,
                 unsafe_allow_html=True
             )
 
@@ -1726,7 +1723,7 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
             f'<div class="brief-title">📋 최근 {ticker_sym} 뉴스 종합 브리핑</div>'
             f'<div class="brief-time">📅 {et_date_str()}</div>'
             f'{body_html}'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -1781,7 +1778,7 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
             f'<div class="news-title-en">{title_en}</div>'
             f'{summary_html}'
             f'<div class="news-meta">{meta}</div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
 
@@ -1811,22 +1808,17 @@ st.set_page_config(page_title='ValueHunter', page_icon='🎯', layout='wide')
 
 st.markdown("""
 <style>
-/* ── 경제 캘린더 selectbox 스타일 ── */
+
+/* ── 경제 캘린더 selectbox 스타일 (버핏지수 레이블 동일) ── */
 div[data-testid="stSelectbox"][data-key="cal_imp"] > div > div,
 div[data-testid="stSelectbox"][data-key="cal_ctry"] > div > div {
-    font-size: 0.72rem !important;
+    font-size: 0.7rem !important;
     color: #a6adc8 !important;
     background: #1e1e2e !important;
     border: 1px solid #313244 !important;
     border-radius: 6px !important;
-    min-height: 28px !important;
-    padding: 2px 8px !important;
+    padding: 2px 6px !important;
 }
-div[data-testid="stSelectbox"][data-key="cal_imp"] svg,
-div[data-testid="stSelectbox"][data-key="cal_ctry"] svg {
-    fill: #a6adc8 !important;
-}
-
 /* ── 칩 그리드 ── */
 .fin-grid {
     display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;
@@ -2103,16 +2095,16 @@ with st.sidebar:
             f'<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
             f'<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
             f'</span></span>'
-            f'</div>'
+
             f'<div style="display:flex;align-items:center;gap:8px;">'
             f'<span style="font-size:1.4rem;font-weight:700;color:{fg_color};">{score}</span>'
             f'<span style="font-size:0.8rem;color:{fg_color};">{rk}</span>'
-            f'</div>'
+
             f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
             f'<div style="background:{fg_color};width:{score}%;height:4px;border-radius:3px;"></div>'
-            f'</div>'
+
             f'<div style="font-size:0.62rem;color:#45475a;margin-top:4px;">출처: {src}</div>'
-            f'</div>',
+,
             unsafe_allow_html=True
         )
     # ── 매크로 지표 ──────────────────────────────────────────────
@@ -2130,7 +2122,7 @@ with st.sidebar:
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
                 f'border-radius:8px;padding:8px 12px;margin:2px 0;">'
                 f'{_macro_row(label, value, color, sub, tip)}'
-                f'</div>',
+    ,
                 unsafe_allow_html=True)
 
         import pandas as _pd
