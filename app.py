@@ -2733,17 +2733,120 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
 .brief-title { font-size: 1rem; font-weight: 700; color: #cdd6f4; margin-bottom: 4px; }
 .brief-time  { font-size: 0.75rem; color: #7f849c; margin-bottom: 14px; }
 
+/* ── 사이드바 우측 끝 클릭 → 닫힘 방지 ──────────────────────────
+   Streamlit의 stSidebarNavSeparator는 리사이즈 핸들과 접기 버튼을
+   동일 영역에 공유한다. 리사이즈 드래그 시 mouseup이 접기 버튼을
+   의도치 않게 트리거하는 문제를 아래 CSS로 완화한다:
+   - NavSeparator 내부 버튼을 숨겨 실수 클릭 방지
+   - 커서를 ew-resize 고정으로 "드래그 영역" 명시
+   ----------------------------------------------------------------- */
+[data-testid="stSidebarNavSeparator"] {
+    cursor: ew-resize !important;
+    z-index: 10 !important;
+}
+[data-testid="stSidebarNavSeparator"] > button,
+[data-testid="stSidebarNavSeparator"] button {
+    pointer-events: none !important;
+    opacity: 0 !important;
+    display: none !important;
+}
+/* 사이드바가 열린 상태에서 접기는 상단 햄버거 버튼으로만 동작 */
+section[data-testid="stSidebar"] > div:first-child {
+    overflow-x: clip !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 # 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
-    st.title("⚙️ 종목 관리")
-    st.caption(f"업데이트: {kst_now_str()}")
+    st.markdown(
+        '<div style="font-size:1.05rem;font-weight:700;color:#cdd6f4;margin:4px 0 1px 0;">⚙️ 종목 관리</div>'
+        f'<div style="font-size:0.65rem;color:#7f849c;margin-bottom:6px;">{kst_now_str()}</div>',
+        unsafe_allow_html=True
+    )
     if st.button("🔄 새로고침", use_container_width=True):
         clear_cache()
         st.rerun()
-    # Fear & Greed Index
+
+    # ── 종목 추가 / 삭제 (매크로 지표 위에 배치) ─────────────────────
+    st.markdown(
+        '<div style="font-size:0.78rem;font-weight:600;color:#cdd6f4;margin:10px 0 5px 0;">📋 종목 추가 / 삭제</div>',
+        unsafe_allow_html=True
+    )
+    if "pending_ticker" not in st.session_state:
+        st.session_state["pending_ticker"] = ""
+    if "pending_name" not in st.session_state:
+        st.session_state["pending_name"] = ""
+    with st.form("ticker_lookup_form", clear_on_submit=False):
+        ticker_input = st.text_input(
+            "티커 입력 (예: AAPL, SOXL)",
+            max_chars=10,
+            value=st.session_state["pending_ticker"]
+        )
+        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if lookup_clicked:
+        t = ticker_input.upper().strip()
+        if t:
+            existing_tickers = [r['ticker'] for r in load_tickers()]
+            if t in existing_tickers:
+                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+            else:
+                name = lookup_company_name(t)
+                st.session_state["pending_ticker"] = t
+                st.session_state["pending_name"] = name
+                if name:
+                    st.success(f"{t} → {name}")
+                else:
+                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+        t    = st.session_state["pending_ticker"]
+        name = st.session_state["pending_name"]
+        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
+            try:
+                add_ticker(t, name)
+                _sort_tickers_by_mcap()
+                clear_cache()
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
+                st.rerun()
+            except Exception as e:
+                st.error(f"추가 실패: {e}")
+
+    # ── 등록 종목 목록 + 삭제 (↑↓ 제거, 삭제만 유지) ──────────────────
+    tickers_raw = load_tickers()
+    if tickers_raw:
+        st.markdown(
+            '<div style="font-size:0.68rem;color:#7f849c;margin:6px 0 3px 0;">'
+            '등록 종목 (시총순 자동정렬)</div>',
+            unsafe_allow_html=True
+        )
+        for i, t in enumerate(tickers_raw):
+            sym   = t['ticker']
+            cname = t.get('company_name', '')
+            col_nm, col_dl = st.columns([5, 1])
+            with col_nm:
+                st.markdown(
+                    f'<div style="padding:3px 0;line-height:1.3;">'
+                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span> '
+                    f'<span style="font-size:0.68rem;color:#7f849c;">{cname}</span></div>',
+                    unsafe_allow_html=True
+                )
+            with col_dl:
+                if st.button("✕", key=f"dl_{sym}_{i}", use_container_width=True):
+                    try:
+                        remove_ticker(sym)
+                        _sort_tickers_by_mcap()
+                        clear_cache()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"삭제 실패: {e}")
+    st.markdown('<hr style="margin:10px 0;border-color:#313244;">', unsafe_allow_html=True)
+
+    # ── Fear & Greed Index ─────────────────────────────────────────
     fg = fetch_fear_greed()
     if fg:
         score  = fg['score']
@@ -2756,21 +2859,18 @@ with st.sidebar:
         else:             fg_color = '#89b4fa'
         st.markdown(
             f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
-            f'padding:10px 12px;margin:8px 0;">'
+            f'padding:10px 12px;margin:4px 0;">'
             f'<div style="font-size:0.68rem;color:#7f849c;margin-bottom:4px;">공포탐욕지수'
             f'<span class="macro-tip">💡<span class="tip-box">'
             f'<span style="color:#89dceb;font-weight:600">📊 설명</span> : CNN이 산출하는 0~100 시장 심리 지수. 25↓=극도공포, 75↑=극도탐욕. 주가 모멘텀·옵션·채권 수요 등 7개 지표 합산<br>'
             f'<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
             f'<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
             f'</span></span>'
-
             f'<div style="display:flex;align-items:center;gap:8px;">'
             f'<span style="font-size:1.4rem;font-weight:700;color:{fg_color};">{score}</span>'
             f'<span style="font-size:0.8rem;color:{fg_color};">{rk}</span>'
-
             f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
             f'<div style="background:{fg_color};width:{score}%;height:4px;border-radius:3px;"></div>'
-
             f'<div style="font-size:0.62rem;color:#45475a;margin-top:4px;">출처: {src}</div>'
 ,
             unsafe_allow_html=True
@@ -2784,7 +2884,6 @@ with st.sidebar:
             '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
             'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
             unsafe_allow_html=True)
-        # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
         def _rrow(label, value, color='#cdd6f4', sub='', tip=''):
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
@@ -2796,7 +2895,6 @@ with st.sidebar:
         import pandas as _pd
         import plotly.graph_objects as _go
 
-        # ── 버핏지수 + 차트 ──────────────────────────────────────
         if 'buffett' in fred_data:
             b  = fred_data['buffett']['value']
             bd = fred_data['buffett']['date']
@@ -2805,10 +2903,8 @@ with st.sidebar:
             elif b > 100: bc, bl, be = '#f9e2af', '주의',   '🟡'
             elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
-            # 지표 행은 _rrow() 로 표시 → 다른 행과 동일한 폰트/색상
             _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd,
                   tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 주식 시총 ÷ GDP 비율. 100%=공정가치, 125%↑=과열, 175%↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 저금리·QE 환경에서 고수치가 수년간 지속 가능. 단기 타이밍 예측 불가<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 투자 밸류에이션 참고 및 포트폴리오 비중 조절 기준으로 활용')
-            # 차트는 별도 expander (라벨은 아이콘+텍스트만, 폰트 영향 최소화)
             buffett_hist = fetch_buffett_history()
             if buffett_hist:
                 with st.expander('📈 버핏지수 히스토리', expanded=False):
@@ -2844,14 +2940,12 @@ with st.sidebar:
                                     config={'displayModeBar': False})
                     st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
 
-        # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
             if cape_curr > 40:   cc2, ce, cl = '#f38ba8', '🔴', '극도과열'
             elif cape_curr > 30: cc2, ce, cl = '#fab387', '🟠', '과열'
             elif cape_curr > 20: cc2, ce, cl = '#f9e2af', '🟡', '주의'
             else:                cc2, ce, cl = '#a6e3a1', '🟢', '저평가'
             cape_hist_now = cape_info.get('history', [])
-            # 역사평균: 값이 50 미만인 것만 유효한 CAPE 값으로 판단
             valid_hist = [(y, v) for y, v in cape_hist_now if v < 200]
             if valid_hist:
                 hist_avg = sum(v for _, v in valid_hist) / len(valid_hist)
@@ -2861,9 +2955,7 @@ with st.sidebar:
                 hist_avg = 17.0
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
-            # 차트용 cape_hist: 필터 없이 원본 사용 (차트는 항상 표시)
             cape_hist = cape_info.get('history', [])
-            # 지표 행은 _rrow() 로 표시
             _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, cape_sub,
                   tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 물가조정 주가순이익비율(10년 평균 EPS). 역사 평균 ~17, 30↑=과열, 40↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 타이밍 예측 부적합. 과열 상태가 수년간 지속 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용')
             if cape_hist:
@@ -2897,7 +2989,6 @@ with st.sidebar:
                                     config={'displayModeBar': False})
                     st.caption('출처: multpl.com / Robert Shiller')
 
-        # ── 나머지 지표 (하나의 블록) ────────────────────────────
         rest_html = ''
         if 'fed_rate' in fred_data:
             rest_html += _macro_row(
@@ -2951,90 +3042,6 @@ with st.sidebar:
                 unsafe_allow_html=True)
 
     render_economic_calendar()
-    st.divider()
-    st.subheader("+ 종목 추가")
-    if "pending_ticker" not in st.session_state:
-        st.session_state["pending_ticker"] = ""
-    if "pending_name" not in st.session_state:
-        st.session_state["pending_name"] = ""
-    with st.form("ticker_lookup_form", clear_on_submit=False):
-        ticker_input = st.text_input(
-            "티커 입력 (예: AAPL, SOXL)",
-            max_chars=10,
-            value=st.session_state["pending_ticker"]
-        )
-        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
-    if lookup_clicked:
-        t = ticker_input.upper().strip()
-        if t:
-            existing_tickers = [r['ticker'] for r in load_tickers()]
-            if t in existing_tickers:
-                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-            else:
-                name = lookup_company_name(t)
-                st.session_state["pending_ticker"] = t
-                st.session_state["pending_name"] = name
-                if name:
-                    st.success(f"{t} -> {name}")
-                else:
-                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
-    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
-        t = st.session_state["pending_ticker"]
-        name = st.session_state["pending_name"]
-        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
-            try:
-                add_ticker(t, name)
-                _sort_tickers_by_mcap()
-                clear_cache()
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
-                st.rerun()
-            except Exception as e:
-                st.error(f"추가 실패: {e}")
-    st.divider()
-    st.subheader("종목 순서 변경 / 삭제")
-    tickers_raw = load_tickers()
-    if tickers_raw:
-        n = len(tickers_raw)
-        for i, t in enumerate(tickers_raw):
-            sym   = t['ticker']
-            cname = t.get('company_name', '')
-            col_nm, col_up, col_dn, col_dl = st.columns([3, 1, 1, 1])
-            with col_nm:
-                st.markdown(
-                    f'<div style="padding:5px 0;line-height:1.3;">'
-                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span><br>'
-                    f'<span style="font-size:0.7rem;color:#7f849c;">{cname}</span></div>',
-                    unsafe_allow_html=True
-                )
-            with col_up:
-                if i > 0:
-                    if st.button("↑", key=f"up_{sym}_{i}", use_container_width=True):
-                        new_order = list(tickers_raw)
-                        new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
-                        try:
-                            reorder_tickers(new_order)
-                            load_tickers.clear()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"순서 변경 실패: {e}")
-                else:
-                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
-            with col_dl:
-                if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
-                    try:
-                        remove_ticker(sym)
-                        _sort_tickers_by_mcap()
-                        clear_cache()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"삭제 실패: {e}")
-    else:
-        st.info("등록된 종목이 없습니다.")
-
 
 # ── 메인 영역 ────────────────────────────────────────────────────
 tickers_list = load_tickers()
