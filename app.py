@@ -562,12 +562,12 @@ def render_economic_calendar():
         unsafe_allow_html=True,
     )
 
-    IMP_OPTIONS     = ['★ 고영향',  '★★ 고+중',  '전체']
+    IMP_OPTIONS     = ['🔴 고영향',  '🟠 고+중',  '⚪ 전체']
     COUNTRY_OPTIONS = ['🇺🇸 미국',  '🇺🇸+🇰🇷 미국·한국',  '🌐 전체']
     IMP_PARAMS = {
-        '★ 고영향':   '&importance%5B%5D=3',
-        '★★ 고+중':  '&importance%5B%5D=3&importance%5B%5D=2',
-        '전체':       '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
+        '🔴 고영향':  '&importance%5B%5D=3',
+        '🟠 고+중':  '&importance%5B%5D=3&importance%5B%5D=2',
+        '⚪ 전체':   '&importance%5B%5D=3&importance%5B%5D=2&importance%5B%5D=1',
     }
     COUNTRY_PARAMS = {
         '🇺🇸 미국':          '&countries=5',
