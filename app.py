@@ -431,6 +431,44 @@ def fetch_fred_data():
     return result
 
 
+
+@st.cache_data(ttl=900)
+def fetch_market_prices():
+    """VIX·금·WTI·구리 Yahoo Finance 15분 지연시세 (15분 캐시)."""
+    H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
+    result = {}
+    import datetime as _dt3
+    def _yf(ticker):
+        try:
+            url = (f'https://query1.finance.yahoo.com/v8/finance/chart/'
+                   f'{ticker}?interval=1d&range=5d')
+            r = requests.get(url, headers=H, timeout=8)
+            if r.ok:
+                ch  = r.json().get('chart', {}).get('result', [{}])[0]
+                cls = ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                tms = ch.get('timestamp', [])
+                cls = [c for c in cls if c is not None]
+                if cls and tms:
+                    dt = _dt3.datetime.fromtimestamp(tms[-1]).strftime('%Y-%m-%d')
+                    return cls[-1], dt
+        except Exception as e:
+            print(f'[YF {ticker}] {e}')
+        return None, None
+    v, d = _yf('%5EVIX')
+    if v is not None:
+        result['vix']    = {'value': round(v, 2), 'date': d}
+    v, d = _yf('GC%3DF')
+    if v is not None:
+        result['gold']   = {'value': round(v, 1), 'date': d}
+    v, d = _yf('CL%3DF')
+    if v is not None:
+        result['wti']    = {'value': round(v, 2), 'date': d}
+    v, d = _yf('HG%3DF')
+    if v is not None:
+        result['copper'] = {'value': round(v, 3), 'date': d}
+    return result
+
+
 @st.cache_data(ttl=86400)
 def fetch_cape_data():
     """Shiller CAPE current + history from multpl.com (24h cache)."""
@@ -1576,14 +1614,14 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
                 f'<div class="rec-segment" style="width:{_pw(h)};background:#585b70;"></div>'
                 f'<div class="rec-segment" style="width:{_pw(s)};background:#fab387;"></div>'
                 f'<div class="rec-segment" style="width:{_pw(ss)};background:#f38ba8;"></div>'
-    
+                f'</div>'
                 f'<div class="rec-labels">'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#a6e3a1;"></span>강력매수 {sb}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#94e2d5;"></span>매수 {b}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#585b70;"></span>중립 {h}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#fab387;"></span>매도 {s}</span>'
                 f'<span class="rec-label"><span class="rec-dot" style="background:#f38ba8;"></span>강력매도 {ss}</span>'
-    
+                f'</div>'
                 f'<div style="margin-top:10px;font-size:0.8rem;color:#a6adc8;">'
                 f'목표주가 &nbsp;최저 <b>{t_low}</b>&nbsp;·&nbsp;'
                 f'평균 <b style="color:#89dceb">{t_mean}</b>&nbsp;·&nbsp;'
@@ -2634,6 +2672,7 @@ st.markdown("""
 .rec-bar { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
 .rec-segment { height: 10px; }
 .rec-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.rec-labels { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; }
 .rec-label { font-size: 0.72rem; color: #a6adc8; display: flex; align-items: center; gap: 4px; }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
@@ -2668,9 +2707,23 @@ st.markdown("""
 }
 .macro-tip:hover .tip-box { visibility: visible; opacity: 1; }
 
+/* ── 사이드바 새로고침 버튼 2줄 스타일 ── */
+section[data-testid="stSidebar"] .stButton:first-child > button {
+    padding-bottom: 18px !important;
+    min-height: 50px !important;
+    height: auto !important;
+}
 /* ── 사이드바 매크로 차트 expander 다크 스타일 ── */
 section[data-testid="stSidebar"] [data-testid="stExpander"] {
     margin: 2px 0 !important;
+}
+/* ── expander wrapper 간격 축소 (버핏지수·실러 히스토리 박스 간격) ── */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"]
+  > div:has([data-testid="stExpander"]) {
+    margin-top: -6px !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details {
     border: 1px solid #313244 !important;
@@ -2802,17 +2855,15 @@ section[data-testid="stSidebar"] > div:first-child {
 
 # 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
-    _sb_btn_col, _sb_ts_col = st.columns([3, 2])
-    with _sb_btn_col:
-        if st.button("🔄 새로고침", use_container_width=True):
-            clear_cache()
-            st.rerun()
-    with _sb_ts_col:
-        st.markdown(
-            f'<div style="font-size:0.6rem;color:#7f849c;line-height:1.5;padding:5px 0;">'
-            f'{kst_now_str()}</div>',
-            unsafe_allow_html=True
-        )
+    if st.button("🔄 새로고침", use_container_width=True):
+        clear_cache()
+        st.rerun()
+    st.markdown(
+        f'<div style="margin-top:-22px;text-align:center;font-size:0.58rem;'
+        f'color:#6c7086;padding-bottom:6px;">'
+        f'{kst_now_str()}</div>',
+        unsafe_allow_html=True
+    )
 
     # ── 종목 추가 / 삭제 (매크로 지표 위에 배치) ─────────────────────
     st.markdown(
@@ -3038,23 +3089,27 @@ with st.sidebar:
         if 't10y' in fred_data:
             rest_html += _macro_row(
                 '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
+                '#cdd6f4', fred_data['t10y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 10년 만기 국채 수익률. 장기 경기 전망·인플레이션 기대 반영. 상승 시 성장주 압박<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행 채권 매입(QE)으로 금리가 인위적으로 억제될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용')
         if 't2y' in fred_data:
             rest_html += _macro_row(
                 '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
+                '#cdd6f4', fred_data['t2y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 2년 만기 국채 수익률. 단기 금리 전망과 연준 정책 방향을 가장 민감하게 반영<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 연준 위원 발언 하나에도 과도하게 반응해 단기 변동성이 큼<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y와의 차이(장단기 스프레드)로 경기침체 선행 신호 확인')
         if 'spread' in fred_data:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
             sl2 = '정상' if sp >= 0 else '역전'
+            _sp_date = fred_data.get('t10y', {}).get('date', '')
             rest_html += _macro_row(
-                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
+                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2, _sp_date,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 10Y-2Y 국채 금리 차이. 역전(마이너스) 시 과거 8회 중 7회 경기침체 발생한 선행지표<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 역전 후 실제 침체까지 6~18개월 시차 존재. 단기 매매 타이밍 도구로 부적합<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 역전 진입보다 역전 해소 이후 주가 하락 리스크를 더 주의할 것')
         if 'credit_spread' in fred_data:
             cs  = fred_data['credit_spread']['value']
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
+                fred_data['credit_spread']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 회사채(BBB)-국채 금리 차이. 스프레드 확대 = 기업 신용 위험 상승·시장 공포 신호<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행의 회사채 직접 매입 등 정책 개입으로 위기 신호가 희석될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 판단')
         if 'krw_usd' in fred_data:
             krw = fred_data['krw_usd']['value']
@@ -3079,6 +3134,57 @@ with st.sidebar:
                 f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
                 f'{rest_html}</div>',
                 unsafe_allow_html=True)
+
+        mp_data = fetch_market_prices()
+        if mp_data:
+            mp_html = ''
+            if 'vix' in mp_data:
+                vv = mp_data['vix']['value']
+                vc = '#f38ba8' if vv >= 30 else '#f9e2af' if vv >= 20 else '#a6e3a1'
+                vd = mp_data['vix']['date'] + ' (15분 지연)'
+                vt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
+                      'CBOE 변동성 지수. S&P500 옵션 내재변동성 기반. 20↑=주의, 30↑=공포<br>'
+                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
+                      '공포 정점 직후 반등 가능. 방향보다 수준으로 해석<br>'
+                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
+                      '30↑ 극도공포 구간은 역발상 매수 기회, 20↓ 안정 구간으로 참고')
+                mp_html += _macro_row('VIX 지수', f'{vv:.2f}', vc, vd, tip=vt)
+            if 'gold' in mp_data:
+                gv = mp_data['gold']['value']
+                gd = mp_data['gold']['date'] + ' (15분 지연)'
+                gt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
+                      '금 선물(GC=F) 가격(USD/oz). 안전자산 선호·달러 강약·인플레이션 기대 반영<br>'
+                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
+                      '금리 인상 시 무이자 자산인 금 가격은 하방 압력을 받음<br>'
+                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
+                      '주식·채권 동반 하락 시 포트폴리오 헤지 자산 동향 참고')
+                mp_html += _macro_row('금 (XAU/USD)', f'${gv:,.1f}/oz', '#f9e2af', gd, tip=gt)
+            if 'wti' in mp_data:
+                wv = mp_data['wti']['value']
+                wd2 = mp_data['wti']['date'] + ' (15분 지연)'
+                wt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
+                      'WTI 원유 선물(CL=F) 가격(USD/배럴). 글로벌 경기 및 지정학 리스크 반영<br>'
+                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
+                      'OPEC+ 생산량 결정·허리케인 등 공급 충격에 과도 반응 가능<br>'
+                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
+                      '에너지·운송·항공 섹터 수익성 및 인플레이션 압력 점검에 활용')
+                mp_html += _macro_row('WTI 원유', f'${wv:.2f}/bbl', '#89b4fa', wd2, tip=wt)
+            if 'copper' in mp_data:
+                cv = mp_data['copper']['value']
+                cd = mp_data['copper']['date'] + ' (15분 지연)'
+                ct = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
+                      '구리 선물(HG=F) 가격(USD/lb). 제조업·인프라 수요 반영하는 경기 선행 지표<br>'
+                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
+                      '중국 제조업 의존도 높아 글로벌 수요 변화를 즉각 반영 못할 수 있음<br>'
+                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
+                      '구리 상승=경기 회복 신호, 하락=경기 둔화 선행 지표로 해석')
+                mp_html += _macro_row('구리 (HG/USD)', f'${cv:.3f}/lb', '#fab387', cd, tip=ct)
+            if mp_html:
+                st.markdown(
+                    f'<div style="background:#1e1e2e;border:1px solid #313244;'
+                    f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
+                    f'{mp_html}</div>',
+                    unsafe_allow_html=True)
 
     render_economic_calendar()
 
