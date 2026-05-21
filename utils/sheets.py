@@ -340,13 +340,3 @@ def archive_and_reset():
     today_sheet.clear()
     today_sheet.append_row(TODAY_HEADERS)
     print("TODAY sheet reset complete")
-shed'], r['collected_at'], r['url_hash'],
-                     r.get('title_kr', ''), r.get('summary_kr', ''),
-                     r.get('article_summary_kr', '')]
-                    for r in keep
-                ]
-                archive.append_rows(rows, value_input_option='RAW')
-
-    today_sheet.clear()
-    today_sheet.append_row(TODAY_HEADERS)
-    print("TODAY sheet reset complete")
