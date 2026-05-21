@@ -285,6 +285,14 @@ def archive_and_reset():
         return
 
     df = pd.DataFrame(records)
+    df = df.fillna('')  # NaN(번역 미완료 셀 등) → '' 로 치환, JSON 직렬화 오류 방지
+
+    def _sv(v):
+        """float NaN/inf → '' (JSON 안전 이중 보호)"""
+        import math
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return ''
+        return v
 
     for ticker in df['ticker'].unique():
         ticker_df = df[df['ticker'] == ticker]
@@ -294,10 +302,11 @@ def archive_and_reset():
         for _, row in ticker_df.iterrows():
             if str(row['url_hash']) not in existing:
                 new_rows.append([
-                    row['ticker'], row['company'], row['title'],
-                    row['link'], row['published'], row['collected_at'], row['url_hash'],
-                    row.get('title_kr', ''), row.get('summary_kr', ''),
-                    row.get('article_summary_kr', '')
+                    _sv(row['ticker']),   _sv(row['company']),  _sv(row['title']),
+                    _sv(row['link']),     _sv(row['published']), _sv(row['collected_at']),
+                    _sv(row['url_hash']),
+                    _sv(row.get('title_kr', '')),   _sv(row.get('summary_kr', '')),
+                    _sv(row.get('article_summary_kr', ''))
                 ])
         if new_rows:
             archive.append_rows(new_rows, value_input_option='RAW')
@@ -322,6 +331,16 @@ def archive_and_reset():
                 rows = [
                     [r['ticker'], r['company'], r['title'],
                      r['link'], r['published'], r['collected_at'], r['url_hash'],
+                     r.get('title_kr', ''), r.get('summary_kr', ''),
+                     r.get('article_summary_kr', '')]
+                    for r in keep
+                ]
+                archive.append_rows(rows, value_input_option='RAW')
+
+    today_sheet.clear()
+    today_sheet.append_row(TODAY_HEADERS)
+    print("TODAY sheet reset complete")
+shed'], r['collected_at'], r['url_hash'],
                      r.get('title_kr', ''), r.get('summary_kr', ''),
                      r.get('article_summary_kr', '')]
                     for r in keep
