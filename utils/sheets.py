@@ -340,3 +340,29 @@ def archive_and_reset():
     today_sheet.clear()
     today_sheet.append_row(TODAY_HEADERS)
     print("TODAY sheet reset complete")
+
+def get_latest_ticker_summary(ticker: str) -> dict:
+    """
+    티커 아카이브 시트에서 가장 최근 summary_kr 반환.
+    오늘 TODAY 시트에 summary_kr이 없을 때 폴백용.
+    반환: {'summary_kr': str, 'collected_at': str} or None
+    """
+    try:
+        ss = get_spreadsheet()
+        try:
+            sheet = ss.worksheet(ticker.upper())
+        except gspread.WorksheetNotFound:
+            return None
+        records = sheet.get_all_records()
+        if not records:
+            return None
+        for row in reversed(records):
+            sk = row.get('summary_kr', '')
+            if sk and str(sk).strip():
+                return {
+                    'summary_kr': str(sk).strip(),
+                    'collected_at': str(row.get('collected_at', ''))
+                }
+    except Exception as e:
+        print(f'[ERROR] get_latest_ticker_summary({ticker}): {e}')
+    return None
