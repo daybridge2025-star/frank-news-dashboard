@@ -7,7 +7,8 @@ import re
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
+import streamlit.components.v1 as components
 import pytz
 import sys
 import os
@@ -1462,6 +1463,749 @@ def fetch_premium_fundamentals(ticker_sym: str,
         return {'error': str(e), 'debug': {'ticker': ticker_sym}}
 
 
+
+# ── 경제 캘린더 ──────────────────────────────────────────────
+_ECO_KR_EXACT = {
+    # ── 고용 ───────────────────────────────────────────────────────
+    "Initial Jobless Claims":              "신규 실업수당 청구건수",
+    "Continuing Jobless Claims":           "연속 실업수당 청구건수",
+    "Nonfarm Payrolls":                    "비농업부문 고용지수",
+    "Unemployment Rate":                   "실업률",
+    "Participation Rate":                  "경제활동참가율",
+    "ADP Employment Change":               "ADP 민간고용변화",
+    "Average Hourly Earnings":             "평균 시간당 임금",
+    "Average Weekly Hours":                "평균 주당 근로시간",
+    "JOLTS Job Openings":                  "JOLTS 구인건수",
+    "JOLTS Quits":                         "JOLTS 자발적 이직",
+    "Job Openings":                        "구인건수",
+    "Challenger Job Cuts":                 "챌린저 감원 발표",
+    # ── 물가 ───────────────────────────────────────────────────────
+    "CPI":                                 "소비자물가지수",
+    "Core CPI":                            "근원 소비자물가지수",
+    "PPI":                                 "생산자물가지수",
+    "Core PPI":                            "근원 생산자물가지수",
+    "PCE Price Index":                     "PCE 물가지수",
+    "Core PCE Price Index":                "근원 PCE 물가지수",
+    "PCE":                                 "개인소비지출 물가지수",
+    "Import Price Index":                  "수입물가지수",
+    "Export Price Index":                  "수출물가지수",
+    "GDP Price Index":                     "GDP 디플레이터",
+    "GDP Deflator":                        "GDP 디플레이터",
+    "Trimmed Mean PCE":                    "절사평균 PCE 물가지수",
+    # ── GDP · 성장 ─────────────────────────────────────────────────
+    "GDP Growth Rate":                     "GDP 성장률",
+    "GDP":                                 "GDP",
+    "GNP":                                 "국민총생산",
+    "Real GDP":                            "실질 GDP",
+    # ── 소비 ───────────────────────────────────────────────────────
+    "Retail Sales":                        "소매판매",
+    "Core Retail Sales":                   "근원 소매판매",
+    "Personal Income":                     "개인소득",
+    "Personal Spending":                   "개인지출",
+    "Consumer Credit":                     "소비자신용",
+    "Consumer Confidence":                 "소비자신뢰지수",
+    "Michigan Consumer Sentiment":         "미시건 소비자심리지수",
+    "Michigan Consumer Expectations":      "미시건 소비자기대지수",
+    "Michigan Inflation Expectations":     "미시건 기대인플레이션",
+    "CB Consumer Confidence":              "콘퍼런스보드 소비자신뢰지수",
+    # ── 제조업 · 생산 ───────────────────────────────────────────────
+    "ISM Manufacturing PMI":               "ISM 제조업 PMI",
+    "ISM Non-Manufacturing PMI":           "ISM 비제조업 PMI",
+    "ISM Services PMI":                    "ISM 서비스업 PMI",
+    "S&P Global Manufacturing PMI":        "S&P 글로벌 제조업 PMI",
+    "S&P Global Services PMI":             "S&P 글로벌 서비스업 PMI",
+    "S&P Global Composite PMI":            "S&P 글로벌 종합 PMI",
+    "Markit Manufacturing PMI":            "마킷 제조업 PMI",
+    "Markit Services PMI":                 "마킷 서비스업 PMI",
+    "Empire State Manufacturing Index":    "엠파이어스테이트 제조업지수",
+    "Philadelphia Fed Manufacturing Index":"필라델피아 연준 제조업지수",
+    "Chicago PMI":                         "시카고 PMI",
+    "Industrial Production":               "산업생산지수",
+    "Manufacturing Production":            "제조업 생산지수",
+    "Capacity Utilization Rate":           "설비가동률",
+    "Factory Orders":                      "공장주문",
+    "Durable Goods Orders":                "내구재 주문",
+    "Core Durable Goods Orders":           "근원 내구재 주문",
+    # ── 주택 ───────────────────────────────────────────────────────
+    "NAHB Housing Market Index":           "NAHB 주택시장지수",
+    "Housing Starts":                      "주택착공건수",
+    "Building Permits":                    "건축허가건수",
+    "Existing Home Sales":                 "기존주택판매건수",
+    "New Home Sales":                      "신규주택판매건수",
+    "Pending Home Sales":                  "주택매매 계약건수",
+    "S&P/CS HPI Composite":               "케이스-실러 주택가격지수",
+    "Case-Shiller Home Price Index":       "케이스-실러 주택가격지수",
+    "FHFA House Price Index":              "FHFA 주택가격지수",
+    # ── 무역 · 국제수지 ─────────────────────────────────────────────
+    "Trade Balance":                       "무역수지",
+    "Current Account":                     "경상수지",
+    "Current Account Balance":             "경상수지",
+    "Goods Trade Balance":                 "상품 무역수지",
+    "Balance of Trade":                    "무역수지",
+    # ── 금리 · 통화정책 ─────────────────────────────────────────────
+    "Fed Interest Rate Decision":          "연준 금리결정",
+    "Federal Funds Rate":                  "연방기금금리",
+    "FOMC Meeting Minutes":                "FOMC 의사록",
+    "FOMC Minutes":                        "FOMC 의사록",
+    "Fed Chair Press Conference":          "연준 의장 기자회견",
+    "Fed Press Conference":                "연준 기자회견",
+    "BoK Interest Rate Decision":          "한국은행 금리결정",
+    "BoJ Interest Rate Decision":          "일본은행 금리결정",
+    "ECB Interest Rate Decision":          "유럽중앙은행 금리결정",
+    "Bank of England Interest Rate":       "영란은행 금리결정",
+    "RBA Interest Rate Decision":          "호주중앙은행 금리결정",
+    # ── 재정 ───────────────────────────────────────────────────────
+    "Federal Budget Balance":              "연방 재정수지",
+    "Government Budget":                   "정부 재정수지",
+    "Public Sector Net Borrowing":         "공공부문 순차입",
+    # ── 에너지 ─────────────────────────────────────────────────────
+    "EIA Crude Oil Inventories":           "EIA 원유재고",
+    "EIA Gasoline Inventories":            "EIA 휘발유재고",
+    "EIA Distillate Inventories":          "EIA 정제유재고",
+    "Crude Oil Inventories":               "원유재고",
+    "Baker Hughes Oil Rig Count":          "베이커휴즈 오일 리그수",
+    "Baker Hughes Total Rig Count":        "베이커휴즈 총 리그수",
+    "Natural Gas Storage":                 "천연가스 재고",
+    # ── 국채 입찰 ───────────────────────────────────────────────────
+    "3-Month Bill Auction":                "3개월물 국채 입찰",
+    "6-Month Bill Auction":                "6개월물 국채 입찰",
+    "2-Year Note Auction":                 "2년물 국채 입찰",
+    "3-Year Note Auction":                 "3년물 국채 입찰",
+    "5-Year Note Auction":                 "5년물 국채 입찰",
+    "7-Year Note Auction":                 "7년물 국채 입찰",
+    "10-Year Note Auction":                "10년물 국채 입찰",
+    "20-Year Bond Auction":                "20년물 국채 입찰",
+    "30-Year Bond Auction":                "30년물 국채 입찰",
+    # ── 재고 ───────────────────────────────────────────────────────
+    "Wholesale Inventories":               "도매재고",
+    "Business Inventories":                "기업재고",
+    "Retail Inventories":                  "소매재고",
+    # ── 한국 주요 지표 ───────────────────────────────────────────────
+    "Export Price Index (YoY)":            "수출물가지수(전년비)",
+    "Import Price Index (YoY)":            "수입물가지수(전년비)",
+    "KR Unemployment Rate":                "한국 실업률",
+    "KR Trade Balance":                    "한국 무역수지",
+    "KR GDP Growth Rate":                  "한국 GDP 성장률",
+    "KR CPI":                              "한국 소비자물가지수",
+    # ── 기타 ───────────────────────────────────────────────────────
+    "Nonfarm Business Sector Labor Productivity":  "비농업부문 노동생산성",
+    "Unit Labor Costs":                    "단위 노동비용",
+    "Productivity":                        "노동생산성",
+    "Leading Index":                       "경기선행지수",
+    "Conference Board Leading Index":      "콘퍼런스보드 경기선행지수",
+    "Chicago Fed National Activity Index": "시카고 연준 전국활동지수",
+    "Kansas City Fed Manufacturing Index": "캔자스시티 연준 제조업지수",
+    "Richmond Fed Manufacturing Index":    "리치먼드 연준 제조업지수",
+    "Dallas Fed Manufacturing Index":      "달라스 연준 제조업지수",
+    "Dallas Fed Services Index":           "달라스 연준 서비스업지수",
+    "Senior Loan Officer Survey":          "고위 대출담당자 설문",
+    "Beige Book":                          "베이지북",
+    "Redbook":                             "레드북 소매판매",
+    "API Weekly Crude Oil Stock":          "API 주간 원유재고",
+    "S&P Global PMI":                      "S&P 글로벌 PMI",
+    "Flash Manufacturing PMI":             "제조업 PMI (속보치)",
+    "Flash Services PMI":                  "서비스업 PMI (속보치)",
+    "Flash Composite PMI":                 "종합 PMI (속보치)",
+    "Foreign Bond Investment":             "외국인 채권 투자",
+    "Foreign Stock Investment":            "외국인 주식 투자",
+    "Money Supply M2":                     "통화량(M2)",
+    "Money Supply M3":                     "통화량(M3)",
+    "Treasury International Capital":     "재무부 국제 자본흐름",
+}
+_ECO_SUFFIX = [
+    (" (MoM)",    " (전월비)"),
+    (" (YoY)",    " (전년비)"),
+    (" (QoQ)",    " (전분기비)"),
+    (" (Prelim)", " (예비치)"),
+    (" (Prel)",   " (예비치)"),
+    (" (Final)",  " (확정치)"),
+    (" (Adv)",    " (속보치)"),
+    (" (Flash)",  " (속보치)"),
+    (" (2nd Est)","(2차 추정치)"),
+    (" (3rd Est)","(3차 추정치)"),
+    (" (Revised)","(수정치)"),
+    (" (Actual)", " (실제)"),
+    (" (SAR)",    " (계절조정)"),
+]
+def _translate_eco_event(name: str) -> str:
+    """경제 이벤트명 영→한 변환 (현업 용어). 미매칭시 원문 반환."""
+    if not name:
+        return name
+    # 1) 완전 일치
+    if name in _ECO_KR_EXACT:
+        return _ECO_KR_EXACT[name]
+    # 2) 접미사 분리 후 기본명 조회
+    stripped, suffix_kr = name, ''
+    for sfx_en, sfx_kr in _ECO_SUFFIX:
+        if stripped.endswith(sfx_en):
+            stripped = stripped[: -len(sfx_en)]
+            suffix_kr = sfx_kr
+            break
+    if stripped in _ECO_KR_EXACT:
+        return _ECO_KR_EXACT[stripped] + suffix_kr
+    # 3) 추가 접미사 제거 후 재시도
+    for sfx_en, sfx_kr in _ECO_SUFFIX:
+        if stripped.endswith(sfx_en):
+            stripped2 = stripped[: -len(sfx_en)]
+            suffix_kr = sfx_kr + suffix_kr
+            if stripped2 in _ECO_KR_EXACT:
+                return _ECO_KR_EXACT[stripped2] + suffix_kr
+    return name  # 미매칭 → 원문
+# ── 경제 캘린더 툴팁 사전 (kr_name, 설명, ▲영향, ▼영향) ──────────────
+_ECO_TOOLTIP = {
+    # ── 고용 ──────────────────────────────────────────────────────────
+    "Initial Jobless Claims": (
+        "신규 실업수당 청구",
+        "한 주간 새롭게 실업수당을 신청한 건수. 매주 목요일 발표되는 고빈도 고용 선행지표.",
+        "증가 → 고용 악화 신호 · 경기 둔화 우려 · 금리인하 기대 ↑",
+        "감소 → 고용 견조 · 금리인하 지연 가능성 · 달러 강세",
+    ),
+    "Continuing Jobless Claims": (
+        "연속 실업수당 청구",
+        "이미 실업급여를 받고 있는 누적 인원. 장기 실업 추세를 파악하는 지표.",
+        "증가 → 재취업 어려움 · 소비 위축 우려",
+        "감소 → 노동시장 흡수력 견조",
+    ),
+    "Nonfarm Payrolls": (
+        "비농업부문 고용",
+        "농업을 제외한 전 산업 신규 취업자 수. 월간 최대 이벤트로 발표 즉시 외환·채권·주식 전반에 급격한 변동성을 유발.",
+        "예상 상회 → 경기 견조 · 달러 강세 · 금리인상 기대 · 성장주 부담",
+        "예상 하회 → 경기 둔화 · 금리인하 기대 · 달러 약세 · 채권 강세",
+    ),
+    "Unemployment Rate": (
+        "실업률",
+        "경제활동인구 중 실업자 비율. NFP와 함께 발표되며 고용시장 전반의 건강도를 요약.",
+        "상승 → 경기 둔화 신호 · 금리인하 기대 확대",
+        "하락 → 완전고용 근접 · 임금 상승 압력 · 금리인하 지연",
+    ),
+    "ADP Employment Change": (
+        "ADP 민간고용",
+        "민간 급여 처리 기업 ADP 집계 민간 신규 고용자 수. NFP 이틀 전 발표되는 선행 참고 지표.",
+        "예상 상회 → NFP 강세 기대 · 위험선호 심리 ↑",
+        "예상 하회 → NFP 부진 경계 · 안전자산 선호",
+    ),
+    "Average Hourly Earnings": (
+        "평균 시간당 임금",
+        "민간 비관리직 근로자 평균 시간당 임금. 임금 인플레이션의 핵심 척도로 연준이 중시.",
+        "예상 상회 → 임금 인플레 우려 · 금리인상 기대 · 달러 강세",
+        "예상 하회 → 임금 압력 완화 · 금리인하 여지 확대",
+    ),
+    "JOLTS Job Openings": (
+        "JOLTS 구인건수",
+        "월간 전체 구인 건수. 노동 수요를 직접 측정하며 연준의 고용시장 과열 판단에 활용.",
+        "예상 상회 → 노동 수요 강세 · 임금 상승 압력 · 금리인하 지연",
+        "예상 하회 → 노동시장 냉각 · 금리인하 기대 ↑",
+    ),
+    # ── 물가 ──────────────────────────────────────────────────────────
+    "CPI": (
+        "소비자물가지수",
+        "도시 소비자가 구매하는 재화·서비스 가격 변동 측정. 연준 통화정책 결정에 직접 사용되는 핵심 인플레이션 지표.",
+        "예상 상회 → 인플레 압력 ↑ · 금리인상 기대 · 달러 강세 · 성장주 약세",
+        "예상 하회 → 인플레 완화 · 금리인하 기대 · 성장주·채권 강세",
+    ),
+    "Core CPI": (
+        "근원 소비자물가지수",
+        "변동성 큰 식품·에너지를 제외한 CPI. 기저 인플레이션 추세를 보여줘 연준이 헤드라인보다 더 중시.",
+        "예상 상회 → 기저 인플레 고착화 우려 · 금리 장기 고수 가능성",
+        "예상 하회 → 인플레 둔화 확인 · 금리인하 경로 열림",
+    ),
+    "PPI": (
+        "생산자물가지수",
+        "생산자 단계의 재화·서비스 가격. CPI보다 1~3개월 선행하는 인플레이션 선행지표.",
+        "예상 상회 → 향후 CPI 상승 압력 예고 · 금리인상 기대",
+        "예상 하회 → CPI 둔화 예고 · 금리인하 기대 강화",
+    ),
+    "Core PPI": (
+        "근원 생산자물가지수",
+        "식품·에너지 제외 PPI. 기업 마진과 향후 소비자가격 방향성을 가늠하는 지표.",
+        "예상 상회 → 기업 비용 증가 → 소비자가격 전가 우려",
+        "예상 하회 → 기업 마진 회복 · 가격 안정 신호",
+    ),
+    "PCE Price Index": (
+        "PCE 물가지수",
+        "연준 공식 인플레이션 목표 기준 지표(목표치 2%). CPI보다 광범위한 소비 행태를 반영.",
+        "예상 상회 → 연준 목표 초과 · 금리인하 지연",
+        "예상 하회 → 2% 목표 수렴 · 금리인하 여지 확대",
+    ),
+    "Core PCE Price Index": (
+        "근원 PCE 물가지수",
+        "연준이 가장 중시하는 인플레이션 지표. 식품·에너지 제외로 기저 물가 추세를 정확히 반영.",
+        "예상 상회 → 금리인하 시점 지연 · 달러 강세",
+        "예상 하회 → 금리인하 가시화 · 위험자산 강세",
+    ),
+    "Import Price Index": (
+        "수입물가지수",
+        "수입 재화·서비스 가격 변동. 달러 강약과 원자재 가격의 국내 물가 파급을 측정.",
+        "예상 상회 → 수입 인플레 확대 · 무역적자 우려",
+        "예상 하회 → 수입 디플레 · 소비자가격 안정",
+    ),
+    # ── GDP ───────────────────────────────────────────────────────────
+    "GDP Growth Rate": (
+        "GDP 성장률",
+        "국내총생산 증가율로 경제 성장의 핵심 지표. 속보(Advance)→예비(Prelim)→확정(Final) 3단계 발표.",
+        "예상 상회 → 경기 강세 확인 · 금리인하 지연 가능 · 달러 강세",
+        "예상 하회 → 경기 둔화 우려 · 금리인하 기대 · 안전자산 선호",
+    ),
+    # ── 소비 ──────────────────────────────────────────────────────────
+    "Retail Sales": (
+        "소매판매",
+        "소매업체 매출 총액. GDP의 약 70%를 차지하는 소비 동향을 월간 측정하는 핵심 지표.",
+        "예상 상회 → 소비 견조 · 경기 낙관 · 금리인하 지연",
+        "예상 하회 → 소비 위축 · 경기 둔화 · 금리인하 기대",
+    ),
+    "Core Retail Sales": (
+        "근원 소매판매",
+        "자동차 제외 소매판매. 변동성 큰 자동차 영향을 배제해 소비 기저 추세를 파악.",
+        "예상 상회 → 기저 소비력 견조",
+        "예상 하회 → 소비심리 약화 신호",
+    ),
+    "Michigan Consumer Sentiment": (
+        "미시건 소비자심리지수",
+        "향후 6~12개월 소비자 경기 전망 서베이. 소비 선행지표이자 물가기대 포함으로 연준 주목.",
+        "예상 상회 → 소비 강세 기대 · 위험자산 선호",
+        "예상 하회 → 소비 위축 우려 · 경기 하강 신호",
+    ),
+    "Michigan Inflation Expectations": (
+        "미시건 기대인플레이션",
+        "소비자가 예상하는 1년·5년 인플레이션. 연준의 인플레 기대 고착화 판단에 핵심 자료.",
+        "상승 → 인플레 기대 고착 우려 · 연준 매파 전환 압력",
+        "하락 → 인플레 기대 안정 · 금리인하 여지 확대",
+    ),
+    "CB Consumer Confidence": (
+        "콘퍼런스보드 소비자신뢰지수",
+        "현재 경제 상황과 6개월 전망을 종합한 소비자 신뢰 지수. 미시건 지수와 함께 양대 소비 심리지표.",
+        "예상 상회 → 소비 심리 개선 · 위험자산 강세",
+        "예상 하회 → 경기 불안 확산 · 방어주 선호",
+    ),
+    "Personal Income": (
+        "개인소득",
+        "임금·배당·이자·이전소득 등 가계 총소득. 소비 지속 가능성과 저축 여력을 판단.",
+        "예상 상회 → 소비 여력 확대 · 경기 낙관",
+        "예상 하회 → 소비 여력 감소 · 경기 둔화 우려",
+    ),
+    "Personal Spending": (
+        "개인지출",
+        "가계 실제 소비 지출. PCE와 함께 발표되며 GDP 소비 구성 요소를 실시간 반영.",
+        "예상 상회 → 소비 견조 · 경기 강세",
+        "예상 하회 → 소비 약화 · 경기 둔화 신호",
+    ),
+    # ── 제조업·PMI ────────────────────────────────────────────────────
+    "ISM Manufacturing PMI": (
+        "ISM 제조업 PMI",
+        "미국 제조업 구매담당자 설문. 50 이상이면 확장, 미만이면 수축. 경기 방향성을 빠르게 포착.",
+        "50 상회·예상 상회 → 제조 경기 확장 · 원자재 강세",
+        "50 하회·예상 하회 → 제조 경기 수축 · 경기 둔화 우려",
+    ),
+    "ISM Services PMI": (
+        "ISM 서비스업 PMI",
+        "서비스업 구매담당자 설문. 미국 GDP의 약 80%를 점하는 서비스 경기 동향 측정.",
+        "50 상회·예상 상회 → 서비스 경기 견조 · 소비 강세 확인",
+        "50 하회·예상 하회 → 서비스 경기 수축 · 경기 침체 우려",
+    ),
+    "S&P Global Manufacturing PMI": (
+        "S&P 글로벌 제조업 PMI",
+        "ISM PMI와 달리 글로벌 기준으로 산출. 속보치(Flash)는 ISM보다 약 1주 앞서 발표돼 선행 참고값으로 활용.",
+        "50 상회·예상 상회 → 제조업 회복 기대",
+        "50 하회·예상 하회 → 글로벌 제조 수요 둔화",
+    ),
+    "S&P Global Services PMI": (
+        "S&P 글로벌 서비스업 PMI",
+        "글로벌 기준 서비스업 경기 지수. 복합 PMI와 함께 경기 사이클 조기 감지에 활용.",
+        "50 상회·예상 상회 → 서비스 회복 · 위험자산 선호",
+        "50 하회·예상 하회 → 서비스 둔화 · 안전자산 선호",
+    ),
+    "Empire State Manufacturing Index": (
+        "엠파이어스테이트 제조업지수",
+        "뉴욕 연준이 집계하는 뉴욕주 제조업 현황 서베이. 월초 발표되어 해당 월 경기 방향을 가장 먼저 시사.",
+        "예상 상회 → 제조 경기 낙관 · 위험선호",
+        "예상 하회 → 제조 경기 비관 · 경계심 확대",
+    ),
+    "Philadelphia Fed Manufacturing Index": (
+        "필라델피아 연준 제조업지수",
+        "필라델피아 연준 관할 중부대서양 지역 제조업 서베이. 엠파이어 지수와 함께 ISM 선행지표로 활용.",
+        "예상 상회 → 지역 제조 견조 · ISM 강세 예고",
+        "예상 하회 → 지역 제조 위축 · ISM 부진 경계",
+    ),
+    "Industrial Production": (
+        "산업생산지수",
+        "제조업·광업·유틸리티 실제 생산량 지수. 경제 공급 측면의 건강도를 직접 측정.",
+        "예상 상회 → 생산 증가 · 경기 확장 확인",
+        "예상 하회 → 생산 감소 · 경기 둔화 신호",
+    ),
+    "Capacity Utilization Rate": (
+        "설비가동률",
+        "생산 잠재력 대비 실제 가동 비율. 80% 이상은 인플레 압력 신호, 70% 미만은 과잉 공급 우려.",
+        "예상 상회·80% 접근 → 생산 과열 · 인플레 압력 ↑",
+        "예상 하회 → 생산 여유 · 인플레 완화",
+    ),
+    "Durable Goods Orders": (
+        "내구재 주문",
+        "3년 이상 사용 제품(항공기·기계·전자) 주문량. 기업 설비투자 선행지표이나 항공기 영향으로 월간 변동성 큼.",
+        "예상 상회 → 기업 투자 의지 강화 · 경기 낙관",
+        "예상 하회 → 투자 위축 · 경기 불확실성 확대",
+    ),
+    "Core Durable Goods Orders": (
+        "근원 내구재 주문",
+        "변동성 큰 방산·항공 제외 내구재 주문. 기업 설비투자 의향을 가장 순수하게 반영하는 지표.",
+        "예상 상회 → 기업 설비투자 확대 · 경기 강세",
+        "예상 하회 → 투자 보류 · 경기 경계",
+    ),
+    # ── 주택 ──────────────────────────────────────────────────────────
+    "NAHB Housing Market Index": (
+        "NAHB 주택시장지수",
+        "전미주택건설업협회(NAHB) 주택건설업자 경기 서베이. 50 기준으로 주택 경기 낙관·비관을 판단.",
+        "50 상회·예상 상회 → 주택 경기 낙관 · 관련주 강세",
+        "50 하회·예상 하회 → 주택 수요 위축 우려",
+    ),
+    "Housing Starts": (
+        "주택착공건수",
+        "신규 주택 공사 시작 건수. 건설·자재 수요를 선행하며 주택 공급 동향을 직접 측정.",
+        "예상 상회 → 주택 공급 확대 · 건설 경기 강세",
+        "예상 하회 → 공급 위축 · 주택가격 상승 압력",
+    ),
+    "Building Permits": (
+        "건축허가건수",
+        "향후 1~2개월 착공 예정 물량. 주택착공의 선행지표로 주택 경기 방향성 예측에 활용.",
+        "예상 상회 → 향후 착공 증가 예고 · 주택 공급 확대",
+        "예상 하회 → 착공 감소 예고 · 공급 부족 우려",
+    ),
+    "Existing Home Sales": (
+        "기존주택판매건수",
+        "중고 주택 거래량. 전체 주택거래의 약 90% 비중으로 주택시장 온도계 역할.",
+        "예상 상회 → 주택 수요 견조 · 부동산 경기 강세",
+        "예상 하회 → 주택 거래 위축 · 고금리 부담 확인",
+    ),
+    "New Home Sales": (
+        "신규주택판매건수",
+        "신규 분양 주택 계약 건수. 건설사 수주와 연동되며 기존주택 대비 선행성이 강함.",
+        "예상 상회 → 신규 수요 견조 · 건설주 호재",
+        "예상 하회 → 신규 분양 부진 · 고금리 충격 가시화",
+    ),
+    "Pending Home Sales": (
+        "주택매매 계약건수",
+        "매매 계약 체결 후 아직 완료되지 않은 건수. 1~2개월 후 기존주택판매의 선행지표.",
+        "예상 상회 → 향후 거래 증가 예고",
+        "예상 하회 → 향후 거래 감소 경고",
+    ),
+    # ── 무역 ──────────────────────────────────────────────────────────
+    "Trade Balance": (
+        "무역수지",
+        "수출액에서 수입액을 뺀 차액. 적자가 커질수록 달러 수요 감소 · 경상수지 악화로 이어질 수 있음.",
+        "적자 축소 → 순수출 개선 · 달러 지지",
+        "적자 확대 → 경상수지 악화 · 달러 약세 요인",
+    ),
+    # ── 금리·통화정책 ─────────────────────────────────────────────────
+    "Fed Interest Rate Decision": (
+        "연준 금리결정",
+        "연방공개시장위원회(FOMC) 정책금리 결정. 전 세계 금융시장에 가장 큰 영향을 미치는 단일 이벤트.",
+        "인상 or 매파 → 달러 강세 · 채권 약세 · 성장주 부담",
+        "인하 or 비둘기파 → 위험자산 강세 · 채권 강세 · 달러 약세",
+    ),
+    "FOMC Meeting Minutes": (
+        "FOMC 의사록",
+        "금리 결정 회의의 상세 논의 공개. 위원별 매파·비둘기파 발언 비율로 향후 금리 방향성 파악.",
+        "매파 우세 → 금리인하 지연 기대 · 달러 강세",
+        "비둘기파 우세 → 금리인하 기대 확대 · 위험자산 강세",
+    ),
+    "BoK Interest Rate Decision": (
+        "한국은행 금리결정",
+        "한국은행 금융통화위원회 기준금리 결정. 원화 가치와 국내 채권·부동산 시장에 직접 영향.",
+        "인상 or 동결(매파) → 원화 강세 · 채권 약세",
+        "인하 or 비둘기파 → 원화 약세 · 채권 강세 · 주식 지지",
+    ),
+    # ── 에너지 ────────────────────────────────────────────────────────
+    "EIA Crude Oil Inventories": (
+        "EIA 원유재고",
+        "미국 에너지정보청(EIA) 주간 원유 재고량. 원유 공급·수요 균형을 판단하는 핵심 단기 지표.",
+        "예상보다 감소 → 공급 타이트 · 유가 상승 압력 · 에너지주 강세",
+        "예상보다 증가 → 공급 과잉 · 유가 하락 압력 · 에너지주 약세",
+    ),
+    "Natural Gas Storage": (
+        "천연가스 재고",
+        "EIA 주간 천연가스 저장량. 계절 수요와 비교해 공급 여유분을 판단하며 가스 가격에 직접 영향.",
+        "예상보다 감소 → 공급 부족 · 가스 가격 ↑",
+        "예상보다 증가 → 공급 여유 · 가스 가격 ↓",
+    ),
+    # ── 재고·공급망 ───────────────────────────────────────────────────
+    "Wholesale Inventories": (
+        "도매재고",
+        "도매업체 보유 재고. 증가는 수요 부진 또는 과잉 공급 신호, 감소는 수요 회복을 시사.",
+        "예상보다 증가 → 수요 둔화 우려 · 향후 생산 감소 가능",
+        "예상보다 감소 → 수요 견조 · 재고 보충 기대",
+    ),
+    "Business Inventories": (
+        "기업재고",
+        "제조·도매·소매 전 단계 재고 종합. GDP 재고투자 항목에 직접 반영.",
+        "예상보다 증가 → 재고 과잉 · 향후 생산 축소 가능",
+        "예상보다 감소 → 재고 소진 · 생산 회복 기대",
+    ),
+    # ── 재정 ──────────────────────────────────────────────────────────
+    "Federal Budget Balance": (
+        "연방 재정수지",
+        "미국 연방정부 세수와 지출의 차이. 적자 확대는 국채 발행 증가로 장기 금리 상승 요인.",
+        "흑자 또는 적자 축소 → 국채 공급 감소 · 금리 안정",
+        "적자 확대 → 국채 공급 증가 · 장기금리 상승 압력",
+    ),
+    # ── 기타 체크포인트 ───────────────────────────────────────────────
+    "Beige Book": (
+        "베이지북",
+        "연준 12개 지역 경기 현황 정성적 보고서. FOMC 2주 전 발표되며 정책 결정 배경 이해에 필수.",
+        "전반적 확장 기술 → 금리 고수 또는 인상 가능성",
+        "전반적 둔화 기술 → 금리인하 논의 확대 기대",
+    ),
+    "Consumer Credit": (
+        "소비자신용",
+        "자동차·학자금 등 소비자 대출 잔액 변화. 신용카드 포함 시 소비 여력과 부채 부담 동향 확인.",
+        "증가 → 소비 의지 강함 · 향후 지출 증가 기대",
+        "감소 → 부채 상환 또는 소비 여력 축소 신호",
+    ),
+    "Chicago PMI": (
+        "시카고 PMI",
+        "시카고 지역 제조·서비스 복합 경기 서베이. ISM 전날 발표되어 당일 ISM 방향성 예측에 활용.",
+        "50 상회·예상 상회 → ISM 강세 선행 신호",
+        "50 하회·예상 하회 → ISM 약세 경계",
+    ),
+    "Richmond Fed Manufacturing Index": (
+        "리치먼드 연준 제조업지수",
+        "리치먼드 연준 관할 중부대서양 남부 제조업 서베이. 지역 제조 경기 선행지표.",
+        "예상 상회 → 지역 제조 개선",
+        "예상 하회 → 지역 제조 위축",
+    ),
+    "Dallas Fed Manufacturing Index": (
+        "달라스 연준 제조업지수",
+        "텍사스 등 남서부 제조업 서베이. 에너지 산업 비중이 높아 유가와 함께 해석.",
+        "예상 상회 → 남서부 제조·에너지 경기 개선",
+        "예상 하회 → 에너지 경기 둔화 반영 가능",
+    ),
+}
+def _get_tooltip(name: str):
+    """이벤트명으로 툴팁 정보 조회. 반환: (kr_name, desc, use_up, use_dn) or None."""
+    if not name:
+        return None
+    if name in _ECO_TOOLTIP:
+        return _ECO_TOOLTIP[name]
+    # 접미사 제거 후 재조회
+    for sfx in [" (MoM)"," (YoY)"," (QoQ)"," (Prelim)"," (Prel)",
+                " (Final)"," (Adv)"," (Flash)"," (2nd Est)"," (3rd Est)",
+                " (Revised)"," (SAR)"," (Actual)"]:
+        if name.endswith(sfx):
+            base = name[:-len(sfx)]
+            if base in _ECO_TOOLTIP:
+                return _ECO_TOOLTIP[base]
+    return None
+@st.cache_data(ttl=1800)
+def fetch_economic_calendar():
+    """Finnhub 경제캘린더 API — 이번 주 (월~일) 데이터 fetch."""
+    api_key = os.environ.get('FINNHUB_API_KEY', '')
+    if not api_key:
+        return None, 'no_key'
+    today  = datetime.now(KST).date()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+    url = (
+        'https://finnhub.io/api/v1/calendar/economic'
+        f'?from={monday}&to={sunday}&token={api_key}'
+    )
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code == 403:
+            return None, '403'
+        r.raise_for_status()
+        return r.json().get('economicCalendar', []), 'ok'
+    except Exception as e:
+        return None, str(e)
+def render_economic_calendar():
+    """경제 캘린더 사이드바 섹션 — Finnhub API 기반 테이블 (한글명 + 클릭 팝업)."""
+    st.markdown(
+        '<div style="font-size:0.7rem;color:#a6adc8;font-weight:600;'
+        'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
+        unsafe_allow_html=True,
+    )
+    IMP_OPTIONS     = ['🔴 고영향', '🟠 고+중', '⚪ 전체']
+    COUNTRY_OPTIONS = ['🇺🇸 미국', '🇺🇸+🇰🇷 미국·한국', '🌐 전체']
+    IMP_MAP  = {'🔴 고영향': ['high'], '🟠 고+중': ['high', 'medium'], '⚪ 전체': ['high', 'medium', 'low']}
+    CTRY_MAP = {'🇺🇸 미국': ['US'], '🇺🇸+🇰🇷 미국·한국': ['US', 'KR'], '🌐 전체': None}
+    FLAG_MAP = {'US':'🇺🇸','KR':'🇰🇷','EU':'🇪🇺','GB':'🇬🇧','JP':'🇯🇵','CN':'🇨🇳','DE':'🇩🇪','CA':'🇨🇦','AU':'🇦🇺'}
+    DOT_CLR  = {'high':'#f38ba8', 'medium':'#f9e2af', 'low':'#585b70'}
+    with st.expander('📋 이번 주 주요 경제 일정', expanded=False):
+        col_l, col_r = st.columns(2)
+        with col_l:
+            imp = st.selectbox('중요도', IMP_OPTIONS, index=0,
+                               key='cal_imp', label_visibility='collapsed')
+        with col_r:
+            ctry = st.selectbox('국가', COUNTRY_OPTIONS, index=0,
+                                key='cal_ctry', label_visibility='collapsed')
+        imp_set  = IMP_MAP.get(imp, ['high'])
+        ctry_set = CTRY_MAP.get(ctry)
+        cal_data, status = fetch_economic_calendar()
+        if status == 'no_key':
+            st.caption('⚠️ FINNHUB_API_KEY 시크릿이 설정되지 않았습니다.')
+            return
+        if status == '403':
+            st.caption('⚠️ Finnhub 무료 플랜에서 경제캘린더 API가 제한됩니다. (Paid plan 필요)')
+            return
+        if status != 'ok' or not cal_data:
+            st.caption(f'⚠️ 데이터 로드 실패: {status}')
+            return
+        # ── 필터링 ─────────────────────────────────────────────────
+        filtered = []
+        for ev in cal_data:
+            ev_imp = (ev.get('impact') or '').lower()
+            if ev_imp not in imp_set:
+                continue
+            if ctry_set and ev.get('country', '') not in ctry_set:
+                continue
+            filtered.append(ev)
+        # ── 날짜 내림차순 정렬 ──────────────────────────────────────
+        filtered.sort(key=lambda x: x.get('time', ''), reverse=True)
+        if not filtered:
+            st.caption('해당하는 일정이 없습니다.')
+            return
+        # ── HTML 테이블 빌드 ────────────────────────────────────────
+        today_str = datetime.now(KST).strftime('%Y-%m-%d')
+        rows = ''
+        last_date = None
+        for ev in filtered:
+            t      = ev.get('time', '')
+            dpart  = t[:10] if len(t) >= 10 else ''
+            tpart  = t[11:16] if len(t) >= 16 else ''
+            is_today = (dpart == today_str)
+            show_date = (dpart != last_date)
+            last_date = dpart
+            try:
+                dt_obj   = datetime.strptime(dpart, '%Y-%m-%d')
+                mmdd     = dt_obj.strftime('%m/%d')
+                if is_today:
+                    date_cell = f'<span style="color:#89b4fa;font-weight:600">{mmdd} 오늘</span>'
+                else:
+                    date_cell = f'<span style="color:#a6adc8">{mmdd}</span>'
+            except Exception:
+                date_cell = f'<span style="color:#a6adc8">{dpart}</span>'
+            flag    = FLAG_MAP.get(ev.get('country',''), '🌐')
+            ev_imp  = (ev.get('impact') or '').lower()
+            dot_c   = DOT_CLR.get(ev_imp, '#585b70')
+            _raw    = ev.get('event', '')
+            # ── 한글 번역 ──────────────────────────────────────────
+            evname  = _translate_eco_event(_raw)
+            actual  = str(ev.get('actual') or '').strip() or '—'
+            est     = str(ev.get('estimate') or '').strip() or '—'
+            prev    = str(ev.get('prev') or '').strip() or '—'
+            _tip    = _get_tooltip(_raw)
+            # 발표값 vs 예측값 색상
+            act_color = '#cdd6f4'
+            if actual != '—' and est != '—':
+                try:
+                    def _num(s):
+                        return float(s.replace('%','').replace('K','e3').replace('M','e6').replace('B','e9').replace(',',''))
+                    a, e = _num(actual), _num(est)
+                    act_color = '#a6e3a1' if a >= e else '#f38ba8'
+                except Exception:
+                    pass
+            date_td = f'<td style="padding:5px 4px;white-space:nowrap;font-size:0.7rem">{date_cell if show_date else ""}</td>'
+            # ── 이벤트 셀: 툴팁 있으면 클릭 가능 span, 없으면 일반 텍스트 ──
+            if _tip:
+                def _esc(s): return s.replace('"', '&quot;').replace("'", '&#39;')
+                evt_cell = (
+                    f'<span class="evn"'
+                    f' data-kr="{_esc(_tip[0])}"'
+                    f' data-en="{_esc(_raw)}"'
+                    f' data-desc="{_esc(_tip[1])}"'
+                    f' data-up="{_esc(_tip[2])}"'
+                    f' data-dn="{_esc(_tip[3])}"'
+                    f'>{evname}</span>'
+                )
+            else:
+                evt_cell = f'<span style="color:#cdd6f4">{evname}</span>'
+            rows += (
+                f'<tr style="border-bottom:1px solid #313244">'
+                f'{date_td}'
+                f'<td style="padding:5px 4px;font-size:0.68rem;color:#7f849c;white-space:nowrap">{tpart} ET</td>'
+                f'<td style="padding:5px 4px;font-size:0.82rem;text-align:center">{flag}</td>'
+                f'<td style="padding:5px 4px;text-align:center">'
+                f'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{dot_c}"></span>'
+                f'</td>'
+                f'<td style="padding:5px 6px;font-size:0.7rem">{evt_cell}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:{act_color};text-align:right;white-space:nowrap">{actual}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:#7f849c;text-align:right;white-space:nowrap">{est}</td>'
+                f'<td style="padding:5px 4px;font-size:0.7rem;color:#585b70;text-align:right;white-space:nowrap">{prev}</td>'
+                f'</tr>'
+            )
+        html_out = (
+            '<style>'
+            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;overflow-x:auto}'
+            '.eco-tbl{width:100%;border-collapse:collapse}'
+            '.eco-tbl thead th{font-size:0.65rem;color:#6c7086;padding:5px 4px;'
+            'border-bottom:1px solid #45475a;font-weight:500;white-space:nowrap}'
+            '.eco-tbl thead th.r{text-align:right}'
+            '.evn{font-size:0.7rem;color:#89b4fa;border-bottom:1px dashed #45475a;'
+            'cursor:pointer;display:inline;transition:opacity 0.15s}'
+            '.evn:hover{opacity:0.75}'
+            '#eco-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;'
+            'background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center}'
+            '#eco-modal.open{display:flex}'
+            '.modal-card{background:#24273a;border:1px solid #45475a;border-radius:10px;'
+            'padding:16px 18px;width:90%;max-width:300px;position:relative;box-sizing:border-box}'
+            '#eco-m-close{position:absolute;top:8px;right:10px;background:none;border:none;'
+            'color:#a6adc8;font-size:18px;cursor:pointer;line-height:1;padding:0}'
+            '#eco-m-close:hover{color:#cdd6f4}'
+            '#eco-m-kr{font-size:0.65rem;color:#7f849c;margin-bottom:2px}'
+            '#eco-m-en{font-size:0.78rem;font-weight:600;color:#cdd6f4;margin-bottom:8px;'
+            'padding-bottom:8px;border-bottom:1px solid #313244}'
+            '#eco-m-desc{font-size:0.68rem;color:#a6adc8;line-height:1.55;margin-bottom:10px}'
+            '.m-row{font-size:0.67rem;line-height:1.6;margin-top:3px}'
+            '.m-up{color:#a6e3a1}'
+            '.m-dn{color:#f38ba8}'
+            '</style>'
+            '<table class="eco-tbl"><thead><tr>'
+            '<th>날짜</th><th>시간</th><th></th><th></th>'
+            '<th>이벤트</th>'
+            '<th class="r">발표</th><th class="r">예측</th><th class="r">이전</th>'
+            '</tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
+            '<div id="eco-modal">'
+            '<div class="modal-card">'
+            '<button id="eco-m-close">✕</button>'
+            '<div id="eco-m-kr"></div>'
+            '<div id="eco-m-en"></div>'
+            '<div id="eco-m-desc"></div>'
+            '<div class="m-row" id="eco-m-up"></div>'
+            '<div class="m-row" id="eco-m-dn"></div>'
+            '</div></div>'
+            '<script>'
+            'var modal=document.getElementById("eco-modal");'
+            'var mKr=document.getElementById("eco-m-kr");'
+            'var mEn=document.getElementById("eco-m-en");'
+            'var mDesc=document.getElementById("eco-m-desc");'
+            'var mUp=document.getElementById("eco-m-up");'
+            'var mDn=document.getElementById("eco-m-dn");'
+            'document.querySelectorAll(".evn").forEach(function(el){'
+            '  el.addEventListener("click",function(){'
+            '    mKr.textContent=el.dataset.kr;'
+            '    mEn.textContent=el.dataset.en;'
+            '    mDesc.textContent=el.dataset.desc;'
+            '    mUp.innerHTML="<span class=\'m-up\'>▲</span> "+el.dataset.up;'
+            '    mDn.innerHTML="<span class=\'m-dn\'>▼</span> "+el.dataset.dn;'
+            '    modal.classList.add("open");'
+            '  });'
+            '});'
+            'document.getElementById("eco-m-close").addEventListener("click",function(){'
+            '  modal.classList.remove("open");});'
+            'modal.addEventListener("click",function(e){'
+            '  if(e.target===modal) modal.classList.remove("open");});'
+            'document.addEventListener("keydown",function(e){'
+            '  if(e.key==="Escape") modal.classList.remove("open");});'
+            '</script>'
+        )
+        row_h  = max(220, min(len(filtered) * 34 + 80, 500))
+        components.html(html_out, height=row_h, scrolling=True)
+        st.markdown(
+            '<div style="font-size:0.6rem;color:#6c7086;text-align:right;padding:2px 4px 0 0;">'
+            '출처: <a href="https://finnhub.io/" target="_blank"'
+            ' style="color:#89b4fa;text-decoration:none;">Finnhub</a></div>',
+            unsafe_allow_html=True,
+        )
+
+
 def clear_cache():
     load_news.clear()
     load_tickers.clear()
@@ -1471,6 +2215,7 @@ def clear_cache():
     fetch_fred_data.clear()
     fetch_cape_data.clear()
     fetch_buffett_history.clear()
+    fetch_economic_calendar.clear()
 
 
 def _sort_tickers_by_mcap():
@@ -2332,6 +3077,8 @@ with st.sidebar:
                 f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
                 f'{rest_html}</div>',
                 unsafe_allow_html=True)
+
+        render_economic_calendar()
 
 
 
