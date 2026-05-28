@@ -2206,6 +2206,273 @@ def render_economic_calendar():
         )
 
 
+# ── 하이퍼스케일러 분석 ──────────────────────────────────────────────
+HYPSCALER_TICKERS = ['MSFT', 'GOOGL', 'AMZN', 'META']
+
+# 2026년 공식 Capex 가이던스 (단위: 십억달러, 캘린더 연간 기준)
+# 출처: 각 사 Q1 2026 실적발표 (2026년 4~5월 공시)
+HYPSCALER_GUIDANCE = {
+    'MSFT':  190,   # Q3 FY2026 실적발표 2026.04.30
+    'GOOGL': 185,   # Q1 2026 실적발표 2026.04.29 ($180~190B 중간값)
+    'AMZN':  200,   # Q1 2026 실적발표 2026.05.01 (CEO Andy Jassy 공식 발표)
+    'META':  135,   # Q1 2026 실적발표 2026.04.29 ($125~145B 중간값)
+}
+HYPSCALER_GUIDANCE_TOTAL = sum(HYPSCALER_GUIDANCE.values())   # 710
+HYPSCALER_GUIDANCE_NOTE  = '2026년 Q1 실적발표 기준 (2026년 4~5월 공시) — 캘린더 연간 기준'
+
+@st.cache_data(ttl=3600)
+def fetch_hyperscaler_data():
+    """MSFT·GOOGL·AMZN·META 분기 재무 취득 → TTM 합산 DataFrame 반환"""
+    import yfinance as yf
+    import pandas as pd
+
+    NI_ROWS    = ['Net Income', 'Net Income Common Stockholders',
+                  'Net Income From Continuing Operations']
+    OCF_ROWS   = ['Operating Cash Flow',
+                  'Cash Flow From Continuing Operating Activities',
+                  'Total Cash From Operating Activities',
+                  'Net Cash Provided By Operating Activities']
+    CAPEX_ROWS = ['Capital Expenditure',
+                  'Purchase Of Property Plant And Equipment',
+                  'Capital Expenditure Reported',
+                  'Purchases of property and equipment',
+                  'Capital Expenditures']
+
+    ni_map, ocf_map, cap_map = {}, {}, {}
+    for ticker in HYPSCALER_TICKERS:
+        try:
+            t   = yf.Ticker(ticker)
+            inc = t.quarterly_income_stmt
+            cf  = t.quarterly_cashflow
+            for r in NI_ROWS:
+                if r in inc.index:
+                    ni_map[ticker] = inc.loc[r]; break
+            for r in OCF_ROWS:
+                if r in cf.index:
+                    ocf_map[ticker] = cf.loc[r]; break
+            for r in CAPEX_ROWS:
+                if r in cf.index:
+                    cap_map[ticker] = cf.loc[r]; break
+        except Exception as e:
+            print(f'[hyperscaler] {ticker}: {e}')
+
+    if len(ni_map) < 2:
+        return None, 'fetch_error'
+
+    def _agg(d):
+        df = pd.DataFrame(d).fillna(0)
+        s  = df.sum(axis=1)
+        s.index = pd.to_datetime(s.index)
+        return s.sort_index()
+
+    ni_q  = _agg(ni_map)
+    ocf_q = _agg(ocf_map)
+    cap_q = _agg(cap_map)    # 음수 (지출)
+    fcf_q = ocf_q + cap_q    # FCF = OCF + Capex(음수)
+
+    def _ttm(s):
+        return s.rolling(4).sum().dropna() / 1e9   # → 십억달러
+
+    result = pd.DataFrame({
+        'net_income_ttm': _ttm(ni_q),
+        'ocf_ttm':        _ttm(ocf_q),
+        'fcf_ttm':        _ttm(fcf_q),
+    }).sort_index()
+    return result, 'ok'
+
+
+def render_hyperscaler_tab():
+    """하이퍼스케일러 분석 탭 — 순이익 vs FCF 추이 + 2026 Capex 가이던스 반영 추정"""
+    import plotly.graph_objects as _go
+    import pandas as _pd
+
+    st.markdown(
+        '<div style="font-size:0.82rem;color:#a6adc8;margin:4px 0 14px 0;">'
+        'MSFT · GOOGL · AMZN · META 합산 — 순이익 vs 잉여현금흐름(FCF) 추이'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    df, status = fetch_hyperscaler_data()
+    if status != 'ok' or df is None or df.empty:
+        st.warning(f'데이터 로드 실패 ({status}). 잠시 후 새로고침해주세요.')
+        return
+
+    latest      = df.iloc[-1]
+    latest_date = df.index[-1]
+    ni_latest   = float(latest['net_income_ttm'])
+    fcf_latest  = float(latest['fcf_ttm'])
+
+    # ── 요약 수치 카드 ────────────────────────────────────────────
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric('합산 순이익 (TTM)', f'${ni_latest:.0f}B')
+    with c2:
+        delta_fcf = fcf_latest - ni_latest
+        st.metric('합산 FCF (TTM)', f'${fcf_latest:.0f}B',
+                  delta=f'{delta_fcf:.0f}B', delta_color='inverse')
+    with c3:
+        gap_pct = (ni_latest - fcf_latest) / ni_latest * 100 if ni_latest else 0
+        st.metric('순이익-FCF 갭', f'{gap_pct:.0f}%')
+    with c4:
+        st.metric('2026 합산 Capex 가이던스', f'${HYPSCALER_GUIDANCE_TOTAL}B',
+                  help='각 사 Q1 2026 실적발표 기준')
+
+    st.markdown('<div style="margin:4px 0 10px 0;border-top:1px solid #313244;"></div>',
+                unsafe_allow_html=True)
+
+    # ── 1년 추정 계산 ─────────────────────────────────────────────
+    fwd_date = latest_date + _pd.DateOffset(months=12)
+
+    if len(df) >= 8:
+        ocf_g = float(df['ocf_ttm'].iloc[-1] / df['ocf_ttm'].iloc[-5] - 1)
+        ni_g  = float(df['net_income_ttm'].iloc[-1] / df['net_income_ttm'].iloc[-5] - 1)
+        ocf_g = max(min(ocf_g, 0.45), 0.05)
+        ni_g  = max(min(ni_g,  0.50), 0.05)
+    else:
+        ocf_g, ni_g = 0.15, 0.20
+
+    fwd_ocf = float(latest['ocf_ttm']) * (1 + ocf_g)
+    fwd_fcf = fwd_ocf - HYPSCALER_GUIDANCE_TOTAL
+    fwd_ni  = ni_latest * (1 + ni_g)
+
+    # ── Plotly 차트 ───────────────────────────────────────────────
+    fig = _go.Figure()
+
+    # 실제값 — 순이익 (실선, 파란색)
+    fig.add_trace(_go.Scatter(
+        x=df.index, y=df['net_income_ttm'],
+        name='순이익 TTM (실제)',
+        line=dict(color='#4a9eff', width=2.5),
+        mode='lines',
+        hovertemplate='순이익: $%{y:.0f}B<extra></extra>',
+    ))
+
+    # 실제값 — FCF (점선, 회색)
+    fig.add_trace(_go.Scatter(
+        x=df.index, y=df['fcf_ttm'],
+        name='FCF TTM (실제)',
+        line=dict(color='#a6adc8', width=2, dash='dot'),
+        mode='lines',
+        hovertemplate='FCF: $%{y:.0f}B<extra></extra>',
+    ))
+
+    # 추정 — 순이익 (점선, 파란색 옅게)
+    fig.add_trace(_go.Scatter(
+        x=[latest_date, fwd_date], y=[ni_latest, fwd_ni],
+        name=f'순이익 추정 (+{ni_g*100:.0f}% 성장 가정)',
+        line=dict(color='#4a9eff', width=1.5, dash='dash'),
+        mode='lines+markers',
+        marker=dict(size=6, color='#4a9eff', symbol='circle-open'),
+        hovertemplate='추정 순이익: $%{y:.0f}B<extra></extra>',
+    ))
+
+    # 추정 — FCF (점선, 위험 시 빨간색)
+    fcf_clr = '#f38ba8' if fwd_fcf < 0 else '#a6adc8'
+    fig.add_trace(_go.Scatter(
+        x=[latest_date, fwd_date], y=[fcf_latest, fwd_fcf],
+        name=f'FCF 추정 (가이던스 Capex ${HYPSCALER_GUIDANCE_TOTAL}B 반영)',
+        line=dict(color=fcf_clr, width=1.5, dash='dash'),
+        mode='lines+markers',
+        marker=dict(size=6, color=fcf_clr, symbol='circle-open'),
+        hovertemplate='추정 FCF: $%{y:.0f}B<extra></extra>',
+    ))
+
+    # 현재 수직선
+    fig.add_vline(
+        x=latest_date, line_dash='dot',
+        line_color='#585b70', line_width=1,
+    )
+    fig.add_annotation(
+        x=latest_date, y=0.97, yref='paper',
+        text='현재', showarrow=False,
+        font=dict(size=9, color='#7f849c'), xshift=20,
+    )
+
+    # 추정 구간 음영
+    fig.add_vrect(
+        x0=latest_date, x1=fwd_date,
+        fillcolor='rgba(88,91,112,0.06)', line_width=0,
+        annotation_text='추정 구간', annotation_position='top left',
+        annotation_font_size=9, annotation_font_color='#585b70',
+    )
+
+    # FCF 제로선 강조
+    fig.add_hline(y=0, line_dash='solid', line_color='#45475a', line_width=1)
+
+    fig.update_layout(
+        height=350,
+        margin=dict(l=55, r=20, t=40, b=40),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#cdd6f4', size=10),
+        xaxis=dict(gridcolor='#313244', showgrid=True, title=''),
+        yaxis=dict(
+            gridcolor='#313244', showgrid=True,
+            title='합산 (십억달러, B)',
+            zeroline=False,
+        ),
+        legend=dict(
+            orientation='h', yanchor='bottom', y=1.01,
+            xanchor='left', x=0,
+            font=dict(size=9), bgcolor='rgba(0,0,0,0)',
+        ),
+        hovermode='x unified',
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    # ── 데이터 출처 및 한계 설명 ──────────────────────────────────
+    st.markdown(
+        '<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+        'padding:12px 16px;margin:4px 0 8px 0;font-size:0.72rem;color:#7f849c;line-height:1.8;">'
+        '<span style="color:#a6adc8;font-weight:600;">📌 데이터 출처 및 구현 한계</span><br>'
+        '• <span style="color:#cdd6f4">실선 (실제값)</span> : yfinance — SEC 공시 기반 분기 재무데이터. '
+        '순이익·FCF (= 영업현금흐름 − Capex) 4분기 TTM 합산. 신뢰도 100%.<br>'
+        '• <span style="color:#cdd6f4">점선 (추정값)</span> : 최근 TTM 성장률 단순 연장 + 공식 Capex 가이던스 반영. '
+        '애널리스트 컨센서스가 아닌 역사적 추세 기반으로 실제와 상이할 수 있음.<br>'
+        f'• <span style="color:#f9e2af">2026 Capex 가이던스</span> ({HYPSCALER_GUIDANCE_NOTE}) : '
+        f'MSFT ${HYPSCALER_GUIDANCE["MSFT"]}B · '
+        f'GOOGL ${HYPSCALER_GUIDANCE["GOOGL"]}B · '
+        f'AMZN ${HYPSCALER_GUIDANCE["AMZN"]}B · '
+        f'META ${HYPSCALER_GUIDANCE["META"]}B = '
+        f'<span style="color:#f38ba8;font-weight:600;">합산 ${HYPSCALER_GUIDANCE_TOTAL}B</span><br>'
+        '• 가이던스 수치는 분기 실적발표마다 변동될 수 있으며, 최신 공시 확인 후 수동 업데이트 필요. '
+        '투자 판단의 참고 자료로만 활용할 것.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── 가이던스 상세 expander ────────────────────────────────────
+    _SRC = {
+        'MSFT':  'Q3 FY2026 실적발표 2026.04.30',
+        'GOOGL': 'Q1 2026 실적발표 2026.04.29 ($180~190B 중간값)',
+        'AMZN':  'Q1 2026 실적발표 2026.05.01',
+        'META':  'Q1 2026 실적발표 2026.04.29 ($125~145B 중간값)',
+    }
+    with st.expander('📋 2026 Capex 가이던스 상세', expanded=False):
+        rows = ''.join(
+            f'<tr>'
+            f'<td style="padding:4px 10px;font-size:0.72rem;color:#cdd6f4">{tk}</td>'
+            f'<td style="padding:4px 10px;font-size:0.72rem;color:#f9e2af;font-weight:600">${vl}B</td>'
+            f'<td style="padding:4px 10px;font-size:0.7rem;color:#7f849c">{_SRC[tk]}</td>'
+            f'</tr>'
+            for tk, vl in HYPSCALER_GUIDANCE.items()
+        )
+        st.markdown(
+            f'<table style="width:100%;border-collapse:collapse;margin-top:4px">'
+            f'<thead><tr>'
+            f'<th style="padding:3px 10px;font-size:0.7rem;color:#6c7086;font-weight:500;text-align:left">종목</th>'
+            f'<th style="padding:3px 10px;font-size:0.7rem;color:#6c7086;font-weight:500;text-align:left">2026 Capex</th>'
+            f'<th style="padding:3px 10px;font-size:0.7rem;color:#6c7086;font-weight:500;text-align:left">출처</th>'
+            f'</tr></thead><tbody>{rows}'
+            f'<tr style="border-top:1px solid #313244">'
+            f'<td style="padding:5px 10px;font-size:0.72rem;color:#a6adc8;font-weight:600">합계</td>'
+            f'<td style="padding:5px 10px;font-size:0.72rem;color:#f38ba8;font-weight:600">${HYPSCALER_GUIDANCE_TOTAL}B</td>'
+            f'<td></td></tr></tbody></table>',
+            unsafe_allow_html=True,
+        )
+
+
 def clear_cache():
     load_news.clear()
     load_tickers.clear()
@@ -2216,6 +2483,7 @@ def clear_cache():
     fetch_cape_data.clear()
     fetch_buffett_history.clear()
     fetch_economic_calendar.clear()
+    fetch_hyperscaler_data.clear()
 
 
 def _sort_tickers_by_mcap():
@@ -2755,16 +3023,18 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
 .rec-bar-wrap { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
 
 /* ── 탭 인덱스 색상 (책 인덱스 스타일) ── */
-[data-baseweb="tab-list"] button:nth-child(1)  { color: #89b4fa !important; border-bottom-color: #89b4fa !important; }
-[data-baseweb="tab-list"] button:nth-child(2)  { color: #a6e3a1 !important; border-bottom-color: #a6e3a1 !important; }
-[data-baseweb="tab-list"] button:nth-child(3)  { color: #fab387 !important; border-bottom-color: #fab387 !important; }
-[data-baseweb="tab-list"] button:nth-child(4)  { color: #f9e2af !important; border-bottom-color: #f9e2af !important; }
-[data-baseweb="tab-list"] button:nth-child(5)  { color: #cba6f7 !important; border-bottom-color: #cba6f7 !important; }
-[data-baseweb="tab-list"] button:nth-child(6)  { color: #94e2d5 !important; border-bottom-color: #94e2d5 !important; }
-[data-baseweb="tab-list"] button:nth-child(7)  { color: #eba0ac !important; border-bottom-color: #eba0ac !important; }
-[data-baseweb="tab-list"] button:nth-child(8)  { color: #89dceb !important; border-bottom-color: #89dceb !important; }
-[data-baseweb="tab-list"] button:nth-child(9)  { color: #b5e8b0 !important; border-bottom-color: #b5e8b0 !important; }
-[data-baseweb="tab-list"] button:nth-child(10) { color: #f2cdcd !important; border-bottom-color: #f2cdcd !important; }
+/* nth-child(1) = 하이퍼스케일러 탭, 2~11 = 종목 탭 */
+[data-baseweb="tab-list"] button:nth-child(1)  { color: #cba6f7 !important; border-bottom-color: #cba6f7 !important; }
+[data-baseweb="tab-list"] button:nth-child(2)  { color: #89b4fa !important; border-bottom-color: #89b4fa !important; }
+[data-baseweb="tab-list"] button:nth-child(3)  { color: #a6e3a1 !important; border-bottom-color: #a6e3a1 !important; }
+[data-baseweb="tab-list"] button:nth-child(4)  { color: #fab387 !important; border-bottom-color: #fab387 !important; }
+[data-baseweb="tab-list"] button:nth-child(5)  { color: #f9e2af !important; border-bottom-color: #f9e2af !important; }
+[data-baseweb="tab-list"] button:nth-child(6)  { color: #cba6f7 !important; border-bottom-color: #cba6f7 !important; }
+[data-baseweb="tab-list"] button:nth-child(7)  { color: #94e2d5 !important; border-bottom-color: #94e2d5 !important; }
+[data-baseweb="tab-list"] button:nth-child(8)  { color: #eba0ac !important; border-bottom-color: #eba0ac !important; }
+[data-baseweb="tab-list"] button:nth-child(9)  { color: #89dceb !important; border-bottom-color: #89dceb !important; }
+[data-baseweb="tab-list"] button:nth-child(10) { color: #b5e8b0 !important; border-bottom-color: #b5e8b0 !important; }
+[data-baseweb="tab-list"] button:nth-child(11) { color: #f2cdcd !important; border-bottom-color: #f2cdcd !important; }
 /* 선택된 탭 강조 */
 [data-baseweb="tab-list"] button[aria-selected="true"] {
     font-weight: 700 !important; opacity: 1 !important;
@@ -3130,18 +3400,24 @@ with st.sidebar:
 # ── 메인 영역 ────────────────────────────────────────────────────
 tickers_list = load_tickers()
 
+_HYPS_TAB = '📊 하이퍼스케일러 분석'
+
+news_df = load_news()
+if news_df is None:
+    news_df = pd.DataFrame()
+
 if not tickers_list:
-    st.title("📰 ValueHunter")
-    st.info("👈 왼쪽 사이드바에서 종목을 추가해주세요.")
+    tabs = st.tabs([_HYPS_TAB])
+    with tabs[0]:
+        render_hyperscaler_tab()
 else:
-    tab_labels = [t['ticker'] for t in tickers_list]
+    tab_labels = [_HYPS_TAB] + [t['ticker'] for t in tickers_list]
     tabs = st.tabs(tab_labels)
 
-    news_df = load_news()
-    if news_df is None:
-        news_df = pd.DataFrame()
+    with tabs[0]:
+        render_hyperscaler_tab()
 
-    for i, (tab, ticker_info) in enumerate(zip(tabs, tickers_list)):
+    for i, (tab, ticker_info) in enumerate(zip(tabs[1:], tickers_list)):
         sym = ticker_info['ticker']
         with tab:
             if not news_df.empty and 'ticker' in news_df.columns:
