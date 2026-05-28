@@ -2797,6 +2797,50 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
 .brief-title { font-size: 1rem; font-weight: 700; color: #cdd6f4; margin-bottom: 4px; }
 .brief-time  { font-size: 0.75rem; color: #7f849c; margin-bottom: 14px; }
 
+/* ── 사이드바 경제캘린더 selectbox 스타일 (매크로지표 톤 맞춤) ── */
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stSelectbox"] > div > div {
+    background: #181825 !important;
+    border: 1px solid #313244 !important;
+    border-radius: 6px !important;
+    min-height: 28px !important;
+    padding: 2px 8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    background: #181825 !important;
+    border: 1px solid #313244 !important;
+    border-radius: 6px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stSelectbox"] [data-baseweb="select"] span,
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stSelectbox"] [data-baseweb="select"] div {
+    font-size: 0.7rem !important;
+    color: #a6adc8 !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stSelectbox"] [data-baseweb="select"] svg {
+    color: #7f849c !important;
+    width: 12px !important;
+    height: 12px !important;
+}
+/* 드롭다운 팝오버 */
+[data-baseweb="popover"] ul {
+    background: #181825 !important;
+    border: 1px solid #313244 !important;
+    border-radius: 6px !important;
+    padding: 2px 0 !important;
+}
+[data-baseweb="popover"] ul li {
+    font-size: 0.7rem !important;
+    color: #a6adc8 !important;
+    background: #181825 !important;
+    padding: 4px 10px !important;
+}
+[data-baseweb="popover"] ul li:hover,
+[data-baseweb="popover"] ul li[aria-selected="true"] {
+    background: #313244 !important;
+    color: #cdd6f4 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
