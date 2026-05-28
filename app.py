@@ -2281,15 +2281,18 @@ with st.sidebar:
             value=st.session_state["pending_ticker"]
         )
         lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if "duplicate_ticker" not in st.session_state:
+        st.session_state["duplicate_ticker"] = ""
     if lookup_clicked:
         t = ticker_input.upper().strip()
         if t:
             existing_tickers = [r['ticker'] for r in load_tickers()]
             if t in existing_tickers:
-                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
+                st.session_state["duplicate_ticker"] = t   # 인라인 삭제 UI용
                 st.session_state["pending_ticker"] = ""
                 st.session_state["pending_name"] = ""
             else:
+                st.session_state["duplicate_ticker"] = ""  # 중복 상태 초기화
                 name = lookup_company_name(t)
                 st.session_state["pending_ticker"] = t
                 st.session_state["pending_name"] = name
@@ -2297,6 +2300,23 @@ with st.sidebar:
                     st.success(f"{t} -> {name}")
                 else:
                     st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+    # ── 이미 등록된 티커: 에러 + 인라인 삭제 버튼 (안 B) ──
+    _dup = st.session_state.get("duplicate_ticker", "")
+    if _dup:
+        _col_msg, _col_btn = st.columns([3, 1])
+        with _col_msg:
+            st.error(f"이미 등록되어 있는 티커명입니다. ({_dup})")
+        with _col_btn:
+            if st.button("🗑 삭제", key="del_dup_ticker", use_container_width=True):
+                try:
+                    remove_ticker(_dup)
+                    _sort_tickers_by_mcap()
+                    clear_cache()
+                    st.session_state["duplicate_ticker"] = ""
+                    st.success(f"{_dup} 삭제 완료")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"삭제 실패: {e}")
     if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
         t = st.session_state["pending_ticker"]
         name = st.session_state["pending_name"]
