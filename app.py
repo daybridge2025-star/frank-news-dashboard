@@ -2062,6 +2062,70 @@ with st.sidebar:
     if st.button("🔄 새로고침", use_container_width=True):
         clear_cache()
         st.rerun()
+    # ── 종목 추가 ────────────────────────────────────────────────
+    st.subheader("+ 종목 추가")
+    if "pending_ticker" not in st.session_state:
+        st.session_state["pending_ticker"] = ""
+    if "pending_name" not in st.session_state:
+        st.session_state["pending_name"] = ""
+    with st.form("ticker_lookup_form", clear_on_submit=False):
+        ticker_input = st.text_input(
+            "티커 입력 (예: AAPL, SOXL)",
+            max_chars=10,
+            value=st.session_state["pending_ticker"]
+        )
+        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if "duplicate_ticker" not in st.session_state:
+        st.session_state["duplicate_ticker"] = ""
+    if lookup_clicked:
+        t = ticker_input.upper().strip()
+        if t:
+            existing_tickers = [r['ticker'] for r in load_tickers()]
+            if t in existing_tickers:
+                st.session_state["duplicate_ticker"] = t   # 인라인 삭제 UI용
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+            else:
+                st.session_state["duplicate_ticker"] = ""  # 중복 상태 초기화
+                name = lookup_company_name(t)
+                st.session_state["pending_ticker"] = t
+                st.session_state["pending_name"] = name
+                if name:
+                    st.success(f"{t} -> {name}")
+                else:
+                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+    # ── 이미 등록된 티커: 에러 + 인라인 삭제 버튼 (안 B) ──
+    _dup = st.session_state.get("duplicate_ticker", "")
+    if _dup:
+        _col_msg, _col_btn = st.columns([3, 1])
+        with _col_msg:
+            st.error(f"이미 등록되어 있는 티커명입니다. ({_dup})")
+        with _col_btn:
+            if st.button("🗑 삭제", key="del_dup_ticker", use_container_width=True):
+                try:
+                    remove_ticker(_dup)
+                    _sort_tickers_by_mcap()
+                    clear_cache()
+                    st.session_state["duplicate_ticker"] = ""
+                    st.success(f"{_dup} 삭제 완료")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"삭제 실패: {e}")
+    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+        t = st.session_state["pending_ticker"]
+        name = st.session_state["pending_name"]
+        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
+            try:
+                add_ticker(t, name)
+                _sort_tickers_by_mcap()
+                clear_cache()
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
+                st.rerun()
+            except Exception as e:
+                st.error(f"추가 실패: {e}")
+    st.divider()
     # Fear & Greed Index
     fg = fetch_fear_greed()
     if fg:
@@ -2268,69 +2332,7 @@ with st.sidebar:
                 f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
                 f'{rest_html}</div>',
                 unsafe_allow_html=True)
-    st.divider()
-    st.subheader("+ 종목 추가")
-    if "pending_ticker" not in st.session_state:
-        st.session_state["pending_ticker"] = ""
-    if "pending_name" not in st.session_state:
-        st.session_state["pending_name"] = ""
-    with st.form("ticker_lookup_form", clear_on_submit=False):
-        ticker_input = st.text_input(
-            "티커 입력 (예: AAPL, SOXL)",
-            max_chars=10,
-            value=st.session_state["pending_ticker"]
-        )
-        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
-    if "duplicate_ticker" not in st.session_state:
-        st.session_state["duplicate_ticker"] = ""
-    if lookup_clicked:
-        t = ticker_input.upper().strip()
-        if t:
-            existing_tickers = [r['ticker'] for r in load_tickers()]
-            if t in existing_tickers:
-                st.session_state["duplicate_ticker"] = t   # 인라인 삭제 UI용
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-            else:
-                st.session_state["duplicate_ticker"] = ""  # 중복 상태 초기화
-                name = lookup_company_name(t)
-                st.session_state["pending_ticker"] = t
-                st.session_state["pending_name"] = name
-                if name:
-                    st.success(f"{t} -> {name}")
-                else:
-                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
-    # ── 이미 등록된 티커: 에러 + 인라인 삭제 버튼 (안 B) ──
-    _dup = st.session_state.get("duplicate_ticker", "")
-    if _dup:
-        _col_msg, _col_btn = st.columns([3, 1])
-        with _col_msg:
-            st.error(f"이미 등록되어 있는 티커명입니다. ({_dup})")
-        with _col_btn:
-            if st.button("🗑 삭제", key="del_dup_ticker", use_container_width=True):
-                try:
-                    remove_ticker(_dup)
-                    _sort_tickers_by_mcap()
-                    clear_cache()
-                    st.session_state["duplicate_ticker"] = ""
-                    st.success(f"{_dup} 삭제 완료")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"삭제 실패: {e}")
-    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
-        t = st.session_state["pending_ticker"]
-        name = st.session_state["pending_name"]
-        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
-            try:
-                add_ticker(t, name)
-                _sort_tickers_by_mcap()
-                clear_cache()
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
-                st.rerun()
-            except Exception as e:
-                st.error(f"추가 실패: {e}")
+
 
 
 
