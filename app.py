@@ -5,21 +5,15 @@ Google Sheets(TODAY 시트)에서 뉴스를 읽어 종목별 탭으로 표시
 
 import re
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news
-try:
-    from utils.sheets import get_sentiment
-except ImportError:
-    def get_sentiment():
-        return pd.DataFrame()
+from utils.sheets import get_tickers, add_ticker, remove_ticker, reorder_tickers, get_today_news, get_sentiment
 from utils.edgar import get_edgar_fundamentals
 from utils.damodaran import enrich_fundamentals, INDUSTRY_CANDIDATES, INDUSTRY_OVERRIDE
 
@@ -279,6 +273,28 @@ def fetch_finnhub_data(ticker):
                         data['prev_volume'] = int(cv['v'][-1])
         except Exception:
             pass
+        # 8. prev_volume YF fallback (Finnhub 실패 시)
+        if data.get('prev_volume') is None:
+            try:
+                _yf_vol_url = (
+                    f'https://query1.finance.yahoo.com/v8/finance/chart/'
+                    f'{ticker}?interval=1d&range=5d'
+                )
+                _yr = requests.get(_yf_vol_url, headers=H, timeout=8)
+                if _yr.ok:
+                    _ch = _yr.json().get('chart', {}).get('result', [{}])[0]
+                    _vols = (
+                        _ch.get('indicators', {})
+                           .get('quote', [{}])[0]
+                           .get('volume', [])
+                    )
+                    _vols = [v for v in _vols if v is not None]
+                    if len(_vols) >= 2:
+                        data['prev_volume'] = int(_vols[-2])
+                    elif _vols:
+                        data['prev_volume'] = int(_vols[-1])
+            except Exception:
+                pass
     except Exception as e:
         print(f'[Finnhub] {ticker} 수집 오류: {e}')
     return data
@@ -431,44 +447,6 @@ def fetch_fred_data():
     return result
 
 
-
-@st.cache_data(ttl=900)
-def fetch_market_prices():
-    """VIX·금·WTI·구리 Yahoo Finance 15분 지연시세 (15분 캐시)."""
-    H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
-    result = {}
-    import datetime as _dt3
-    def _yf(ticker):
-        try:
-            url = (f'https://query1.finance.yahoo.com/v8/finance/chart/'
-                   f'{ticker}?interval=1d&range=5d')
-            r = requests.get(url, headers=H, timeout=8)
-            if r.ok:
-                ch  = r.json().get('chart', {}).get('result', [{}])[0]
-                cls = ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
-                tms = ch.get('timestamp', [])
-                cls = [c for c in cls if c is not None]
-                if cls and tms:
-                    dt = _dt3.datetime.fromtimestamp(tms[-1]).strftime('%Y-%m-%d')
-                    return cls[-1], dt
-        except Exception as e:
-            print(f'[YF {ticker}] {e}')
-        return None, None
-    v, d = _yf('%5EVIX')
-    if v is not None:
-        result['vix']    = {'value': round(v, 2), 'date': d}
-    v, d = _yf('GC%3DF')
-    if v is not None:
-        result['gold']   = {'value': round(v, 1), 'date': d}
-    v, d = _yf('CL%3DF')
-    if v is not None:
-        result['wti']    = {'value': round(v, 2), 'date': d}
-    v, d = _yf('HG%3DF')
-    if v is not None:
-        result['copper'] = {'value': round(v, 3), 'date': d}
-    return result
-
-
 @st.cache_data(ttl=86400)
 def fetch_cape_data():
     """Shiller CAPE current + history from multpl.com (24h cache)."""
@@ -592,778 +570,6 @@ def _macro_row(label, value_str, color='#cdd6f4', sub='', tip=''):
     )
 
 
-
-# ── 경제 캘린더 이벤트명 영→한 번역 사전 (현업 용어) ─────────────────
-_ECO_KR_EXACT = {
-    # ── 고용 ───────────────────────────────────────────────────────
-    "Initial Jobless Claims":              "신규 실업수당 청구건수",
-    "Continuing Jobless Claims":           "연속 실업수당 청구건수",
-    "Nonfarm Payrolls":                    "비농업부문 고용지수",
-    "Unemployment Rate":                   "실업률",
-    "Participation Rate":                  "경제활동참가율",
-    "ADP Employment Change":               "ADP 민간고용변화",
-    "Average Hourly Earnings":             "평균 시간당 임금",
-    "Average Weekly Hours":                "평균 주당 근로시간",
-    "JOLTS Job Openings":                  "JOLTS 구인건수",
-    "JOLTS Quits":                         "JOLTS 자발적 이직",
-    "Job Openings":                        "구인건수",
-    "Challenger Job Cuts":                 "챌린저 감원 발표",
-    # ── 물가 ───────────────────────────────────────────────────────
-    "CPI":                                 "소비자물가지수",
-    "Core CPI":                            "근원 소비자물가지수",
-    "PPI":                                 "생산자물가지수",
-    "Core PPI":                            "근원 생산자물가지수",
-    "PCE Price Index":                     "PCE 물가지수",
-    "Core PCE Price Index":                "근원 PCE 물가지수",
-    "PCE":                                 "개인소비지출 물가지수",
-    "Import Price Index":                  "수입물가지수",
-    "Export Price Index":                  "수출물가지수",
-    "GDP Price Index":                     "GDP 디플레이터",
-    "GDP Deflator":                        "GDP 디플레이터",
-    "Trimmed Mean PCE":                    "절사평균 PCE 물가지수",
-    # ── GDP · 성장 ─────────────────────────────────────────────────
-    "GDP Growth Rate":                     "GDP 성장률",
-    "GDP":                                 "GDP",
-    "GNP":                                 "국민총생산",
-    "Real GDP":                            "실질 GDP",
-    # ── 소비 ───────────────────────────────────────────────────────
-    "Retail Sales":                        "소매판매",
-    "Core Retail Sales":                   "근원 소매판매",
-    "Personal Income":                     "개인소득",
-    "Personal Spending":                   "개인지출",
-    "Consumer Credit":                     "소비자신용",
-    "Consumer Confidence":                 "소비자신뢰지수",
-    "Michigan Consumer Sentiment":         "미시건 소비자심리지수",
-    "Michigan Consumer Expectations":      "미시건 소비자기대지수",
-    "Michigan Inflation Expectations":     "미시건 기대인플레이션",
-    "CB Consumer Confidence":              "콘퍼런스보드 소비자신뢰지수",
-    # ── 제조업 · 생산 ───────────────────────────────────────────────
-    "ISM Manufacturing PMI":               "ISM 제조업 PMI",
-    "ISM Non-Manufacturing PMI":           "ISM 비제조업 PMI",
-    "ISM Services PMI":                    "ISM 서비스업 PMI",
-    "S&P Global Manufacturing PMI":        "S&P 글로벌 제조업 PMI",
-    "S&P Global Services PMI":             "S&P 글로벌 서비스업 PMI",
-    "S&P Global Composite PMI":            "S&P 글로벌 종합 PMI",
-    "Markit Manufacturing PMI":            "마킷 제조업 PMI",
-    "Markit Services PMI":                 "마킷 서비스업 PMI",
-    "Empire State Manufacturing Index":    "엠파이어스테이트 제조업지수",
-    "Philadelphia Fed Manufacturing Index":"필라델피아 연준 제조업지수",
-    "Chicago PMI":                         "시카고 PMI",
-    "Industrial Production":               "산업생산지수",
-    "Manufacturing Production":            "제조업 생산지수",
-    "Capacity Utilization Rate":           "설비가동률",
-    "Factory Orders":                      "공장주문",
-    "Durable Goods Orders":                "내구재 주문",
-    "Core Durable Goods Orders":           "근원 내구재 주문",
-    # ── 주택 ───────────────────────────────────────────────────────
-    "NAHB Housing Market Index":           "NAHB 주택시장지수",
-    "Housing Starts":                      "주택착공건수",
-    "Building Permits":                    "건축허가건수",
-    "Existing Home Sales":                 "기존주택판매건수",
-    "New Home Sales":                      "신규주택판매건수",
-    "Pending Home Sales":                  "주택매매 계약건수",
-    "S&P/CS HPI Composite":               "케이스-실러 주택가격지수",
-    "Case-Shiller Home Price Index":       "케이스-실러 주택가격지수",
-    "FHFA House Price Index":              "FHFA 주택가격지수",
-    # ── 무역 · 국제수지 ─────────────────────────────────────────────
-    "Trade Balance":                       "무역수지",
-    "Current Account":                     "경상수지",
-    "Current Account Balance":             "경상수지",
-    "Goods Trade Balance":                 "상품 무역수지",
-    "Balance of Trade":                    "무역수지",
-    # ── 금리 · 통화정책 ─────────────────────────────────────────────
-    "Fed Interest Rate Decision":          "연준 금리결정",
-    "Federal Funds Rate":                  "연방기금금리",
-    "FOMC Meeting Minutes":                "FOMC 의사록",
-    "FOMC Minutes":                        "FOMC 의사록",
-    "Fed Chair Press Conference":          "연준 의장 기자회견",
-    "Fed Press Conference":                "연준 기자회견",
-    "BoK Interest Rate Decision":          "한국은행 금리결정",
-    "BoJ Interest Rate Decision":          "일본은행 금리결정",
-    "ECB Interest Rate Decision":          "유럽중앙은행 금리결정",
-    "Bank of England Interest Rate":       "영란은행 금리결정",
-    "RBA Interest Rate Decision":          "호주중앙은행 금리결정",
-    # ── 재정 ───────────────────────────────────────────────────────
-    "Federal Budget Balance":              "연방 재정수지",
-    "Government Budget":                   "정부 재정수지",
-    "Public Sector Net Borrowing":         "공공부문 순차입",
-    # ── 에너지 ─────────────────────────────────────────────────────
-    "EIA Crude Oil Inventories":           "EIA 원유재고",
-    "EIA Gasoline Inventories":            "EIA 휘발유재고",
-    "EIA Distillate Inventories":          "EIA 정제유재고",
-    "Crude Oil Inventories":               "원유재고",
-    "Baker Hughes Oil Rig Count":          "베이커휴즈 오일 리그수",
-    "Baker Hughes Total Rig Count":        "베이커휴즈 총 리그수",
-    "Natural Gas Storage":                 "천연가스 재고",
-    # ── 국채 입찰 ───────────────────────────────────────────────────
-    "3-Month Bill Auction":                "3개월물 국채 입찰",
-    "6-Month Bill Auction":                "6개월물 국채 입찰",
-    "2-Year Note Auction":                 "2년물 국채 입찰",
-    "3-Year Note Auction":                 "3년물 국채 입찰",
-    "5-Year Note Auction":                 "5년물 국채 입찰",
-    "7-Year Note Auction":                 "7년물 국채 입찰",
-    "10-Year Note Auction":                "10년물 국채 입찰",
-    "20-Year Bond Auction":                "20년물 국채 입찰",
-    "30-Year Bond Auction":                "30년물 국채 입찰",
-    # ── 재고 ───────────────────────────────────────────────────────
-    "Wholesale Inventories":               "도매재고",
-    "Business Inventories":                "기업재고",
-    "Retail Inventories":                  "소매재고",
-    # ── 한국 주요 지표 ───────────────────────────────────────────────
-    "Export Price Index (YoY)":            "수출물가지수(전년비)",
-    "Import Price Index (YoY)":            "수입물가지수(전년비)",
-    "KR Unemployment Rate":                "한국 실업률",
-    "KR Trade Balance":                    "한국 무역수지",
-    "KR GDP Growth Rate":                  "한국 GDP 성장률",
-    "KR CPI":                              "한국 소비자물가지수",
-    # ── 기타 ───────────────────────────────────────────────────────
-    "Nonfarm Business Sector Labor Productivity":  "비농업부문 노동생산성",
-    "Unit Labor Costs":                    "단위 노동비용",
-    "Productivity":                        "노동생산성",
-    "Leading Index":                       "경기선행지수",
-    "Conference Board Leading Index":      "콘퍼런스보드 경기선행지수",
-    "Chicago Fed National Activity Index": "시카고 연준 전국활동지수",
-    "Kansas City Fed Manufacturing Index": "캔자스시티 연준 제조업지수",
-    "Richmond Fed Manufacturing Index":    "리치먼드 연준 제조업지수",
-    "Dallas Fed Manufacturing Index":      "달라스 연준 제조업지수",
-    "Dallas Fed Services Index":           "달라스 연준 서비스업지수",
-    "Senior Loan Officer Survey":          "고위 대출담당자 설문",
-    "Beige Book":                          "베이지북",
-    "Redbook":                             "레드북 소매판매",
-    "API Weekly Crude Oil Stock":          "API 주간 원유재고",
-    "S&P Global PMI":                      "S&P 글로벌 PMI",
-    "Flash Manufacturing PMI":             "제조업 PMI (속보치)",
-    "Flash Services PMI":                  "서비스업 PMI (속보치)",
-    "Flash Composite PMI":                 "종합 PMI (속보치)",
-    "Foreign Bond Investment":             "외국인 채권 투자",
-    "Foreign Stock Investment":            "외국인 주식 투자",
-    "Money Supply M2":                     "통화량(M2)",
-    "Money Supply M3":                     "통화량(M3)",
-    "Treasury International Capital":     "재무부 국제 자본흐름",
-}
-
-_ECO_SUFFIX = [
-    (" (MoM)",    " (전월비)"),
-    (" (YoY)",    " (전년비)"),
-    (" (QoQ)",    " (전분기비)"),
-    (" (Prelim)", " (예비치)"),
-    (" (Prel)",   " (예비치)"),
-    (" (Final)",  " (확정치)"),
-    (" (Adv)",    " (속보치)"),
-    (" (Flash)",  " (속보치)"),
-    (" (2nd Est)","(2차 추정치)"),
-    (" (3rd Est)","(3차 추정치)"),
-    (" (Revised)","(수정치)"),
-    (" (Actual)", " (실제)"),
-    (" (SAR)",    " (계절조정)"),
-]
-
-
-def _translate_eco_event(name: str) -> str:
-    """경제 이벤트명 영→한 변환 (현업 용어). 미매칭시 원문 반환."""
-    if not name:
-        return name
-    # 1) 완전 일치
-    if name in _ECO_KR_EXACT:
-        return _ECO_KR_EXACT[name]
-    # 2) 접미사 분리 후 기본명 조회
-    stripped, suffix_kr = name, ''
-    for sfx_en, sfx_kr in _ECO_SUFFIX:
-        if stripped.endswith(sfx_en):
-            stripped = stripped[: -len(sfx_en)]
-            suffix_kr = sfx_kr
-            break
-    if stripped in _ECO_KR_EXACT:
-        return _ECO_KR_EXACT[stripped] + suffix_kr
-    # 3) 추가 접미사 제거 후 재시도
-    for sfx_en, sfx_kr in _ECO_SUFFIX:
-        if stripped.endswith(sfx_en):
-            stripped2 = stripped[: -len(sfx_en)]
-            suffix_kr = sfx_kr + suffix_kr
-            if stripped2 in _ECO_KR_EXACT:
-                return _ECO_KR_EXACT[stripped2] + suffix_kr
-    return name  # 미매칭 → 원문
-
-
-
-
-# ── 경제 캘린더 툴팁 사전 (kr_name, 설명, ▲영향, ▼영향) ──────────────
-_ECO_TOOLTIP = {
-    # ── 고용 ──────────────────────────────────────────────────────────
-    "Initial Jobless Claims": (
-        "신규 실업수당 청구",
-        "한 주간 새롭게 실업수당을 신청한 건수. 매주 목요일 발표되는 고빈도 고용 선행지표.",
-        "증가 → 고용 악화 신호 · 경기 둔화 우려 · 금리인하 기대 ↑",
-        "감소 → 고용 견조 · 금리인하 지연 가능성 · 달러 강세",
-    ),
-    "Continuing Jobless Claims": (
-        "연속 실업수당 청구",
-        "이미 실업급여를 받고 있는 누적 인원. 장기 실업 추세를 파악하는 지표.",
-        "증가 → 재취업 어려움 · 소비 위축 우려",
-        "감소 → 노동시장 흡수력 견조",
-    ),
-    "Nonfarm Payrolls": (
-        "비농업부문 고용",
-        "농업을 제외한 전 산업 신규 취업자 수. 월간 최대 이벤트로 발표 즉시 외환·채권·주식 전반에 급격한 변동성을 유발.",
-        "예상 상회 → 경기 견조 · 달러 강세 · 금리인상 기대 · 성장주 부담",
-        "예상 하회 → 경기 둔화 · 금리인하 기대 · 달러 약세 · 채권 강세",
-    ),
-    "Unemployment Rate": (
-        "실업률",
-        "경제활동인구 중 실업자 비율. NFP와 함께 발표되며 고용시장 전반의 건강도를 요약.",
-        "상승 → 경기 둔화 신호 · 금리인하 기대 확대",
-        "하락 → 완전고용 근접 · 임금 상승 압력 · 금리인하 지연",
-    ),
-    "ADP Employment Change": (
-        "ADP 민간고용",
-        "민간 급여 처리 기업 ADP 집계 민간 신규 고용자 수. NFP 이틀 전 발표되는 선행 참고 지표.",
-        "예상 상회 → NFP 강세 기대 · 위험선호 심리 ↑",
-        "예상 하회 → NFP 부진 경계 · 안전자산 선호",
-    ),
-    "Average Hourly Earnings": (
-        "평균 시간당 임금",
-        "민간 비관리직 근로자 평균 시간당 임금. 임금 인플레이션의 핵심 척도로 연준이 중시.",
-        "예상 상회 → 임금 인플레 우려 · 금리인상 기대 · 달러 강세",
-        "예상 하회 → 임금 압력 완화 · 금리인하 여지 확대",
-    ),
-    "JOLTS Job Openings": (
-        "JOLTS 구인건수",
-        "월간 전체 구인 건수. 노동 수요를 직접 측정하며 연준의 고용시장 과열 판단에 활용.",
-        "예상 상회 → 노동 수요 강세 · 임금 상승 압력 · 금리인하 지연",
-        "예상 하회 → 노동시장 냉각 · 금리인하 기대 ↑",
-    ),
-    # ── 물가 ──────────────────────────────────────────────────────────
-    "CPI": (
-        "소비자물가지수",
-        "도시 소비자가 구매하는 재화·서비스 가격 변동 측정. 연준 통화정책 결정에 직접 사용되는 핵심 인플레이션 지표.",
-        "예상 상회 → 인플레 압력 ↑ · 금리인상 기대 · 달러 강세 · 성장주 약세",
-        "예상 하회 → 인플레 완화 · 금리인하 기대 · 성장주·채권 강세",
-    ),
-    "Core CPI": (
-        "근원 소비자물가지수",
-        "변동성 큰 식품·에너지를 제외한 CPI. 기저 인플레이션 추세를 보여줘 연준이 헤드라인보다 더 중시.",
-        "예상 상회 → 기저 인플레 고착화 우려 · 금리 장기 고수 가능성",
-        "예상 하회 → 인플레 둔화 확인 · 금리인하 경로 열림",
-    ),
-    "PPI": (
-        "생산자물가지수",
-        "생산자 단계의 재화·서비스 가격. CPI보다 1~3개월 선행하는 인플레이션 선행지표.",
-        "예상 상회 → 향후 CPI 상승 압력 예고 · 금리인상 기대",
-        "예상 하회 → CPI 둔화 예고 · 금리인하 기대 강화",
-    ),
-    "Core PPI": (
-        "근원 생산자물가지수",
-        "식품·에너지 제외 PPI. 기업 마진과 향후 소비자가격 방향성을 가늠하는 지표.",
-        "예상 상회 → 기업 비용 증가 → 소비자가격 전가 우려",
-        "예상 하회 → 기업 마진 회복 · 가격 안정 신호",
-    ),
-    "PCE Price Index": (
-        "PCE 물가지수",
-        "연준 공식 인플레이션 목표 기준 지표(목표치 2%). CPI보다 광범위한 소비 행태를 반영.",
-        "예상 상회 → 연준 목표 초과 · 금리인하 지연",
-        "예상 하회 → 2% 목표 수렴 · 금리인하 여지 확대",
-    ),
-    "Core PCE Price Index": (
-        "근원 PCE 물가지수",
-        "연준이 가장 중시하는 인플레이션 지표. 식품·에너지 제외로 기저 물가 추세를 정확히 반영.",
-        "예상 상회 → 금리인하 시점 지연 · 달러 강세",
-        "예상 하회 → 금리인하 가시화 · 위험자산 강세",
-    ),
-    "Import Price Index": (
-        "수입물가지수",
-        "수입 재화·서비스 가격 변동. 달러 강약과 원자재 가격의 국내 물가 파급을 측정.",
-        "예상 상회 → 수입 인플레 확대 · 무역적자 우려",
-        "예상 하회 → 수입 디플레 · 소비자가격 안정",
-    ),
-    # ── GDP ───────────────────────────────────────────────────────────
-    "GDP Growth Rate": (
-        "GDP 성장률",
-        "국내총생산 증가율로 경제 성장의 핵심 지표. 속보(Advance)→예비(Prelim)→확정(Final) 3단계 발표.",
-        "예상 상회 → 경기 강세 확인 · 금리인하 지연 가능 · 달러 강세",
-        "예상 하회 → 경기 둔화 우려 · 금리인하 기대 · 안전자산 선호",
-    ),
-    # ── 소비 ──────────────────────────────────────────────────────────
-    "Retail Sales": (
-        "소매판매",
-        "소매업체 매출 총액. GDP의 약 70%를 차지하는 소비 동향을 월간 측정하는 핵심 지표.",
-        "예상 상회 → 소비 견조 · 경기 낙관 · 금리인하 지연",
-        "예상 하회 → 소비 위축 · 경기 둔화 · 금리인하 기대",
-    ),
-    "Core Retail Sales": (
-        "근원 소매판매",
-        "자동차 제외 소매판매. 변동성 큰 자동차 영향을 배제해 소비 기저 추세를 파악.",
-        "예상 상회 → 기저 소비력 견조",
-        "예상 하회 → 소비심리 약화 신호",
-    ),
-    "Michigan Consumer Sentiment": (
-        "미시건 소비자심리지수",
-        "향후 6~12개월 소비자 경기 전망 서베이. 소비 선행지표이자 물가기대 포함으로 연준 주목.",
-        "예상 상회 → 소비 강세 기대 · 위험자산 선호",
-        "예상 하회 → 소비 위축 우려 · 경기 하강 신호",
-    ),
-    "Michigan Inflation Expectations": (
-        "미시건 기대인플레이션",
-        "소비자가 예상하는 1년·5년 인플레이션. 연준의 인플레 기대 고착화 판단에 핵심 자료.",
-        "상승 → 인플레 기대 고착 우려 · 연준 매파 전환 압력",
-        "하락 → 인플레 기대 안정 · 금리인하 여지 확대",
-    ),
-    "CB Consumer Confidence": (
-        "콘퍼런스보드 소비자신뢰지수",
-        "현재 경제 상황과 6개월 전망을 종합한 소비자 신뢰 지수. 미시건 지수와 함께 양대 소비 심리지표.",
-        "예상 상회 → 소비 심리 개선 · 위험자산 강세",
-        "예상 하회 → 경기 불안 확산 · 방어주 선호",
-    ),
-    "Personal Income": (
-        "개인소득",
-        "임금·배당·이자·이전소득 등 가계 총소득. 소비 지속 가능성과 저축 여력을 판단.",
-        "예상 상회 → 소비 여력 확대 · 경기 낙관",
-        "예상 하회 → 소비 여력 감소 · 경기 둔화 우려",
-    ),
-    "Personal Spending": (
-        "개인지출",
-        "가계 실제 소비 지출. PCE와 함께 발표되며 GDP 소비 구성 요소를 실시간 반영.",
-        "예상 상회 → 소비 견조 · 경기 강세",
-        "예상 하회 → 소비 약화 · 경기 둔화 신호",
-    ),
-    # ── 제조업·PMI ────────────────────────────────────────────────────
-    "ISM Manufacturing PMI": (
-        "ISM 제조업 PMI",
-        "미국 제조업 구매담당자 설문. 50 이상이면 확장, 미만이면 수축. 경기 방향성을 빠르게 포착.",
-        "50 상회·예상 상회 → 제조 경기 확장 · 원자재 강세",
-        "50 하회·예상 하회 → 제조 경기 수축 · 경기 둔화 우려",
-    ),
-    "ISM Services PMI": (
-        "ISM 서비스업 PMI",
-        "서비스업 구매담당자 설문. 미국 GDP의 약 80%를 점하는 서비스 경기 동향 측정.",
-        "50 상회·예상 상회 → 서비스 경기 견조 · 소비 강세 확인",
-        "50 하회·예상 하회 → 서비스 경기 수축 · 경기 침체 우려",
-    ),
-    "S&P Global Manufacturing PMI": (
-        "S&P 글로벌 제조업 PMI",
-        "ISM PMI와 달리 글로벌 기준으로 산출. 속보치(Flash)는 ISM보다 약 1주 앞서 발표돼 선행 참고값으로 활용.",
-        "50 상회·예상 상회 → 제조업 회복 기대",
-        "50 하회·예상 하회 → 글로벌 제조 수요 둔화",
-    ),
-    "S&P Global Services PMI": (
-        "S&P 글로벌 서비스업 PMI",
-        "글로벌 기준 서비스업 경기 지수. 복합 PMI와 함께 경기 사이클 조기 감지에 활용.",
-        "50 상회·예상 상회 → 서비스 회복 · 위험자산 선호",
-        "50 하회·예상 하회 → 서비스 둔화 · 안전자산 선호",
-    ),
-    "Empire State Manufacturing Index": (
-        "엠파이어스테이트 제조업지수",
-        "뉴욕 연준이 집계하는 뉴욕주 제조업 현황 서베이. 월초 발표되어 해당 월 경기 방향을 가장 먼저 시사.",
-        "예상 상회 → 제조 경기 낙관 · 위험선호",
-        "예상 하회 → 제조 경기 비관 · 경계심 확대",
-    ),
-    "Philadelphia Fed Manufacturing Index": (
-        "필라델피아 연준 제조업지수",
-        "필라델피아 연준 관할 중부대서양 지역 제조업 서베이. 엠파이어 지수와 함께 ISM 선행지표로 활용.",
-        "예상 상회 → 지역 제조 견조 · ISM 강세 예고",
-        "예상 하회 → 지역 제조 위축 · ISM 부진 경계",
-    ),
-    "Industrial Production": (
-        "산업생산지수",
-        "제조업·광업·유틸리티 실제 생산량 지수. 경제 공급 측면의 건강도를 직접 측정.",
-        "예상 상회 → 생산 증가 · 경기 확장 확인",
-        "예상 하회 → 생산 감소 · 경기 둔화 신호",
-    ),
-    "Capacity Utilization Rate": (
-        "설비가동률",
-        "생산 잠재력 대비 실제 가동 비율. 80% 이상은 인플레 압력 신호, 70% 미만은 과잉 공급 우려.",
-        "예상 상회·80% 접근 → 생산 과열 · 인플레 압력 ↑",
-        "예상 하회 → 생산 여유 · 인플레 완화",
-    ),
-    "Durable Goods Orders": (
-        "내구재 주문",
-        "3년 이상 사용 제품(항공기·기계·전자) 주문량. 기업 설비투자 선행지표이나 항공기 영향으로 월간 변동성 큼.",
-        "예상 상회 → 기업 투자 의지 강화 · 경기 낙관",
-        "예상 하회 → 투자 위축 · 경기 불확실성 확대",
-    ),
-    "Core Durable Goods Orders": (
-        "근원 내구재 주문",
-        "변동성 큰 방산·항공 제외 내구재 주문. 기업 설비투자 의향을 가장 순수하게 반영하는 지표.",
-        "예상 상회 → 기업 설비투자 확대 · 경기 강세",
-        "예상 하회 → 투자 보류 · 경기 경계",
-    ),
-    # ── 주택 ──────────────────────────────────────────────────────────
-    "NAHB Housing Market Index": (
-        "NAHB 주택시장지수",
-        "전미주택건설업협회(NAHB) 주택건설업자 경기 서베이. 50 기준으로 주택 경기 낙관·비관을 판단.",
-        "50 상회·예상 상회 → 주택 경기 낙관 · 관련주 강세",
-        "50 하회·예상 하회 → 주택 수요 위축 우려",
-    ),
-    "Housing Starts": (
-        "주택착공건수",
-        "신규 주택 공사 시작 건수. 건설·자재 수요를 선행하며 주택 공급 동향을 직접 측정.",
-        "예상 상회 → 주택 공급 확대 · 건설 경기 강세",
-        "예상 하회 → 공급 위축 · 주택가격 상승 압력",
-    ),
-    "Building Permits": (
-        "건축허가건수",
-        "향후 1~2개월 착공 예정 물량. 주택착공의 선행지표로 주택 경기 방향성 예측에 활용.",
-        "예상 상회 → 향후 착공 증가 예고 · 주택 공급 확대",
-        "예상 하회 → 착공 감소 예고 · 공급 부족 우려",
-    ),
-    "Existing Home Sales": (
-        "기존주택판매건수",
-        "중고 주택 거래량. 전체 주택거래의 약 90% 비중으로 주택시장 온도계 역할.",
-        "예상 상회 → 주택 수요 견조 · 부동산 경기 강세",
-        "예상 하회 → 주택 거래 위축 · 고금리 부담 확인",
-    ),
-    "New Home Sales": (
-        "신규주택판매건수",
-        "신규 분양 주택 계약 건수. 건설사 수주와 연동되며 기존주택 대비 선행성이 강함.",
-        "예상 상회 → 신규 수요 견조 · 건설주 호재",
-        "예상 하회 → 신규 분양 부진 · 고금리 충격 가시화",
-    ),
-    "Pending Home Sales": (
-        "주택매매 계약건수",
-        "매매 계약 체결 후 아직 완료되지 않은 건수. 1~2개월 후 기존주택판매의 선행지표.",
-        "예상 상회 → 향후 거래 증가 예고",
-        "예상 하회 → 향후 거래 감소 경고",
-    ),
-    # ── 무역 ──────────────────────────────────────────────────────────
-    "Trade Balance": (
-        "무역수지",
-        "수출액에서 수입액을 뺀 차액. 적자가 커질수록 달러 수요 감소 · 경상수지 악화로 이어질 수 있음.",
-        "적자 축소 → 순수출 개선 · 달러 지지",
-        "적자 확대 → 경상수지 악화 · 달러 약세 요인",
-    ),
-    # ── 금리·통화정책 ─────────────────────────────────────────────────
-    "Fed Interest Rate Decision": (
-        "연준 금리결정",
-        "연방공개시장위원회(FOMC) 정책금리 결정. 전 세계 금융시장에 가장 큰 영향을 미치는 단일 이벤트.",
-        "인상 or 매파 → 달러 강세 · 채권 약세 · 성장주 부담",
-        "인하 or 비둘기파 → 위험자산 강세 · 채권 강세 · 달러 약세",
-    ),
-    "FOMC Meeting Minutes": (
-        "FOMC 의사록",
-        "금리 결정 회의의 상세 논의 공개. 위원별 매파·비둘기파 발언 비율로 향후 금리 방향성 파악.",
-        "매파 우세 → 금리인하 지연 기대 · 달러 강세",
-        "비둘기파 우세 → 금리인하 기대 확대 · 위험자산 강세",
-    ),
-    "BoK Interest Rate Decision": (
-        "한국은행 금리결정",
-        "한국은행 금융통화위원회 기준금리 결정. 원화 가치와 국내 채권·부동산 시장에 직접 영향.",
-        "인상 or 동결(매파) → 원화 강세 · 채권 약세",
-        "인하 or 비둘기파 → 원화 약세 · 채권 강세 · 주식 지지",
-    ),
-    # ── 에너지 ────────────────────────────────────────────────────────
-    "EIA Crude Oil Inventories": (
-        "EIA 원유재고",
-        "미국 에너지정보청(EIA) 주간 원유 재고량. 원유 공급·수요 균형을 판단하는 핵심 단기 지표.",
-        "예상보다 감소 → 공급 타이트 · 유가 상승 압력 · 에너지주 강세",
-        "예상보다 증가 → 공급 과잉 · 유가 하락 압력 · 에너지주 약세",
-    ),
-    "Natural Gas Storage": (
-        "천연가스 재고",
-        "EIA 주간 천연가스 저장량. 계절 수요와 비교해 공급 여유분을 판단하며 가스 가격에 직접 영향.",
-        "예상보다 감소 → 공급 부족 · 가스 가격 ↑",
-        "예상보다 증가 → 공급 여유 · 가스 가격 ↓",
-    ),
-    # ── 재고·공급망 ───────────────────────────────────────────────────
-    "Wholesale Inventories": (
-        "도매재고",
-        "도매업체 보유 재고. 증가는 수요 부진 또는 과잉 공급 신호, 감소는 수요 회복을 시사.",
-        "예상보다 증가 → 수요 둔화 우려 · 향후 생산 감소 가능",
-        "예상보다 감소 → 수요 견조 · 재고 보충 기대",
-    ),
-    "Business Inventories": (
-        "기업재고",
-        "제조·도매·소매 전 단계 재고 종합. GDP 재고투자 항목에 직접 반영.",
-        "예상보다 증가 → 재고 과잉 · 향후 생산 축소 가능",
-        "예상보다 감소 → 재고 소진 · 생산 회복 기대",
-    ),
-    # ── 재정 ──────────────────────────────────────────────────────────
-    "Federal Budget Balance": (
-        "연방 재정수지",
-        "미국 연방정부 세수와 지출의 차이. 적자 확대는 국채 발행 증가로 장기 금리 상승 요인.",
-        "흑자 또는 적자 축소 → 국채 공급 감소 · 금리 안정",
-        "적자 확대 → 국채 공급 증가 · 장기금리 상승 압력",
-    ),
-    # ── 기타 체크포인트 ───────────────────────────────────────────────
-    "Beige Book": (
-        "베이지북",
-        "연준 12개 지역 경기 현황 정성적 보고서. FOMC 2주 전 발표되며 정책 결정 배경 이해에 필수.",
-        "전반적 확장 기술 → 금리 고수 또는 인상 가능성",
-        "전반적 둔화 기술 → 금리인하 논의 확대 기대",
-    ),
-    "Consumer Credit": (
-        "소비자신용",
-        "자동차·학자금 등 소비자 대출 잔액 변화. 신용카드 포함 시 소비 여력과 부채 부담 동향 확인.",
-        "증가 → 소비 의지 강함 · 향후 지출 증가 기대",
-        "감소 → 부채 상환 또는 소비 여력 축소 신호",
-    ),
-    "Chicago PMI": (
-        "시카고 PMI",
-        "시카고 지역 제조·서비스 복합 경기 서베이. ISM 전날 발표되어 당일 ISM 방향성 예측에 활용.",
-        "50 상회·예상 상회 → ISM 강세 선행 신호",
-        "50 하회·예상 하회 → ISM 약세 경계",
-    ),
-    "Richmond Fed Manufacturing Index": (
-        "리치먼드 연준 제조업지수",
-        "리치먼드 연준 관할 중부대서양 남부 제조업 서베이. 지역 제조 경기 선행지표.",
-        "예상 상회 → 지역 제조 개선",
-        "예상 하회 → 지역 제조 위축",
-    ),
-    "Dallas Fed Manufacturing Index": (
-        "달라스 연준 제조업지수",
-        "텍사스 등 남서부 제조업 서베이. 에너지 산업 비중이 높아 유가와 함께 해석.",
-        "예상 상회 → 남서부 제조·에너지 경기 개선",
-        "예상 하회 → 에너지 경기 둔화 반영 가능",
-    ),
-}
-
-
-def _get_tooltip(name: str):
-    """이벤트명으로 툴팁 정보 조회. 반환: (kr_name, desc, use_up, use_dn) or None."""
-    if not name:
-        return None
-    if name in _ECO_TOOLTIP:
-        return _ECO_TOOLTIP[name]
-    # 접미사 제거 후 재조회
-    for sfx in [" (MoM)"," (YoY)"," (QoQ)"," (Prelim)"," (Prel)",
-                " (Final)"," (Adv)"," (Flash)"," (2nd Est)"," (3rd Est)",
-                " (Revised)"," (SAR)"," (Actual)"]:
-        if name.endswith(sfx):
-            base = name[:-len(sfx)]
-            if base in _ECO_TOOLTIP:
-                return _ECO_TOOLTIP[base]
-    return None
-
-@st.cache_data(ttl=1800)
-def fetch_economic_calendar():
-    """Finnhub 경제캘린더 API — 이번 주 (월~일) 데이터 fetch."""
-    api_key = os.environ.get('FINNHUB_API_KEY', '')
-    if not api_key:
-        return None, 'no_key'
-    today  = datetime.now(KST).date()
-    monday = today - timedelta(days=today.weekday())
-    sunday = monday + timedelta(days=6)
-    url = (
-        'https://finnhub.io/api/v1/calendar/economic'
-        f'?from={monday}&to={sunday}&token={api_key}'
-    )
-    try:
-        r = requests.get(url, timeout=10)
-        if r.status_code == 403:
-            return None, '403'
-        r.raise_for_status()
-        return r.json().get('economicCalendar', []), 'ok'
-    except Exception as e:
-        return None, str(e)
-
-def render_economic_calendar():
-    """경제 캘린더 사이드바 섹션 — Finnhub API 기반 테이블 (한글명 + 클릭 팝업)."""
-    st.markdown(
-        '<div style="font-size:0.7rem;color:#a6adc8;font-weight:600;'
-        'margin:10px 0 4px 0;">📅 경제 캘린더</div>',
-        unsafe_allow_html=True,
-    )
-
-    IMP_OPTIONS     = ['🔴 고영향', '🟠 고+중', '⚪ 전체']
-    COUNTRY_OPTIONS = ['🇺🇸 미국', '🇺🇸+🇰🇷 미국·한국', '🌐 전체']
-    IMP_MAP  = {'🔴 고영향': ['high'], '🟠 고+중': ['high', 'medium'], '⚪ 전체': ['high', 'medium', 'low']}
-    CTRY_MAP = {'🇺🇸 미국': ['US'], '🇺🇸+🇰🇷 미국·한국': ['US', 'KR'], '🌐 전체': None}
-    FLAG_MAP = {'US':'🇺🇸','KR':'🇰🇷','EU':'🇪🇺','GB':'🇬🇧','JP':'🇯🇵','CN':'🇨🇳','DE':'🇩🇪','CA':'🇨🇦','AU':'🇦🇺'}
-    DOT_CLR  = {'high':'#f38ba8', 'medium':'#f9e2af', 'low':'#585b70'}
-
-    with st.expander('📋 이번 주 주요 경제 일정', expanded=False):
-        col_l, col_r = st.columns(2)
-        with col_l:
-            imp = st.selectbox('중요도', IMP_OPTIONS, index=0,
-                               key='cal_imp', label_visibility='collapsed')
-        with col_r:
-            ctry = st.selectbox('국가', COUNTRY_OPTIONS, index=0,
-                                key='cal_ctry', label_visibility='collapsed')
-
-        imp_set  = IMP_MAP.get(imp, ['high'])
-        ctry_set = CTRY_MAP.get(ctry)
-
-        cal_data, status = fetch_economic_calendar()
-
-        if status == 'no_key':
-            st.caption('⚠️ FINNHUB_API_KEY 시크릿이 설정되지 않았습니다.')
-            return
-        if status == '403':
-            st.caption('⚠️ Finnhub 무료 플랜에서 경제캘린더 API가 제한됩니다. (Paid plan 필요)')
-            return
-        if status != 'ok' or not cal_data:
-            st.caption(f'⚠️ 데이터 로드 실패: {status}')
-            return
-
-        # ── 필터링 ─────────────────────────────────────────────────
-        filtered = []
-        for ev in cal_data:
-            ev_imp = (ev.get('impact') or '').lower()
-            if ev_imp not in imp_set:
-                continue
-            if ctry_set and ev.get('country', '') not in ctry_set:
-                continue
-            filtered.append(ev)
-
-        # ── 날짜 내림차순 정렬 ──────────────────────────────────────
-        filtered.sort(key=lambda x: x.get('time', ''), reverse=True)
-
-        if not filtered:
-            st.caption('해당하는 일정이 없습니다.')
-            return
-
-        # ── HTML 테이블 빌드 ────────────────────────────────────────
-        today_str = datetime.now(KST).strftime('%Y-%m-%d')
-        rows = ''
-        last_date = None
-        for ev in filtered:
-            t      = ev.get('time', '')
-            dpart  = t[:10] if len(t) >= 10 else ''
-            tpart  = t[11:16] if len(t) >= 16 else ''
-            is_today = (dpart == today_str)
-            show_date = (dpart != last_date)
-            last_date = dpart
-
-            try:
-                dt_obj   = datetime.strptime(dpart, '%Y-%m-%d')
-                mmdd     = dt_obj.strftime('%m/%d')
-                if is_today:
-                    date_cell = f'<span style="color:#89b4fa;font-weight:600">{mmdd} 오늘</span>'
-                else:
-                    date_cell = f'<span style="color:#a6adc8">{mmdd}</span>'
-            except Exception:
-                date_cell = f'<span style="color:#a6adc8">{dpart}</span>'
-
-            flag    = FLAG_MAP.get(ev.get('country',''), '🌐')
-            ev_imp  = (ev.get('impact') or '').lower()
-            dot_c   = DOT_CLR.get(ev_imp, '#585b70')
-            _raw    = ev.get('event', '')
-            # ── 한글 번역 ──────────────────────────────────────────
-            evname  = _translate_eco_event(_raw)
-            actual  = str(ev.get('actual') or '').strip() or '—'
-            est     = str(ev.get('estimate') or '').strip() or '—'
-            prev    = str(ev.get('prev') or '').strip() or '—'
-            _tip    = _get_tooltip(_raw)
-
-            # 발표값 vs 예측값 색상
-            act_color = '#cdd6f4'
-            if actual != '—' and est != '—':
-                try:
-                    def _num(s):
-                        return float(s.replace('%','').replace('K','e3').replace('M','e6').replace('B','e9').replace(',',''))
-                    a, e = _num(actual), _num(est)
-                    act_color = '#a6e3a1' if a >= e else '#f38ba8'
-                except Exception:
-                    pass
-
-            date_td = f'<td style="padding:5px 4px;white-space:nowrap;font-size:0.7rem">{date_cell if show_date else ""}</td>'
-
-            # ── 이벤트 셀: 툴팁 있으면 클릭 가능 span, 없으면 일반 텍스트 ──
-            if _tip:
-                def _esc(s): return s.replace('"', '&quot;').replace("'", '&#39;')
-                evt_cell = (
-                    f'<span class="evn"'
-                    f' data-kr="{_esc(_tip[0])}"'
-                    f' data-en="{_esc(_raw)}"'
-                    f' data-desc="{_esc(_tip[1])}"'
-                    f' data-up="{_esc(_tip[2])}"'
-                    f' data-dn="{_esc(_tip[3])}"'
-                    f'>{evname}</span>'
-                )
-            else:
-                evt_cell = f'<span style="color:#cdd6f4">{evname}</span>'
-
-            rows += (
-                f'<tr style="border-bottom:1px solid #313244">'
-                f'{date_td}'
-                f'<td style="padding:5px 4px;font-size:0.68rem;color:#7f849c;white-space:nowrap">{tpart} ET</td>'
-                f'<td style="padding:5px 4px;font-size:0.82rem;text-align:center">{flag}</td>'
-                f'<td style="padding:5px 4px;text-align:center">'
-                f'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{dot_c}"></span>'
-                f'</td>'
-                f'<td style="padding:5px 6px;font-size:0.7rem">{evt_cell}</td>'
-                f'<td style="padding:5px 4px;font-size:0.7rem;color:{act_color};text-align:right;white-space:nowrap">{actual}</td>'
-                f'<td style="padding:5px 4px;font-size:0.7rem;color:#7f849c;text-align:right;white-space:nowrap">{est}</td>'
-                f'<td style="padding:5px 4px;font-size:0.7rem;color:#585b70;text-align:right;white-space:nowrap">{prev}</td>'
-                f'</tr>'
-            )
-
-        html_out = (
-            '<style>'
-            'body{margin:0;padding:0;background:#1e1e2e;color:#cdd6f4;font-family:sans-serif;overflow-x:auto}'
-            '.eco-tbl{width:100%;border-collapse:collapse}'
-            '.eco-tbl thead th{font-size:0.65rem;color:#6c7086;padding:5px 4px;'
-            'border-bottom:1px solid #45475a;font-weight:500;white-space:nowrap}'
-            '.eco-tbl thead th.r{text-align:right}'
-            '.evn{font-size:0.7rem;color:#89b4fa;border-bottom:1px dashed #45475a;'
-            'cursor:pointer;display:inline;transition:opacity 0.15s}'
-            '.evn:hover{opacity:0.75}'
-            '#eco-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;'
-            'background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center}'
-            '#eco-modal.open{display:flex}'
-            '.modal-card{background:#24273a;border:1px solid #45475a;border-radius:10px;'
-            'padding:16px 18px;width:90%;max-width:300px;position:relative;box-sizing:border-box}'
-            '#eco-m-close{position:absolute;top:8px;right:10px;background:none;border:none;'
-            'color:#a6adc8;font-size:18px;cursor:pointer;line-height:1;padding:0}'
-            '#eco-m-close:hover{color:#cdd6f4}'
-            '#eco-m-kr{font-size:0.65rem;color:#7f849c;margin-bottom:2px}'
-            '#eco-m-en{font-size:0.78rem;font-weight:600;color:#cdd6f4;margin-bottom:8px;'
-            'padding-bottom:8px;border-bottom:1px solid #313244}'
-            '#eco-m-desc{font-size:0.68rem;color:#a6adc8;line-height:1.55;margin-bottom:10px}'
-            '.m-row{font-size:0.67rem;line-height:1.6;margin-top:3px}'
-            '.m-up{color:#a6e3a1}'
-            '.m-dn{color:#f38ba8}'
-            '</style>'
-            '<table class="eco-tbl"><thead><tr>'
-            '<th>날짜</th><th>시간</th><th></th><th></th>'
-            '<th>이벤트</th>'
-            '<th class="r">발표</th><th class="r">예측</th><th class="r">이전</th>'
-            '</tr></thead>'
-            f'<tbody>{rows}</tbody></table>'
-            '<div id="eco-modal">'
-            '<div class="modal-card">'
-            '<button id="eco-m-close">✕</button>'
-            '<div id="eco-m-kr"></div>'
-            '<div id="eco-m-en"></div>'
-            '<div id="eco-m-desc"></div>'
-            '<div class="m-row" id="eco-m-up"></div>'
-            '<div class="m-row" id="eco-m-dn"></div>'
-            '</div></div>'
-            '<script>'
-            'var modal=document.getElementById("eco-modal");'
-            'var mKr=document.getElementById("eco-m-kr");'
-            'var mEn=document.getElementById("eco-m-en");'
-            'var mDesc=document.getElementById("eco-m-desc");'
-            'var mUp=document.getElementById("eco-m-up");'
-            'var mDn=document.getElementById("eco-m-dn");'
-            'document.querySelectorAll(".evn").forEach(function(el){'
-            '  el.addEventListener("click",function(){'
-            '    mKr.textContent=el.dataset.kr;'
-            '    mEn.textContent=el.dataset.en;'
-            '    mDesc.textContent=el.dataset.desc;'
-            '    mUp.innerHTML="<span class=\'m-up\'>▲</span> "+el.dataset.up;'
-            '    mDn.innerHTML="<span class=\'m-dn\'>▼</span> "+el.dataset.dn;'
-            '    modal.classList.add("open");'
-            '  });'
-            '});'
-            'document.getElementById("eco-m-close").addEventListener("click",function(){'
-            '  modal.classList.remove("open");});'
-            'modal.addEventListener("click",function(e){'
-            '  if(e.target===modal) modal.classList.remove("open");});'
-            'document.addEventListener("keydown",function(e){'
-            '  if(e.key==="Escape") modal.classList.remove("open");});'
-            '</script>'
-        )
-
-        row_h  = max(220, min(len(filtered) * 34 + 80, 500))
-        components.html(html_out, height=row_h, scrolling=True)
-
-        st.markdown(
-            '<div style="font-size:0.6rem;color:#6c7086;text-align:right;padding:2px 4px 0 0;">'
-            '출처: <a href="https://finnhub.io/" target="_blank"'
-            ' style="color:#89b4fa;text-decoration:none;">Finnhub</a></div>',
-            unsafe_allow_html=True,
-        )
-
-
 def render_premium_lock(icon, title, desc):
     """프리미엄 잠금 플레이스홀더 카드."""
     st.markdown(
@@ -1400,14 +606,22 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         except Exception:
             return na
 
-    def _fmt_mcap(val):
+    def _fmt_mcap(val, krw_rate=None):
         if val is None:
             return '—'
-        if val >= 1_000_000:
-            return f'${val / 1_000_000:.2f}T'
-        if val >= 1_000:
-            return f'${val / 1_000:.0f}B'
-        return f'${val:.0f}M'
+        usd_str = (
+            f'${val / 1_000_000:.2f}T' if val >= 1_000_000 else
+            f'${val / 1_000:.0f}B'    if val >= 1_000 else
+            f'${val:.0f}M'
+        )
+        if krw_rate:
+            krw_jo = val * 1_000_000 * krw_rate / 1e12
+            if krw_jo >= 1:
+                usd_str += f' (₩{krw_jo:,.0f}조)'
+            else:
+                krw_eok = val * 1_000_000 * krw_rate / 1e8
+                usd_str += f' (₩{krw_eok:,.0f}억)'
+        return usd_str
 
     with st.expander('📈 주가정보', expanded=False):
         # ── 홈페이지 링크 ────────────────────────────────────────────
@@ -1424,7 +638,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
                 f'<span style="font-size:0.65rem;opacity:0.6;">↗</span>'
                 f'</a>'
                 f'<span style="font-size:0.7rem;color:#585b70;margin-left:6px;">{display_url}</span>'
-    ,
+                f'</div>',
                 unsafe_allow_html=True
             )
         # ── 안 A: 가격 4칩 ──────────────────────────────────────────
@@ -1442,7 +656,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             try:
                 # 형식 예: '2024-05-01' or '2024-05-01 00:00:00'
                 d = str(raw)[:10]
-                from datetime import datetime, timedelta as _dt
+                from datetime import datetime as _dt
                 dt = _dt.strptime(d, '%Y-%m-%d')
                 return dt.strftime('%y/%m/%d')
             except Exception:
@@ -1489,7 +703,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">52주 최저가{l52_date_span}</div><div class="fc-value">{l52}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">52주 저 대비</div><div class="fc-value {l52_cls}">{l52_chg}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">전일 거래량</div><div class="fc-value">{vol_str}</div></div>'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
 
@@ -1534,7 +748,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'</div></div>'
             f'<div class="fin-chip"><div class="fc-label">배당수익률</div><div class="fc-value">{div}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">{beta_label}</div><div class="fc-value">{beta}</div></div>'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
 
@@ -1543,15 +757,16 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
         shares = (fundamentals.get('shares_outstanding') if fundamentals else None)
         mcap_v = data.get('mcap')
         if shares is not None:
-            if shares >= 1e9:
-                sh_str = f'{shares / 1e9:.2f}B주'
-            elif shares >= 1e6:
-                sh_str = f'{shares / 1e6:.0f}M주'
-            else:
-                sh_str = f'{shares:,.0f}주'
+            sh_str = f'{shares:,.0f}주'
             company_chips.append(('발행주식수', sh_str))
         if mcap_v is not None:
-            company_chips.append(('시가총액', _fmt_mcap(mcap_v)))
+            try:
+                _fred_d = fetch_fred_data()
+                _krw_r  = (_fred_d.get('krw_usd', {}).get('value')
+                           if _fred_d else None)
+            except Exception:
+                _krw_r = None
+            company_chips.append(('시가총액', _fmt_mcap(mcap_v, _krw_r)))
         # 향후 확장 예시: company_chips.append(('주요주주', '...'))
         if company_chips:
             chips_html = ''.join(
@@ -1586,7 +801,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
             f'<div class="fin-chip"><div class="fc-label">EPS성장 5Y</div><div class="fc-value">{e5y}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">순이익률 (TTM)</div><div class="fc-value">{nm}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">매출총이익률 (TTM)</div><div class="fc-value">{gm}</div></div>'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
 
@@ -1626,7 +841,7 @@ def render_stock_header(ticker_sym, data, fundamentals=None):
                 f'목표주가 &nbsp;최저 <b>{t_low}</b>&nbsp;·&nbsp;'
                 f'평균 <b style="color:#89dceb">{t_mean}</b>&nbsp;·&nbsp;'
                 f'최고 <b>{t_high}</b>'
-    ,
+                f'</div>',
                 unsafe_allow_html=True
             )
 
@@ -2197,6 +1412,13 @@ def load_news():
     return get_today_news()
 
 
+@st.cache_data(ttl=3600)
+def get_archive_summary_cached(ticker: str):
+    """아카이브 시트에서 가장 최근 summary_kr 조회 (1시간 캐시)."""
+    from utils.sheets import get_latest_ticker_summary
+    return get_latest_ticker_summary(ticker)
+
+
 @st.cache_data(ttl=300)
 def load_sentiment_data():
     """SENTIMENT 시트 전체 로드 (5분 캐시)."""
@@ -2363,7 +1585,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
             f'<div class="fc-value">{news_bear}</div></div>'
             f'<div class="fin-chip"><div class="fc-label">Buzz 지수</div>'
             f'<div class="fc-value">{news_buzz}</div></div>'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
 
@@ -2382,7 +1604,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
                 f'<div class="fc-value negative">{reddit_neg}</div></div>'
                 f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
                 f'<div class="fc-value">{reddit_mention}</div></div>'
-    ,
+                f'</div>',
                 unsafe_allow_html=True
             )
 
@@ -2401,7 +1623,7 @@ def render_sentiment_card(ticker_sym, sentiment_df):
                 f'<div class="fc-value negative">{twitter_neg}</div></div>'
                 f'<div class="fin-chip"><div class="fc-label">멘션 수</div>'
                 f'<div class="fc-value">{twitter_mention}</div></div>'
-    ,
+                f'</div>',
                 unsafe_allow_html=True
             )
 
@@ -2448,29 +1670,60 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
     _sentiment_df = load_sentiment_data()
     render_sentiment_card(ticker_sym, _sentiment_df)
 
-    # 종합 브리핑 박스 (기사 유무와 무관하게 summary_kr 있으면 표시)
-    summary_kr = ''
+    # ── 종합 브리핑 박스 ─────────────────────────────────────────
+    summary_kr          = ''
+    summary_collected_at = ''
+    summary_from_archive = False
+
+    # 1) 오늘 TODAY 시트에서 summary_kr 탐색
     if not no_news and 'summary_kr' in ticker_df.columns:
-        for val in ticker_df['summary_kr']:
-            if val and str(val).strip():
-                summary_kr = str(val).strip()
+        for _i, _val in enumerate(ticker_df['summary_kr']):
+            if _val and str(_val).strip():
+                summary_kr = str(_val).strip()
+                # 같은 행의 collected_at 가져오기
+                if 'collected_at' in ticker_df.columns:
+                    _cat = ticker_df['collected_at'].iloc[_i]
+                    if _cat:
+                        summary_collected_at = str(_cat).strip()
                 break
 
-    # 기사 없으면 안내 후 종료 (브리핑은 이미 위에서 처리)
-    if no_news:
-        st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
-        return
+    # 2) 없으면 아카이브 시트에서 최근 summary 로드 (1시간 캐시)
+    if not summary_kr:
+        _arch = get_archive_summary_cached(ticker_sym)
+        if _arch and _arch.get('summary_kr'):
+            summary_kr           = _arch['summary_kr']
+            summary_collected_at = _arch.get('collected_at', '')
+            summary_from_archive = True
 
+    # 3) 브리핑 렌더링
     if summary_kr:
         body_html = format_summary_html(summary_kr)
+        # 업데이트 시점 계산
+        if summary_from_archive and summary_collected_at:
+            try:
+                _cat_dt   = datetime.strptime(summary_collected_at, '%Y-%m-%d %H:%M:%S')
+                _cat_dt   = KST.localize(_cat_dt)
+                _days_ago = (datetime.now(KST) - _cat_dt).days
+                _ago_str  = f'{_days_ago}일 전 업데이트' if _days_ago > 0 else '오늘 업데이트'
+            except Exception:
+                _ago_str = '이전 업데이트'
+            _date_display = f'🕐 {_ago_str}'
+        else:
+            _date_display = f'📅 {et_date_str()}'
         st.markdown(
             f'<div class="brief-box">'
             f'<div class="brief-title">📋 최근 {ticker_sym} 뉴스 종합 브리핑</div>'
-            f'<div class="brief-time">📅 {et_date_str()}</div>'
+            f'<div class="brief-time">{_date_display}</div>'
             f'{body_html}'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
+
+    # 기사 없으면 안내 후 종료
+    if no_news:
+        if not summary_kr:
+            st.info("📭 오늘 수집된 기사가 없습니다. 다음 수집 주기를 기다려주세요.")
+        return
 
     # 페이지네이션
     ITEMS_PER_PAGE = 10
@@ -2523,7 +1776,7 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
             f'<div class="news-title-en">{title_en}</div>'
             f'{summary_html}'
             f'<div class="news-meta">{meta}</div>'
-,
+            f'</div>',
             unsafe_allow_html=True
         )
 
@@ -2553,20 +1806,6 @@ st.set_page_config(page_title='ValueHunter', page_icon='🎯', layout='wide')
 
 st.markdown("""
 <style>
-
-/* ── 경제 캘린더 selectbox 스타일 (버핏지수 레이블 동일) ── */
-[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] {
-    background: #1e1e2e !important;
-    border: 1px solid #313244 !important;
-    border-radius: 6px !important;
-    min-height: 28px !important;
-}
-[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div,
-[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] span {
-    font-size: 0.7rem !important;
-    color: #a6adc8 !important;
-    line-height: 1.4 !important;
-}
 /* ── 칩 그리드 ── */
 .fin-grid {
     display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;
@@ -2672,7 +1911,6 @@ st.markdown("""
 .rec-bar { display: flex; border-radius: 4px; overflow: hidden; height: 10px; margin: 6px 0; }
 .rec-segment { height: 10px; }
 .rec-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.rec-labels { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; }
 .rec-label { font-size: 0.72rem; color: #a6adc8; display: flex; align-items: center; gap: 4px; }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
@@ -2707,23 +1945,9 @@ st.markdown("""
 }
 .macro-tip:hover .tip-box { visibility: visible; opacity: 1; }
 
-/* ── 사이드바 새로고침 버튼 2줄 스타일 ── */
-section[data-testid="stSidebar"] .stButton:first-child > button {
-    padding-bottom: 18px !important;
-    min-height: 50px !important;
-    height: auto !important;
-}
 /* ── 사이드바 매크로 차트 expander 다크 스타일 ── */
 section[data-testid="stSidebar"] [data-testid="stExpander"] {
     margin: 2px 0 !important;
-}
-/* ── expander wrapper 간격 축소 (버핏지수·실러 히스토리 박스 간격) ── */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"]
-  > div:has([data-testid="stExpander"]) {
-    margin-top: -6px !important;
-    margin-bottom: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
 }
 section[data-testid="stSidebar"] [data-testid="stExpander"] details {
     border: 1px solid #313244 !important;
@@ -2828,163 +2052,70 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] details > div {
 .brief-title { font-size: 1rem; font-weight: 700; color: #cdd6f4; margin-bottom: 4px; }
 .brief-time  { font-size: 0.75rem; color: #7f849c; margin-bottom: 14px; }
 
-/* ── 사이드바 우측 끝 클릭 → 닫힘 방지 ──────────────────────────
-   Streamlit의 stSidebarNavSeparator는 리사이즈 핸들과 접기 버튼을
-   동일 영역에 공유한다. 리사이즈 드래그 시 mouseup이 접기 버튼을
-   의도치 않게 트리거하는 문제를 아래 CSS로 완화한다:
-   - NavSeparator 내부 버튼을 숨겨 실수 클릭 방지
-   - 커서를 ew-resize 고정으로 "드래그 영역" 명시
-   ----------------------------------------------------------------- */
-[data-testid="stSidebarNavSeparator"] {
-    cursor: ew-resize !important;
-    z-index: 10 !important;
-}
-[data-testid="stSidebarNavSeparator"] > button,
-[data-testid="stSidebarNavSeparator"] button {
-    pointer-events: none !important;
-    opacity: 0 !important;
-    display: none !important;
-}
-/* 사이드바가 열린 상태에서 접기는 상단 햄버거 버튼으로만 동작 */
-section[data-testid="stSidebar"] > div:first-child {
-    overflow-x: clip !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
+    st.title("⚙️ 종목 관리")
+    st.caption(f"업데이트: {kst_now_str()}")
     if st.button("🔄 새로고침", use_container_width=True):
         clear_cache()
         st.rerun()
-    st.markdown(
-        f'<div style="margin-top:-22px;text-align:center;font-size:0.58rem;'
-        f'color:#6c7086;padding-bottom:6px;">'
-        f'{kst_now_str()}</div>',
-        unsafe_allow_html=True
-    )
-
-    # ── 종목 추가 / 삭제 (매크로 지표 위에 배치) ─────────────────────
-    st.markdown(
-        '<div style="font-size:0.78rem;font-weight:600;color:#cdd6f4;margin:10px 0 5px 0;">📋 종목 추가 / 삭제</div>',
-        unsafe_allow_html=True
-    )
-    if "pending_ticker" not in st.session_state:
-        st.session_state["pending_ticker"] = ""
-    if "pending_name" not in st.session_state:
-        st.session_state["pending_name"] = ""
-    with st.form("ticker_lookup_form", clear_on_submit=False):
-        ticker_input = st.text_input(
-            "티커 입력 (예: AAPL, SOXL)",
-            max_chars=10,
-            value=st.session_state["pending_ticker"]
+    # Fear & Greed Index
+    fg = fetch_fear_greed()
+    if fg:
+        score  = fg['score']
+        rk     = fg['rating_kr']
+        src    = fg['source']
+        if score >= 75:   fg_color = '#f38ba8'
+        elif score >= 55: fg_color = '#fab387'
+        elif score >= 45: fg_color = '#f9e2af'
+        elif score >= 25: fg_color = '#94e2d5'
+        else:             fg_color = '#89b4fa'
+        st.markdown(
+            f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+            f'padding:10px 12px;margin:8px 0;">'
+            f'<div style="font-size:0.68rem;color:#7f849c;margin-bottom:4px;">공포탐욕지수'
+            f'<span class="macro-tip">💡<span class="tip-box">'
+            f'<span style="color:#89dceb;font-weight:600">📊 설명</span> : CNN이 산출하는 0~100 시장 심리 지수. 25↓=극도공포, 75↑=극도탐욕. 주가 모멘텀·옵션·채권 수요 등 7개 지표 합산<br>'
+            f'<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
+            f'<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
+            f'</span></span>'
+            f'</div>'
+            f'<div style="display:flex;align-items:center;gap:8px;">'
+            f'<span style="font-size:1.4rem;font-weight:700;color:{fg_color};">{score}</span>'
+            f'<span style="font-size:0.8rem;color:{fg_color};">{rk}</span>'
+            f'</div>'
+            f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
+            f'<div style="background:{fg_color};width:{score}%;height:4px;border-radius:3px;"></div>'
+            f'</div>'
+            f'<div style="font-size:0.62rem;color:#45475a;margin-top:4px;">출처: {src}</div>'
+            f'</div>',
+            unsafe_allow_html=True
         )
-        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
-    if "pending_action" not in st.session_state:
-        st.session_state["pending_action"] = ""
-    if lookup_clicked:
-        t = ticker_input.upper().strip()
-        if t:
-            existing_tickers = [r['ticker'] for r in load_tickers()]
-            if t in existing_tickers:
-                # 이미 등록된 종목 → 삭제 옵션 표시
-                st.session_state["pending_ticker"] = t
-                st.session_state["pending_name"] = ""
-                st.session_state["pending_action"] = "delete"
-            else:
-                name = lookup_company_name(t)
-                st.session_state["pending_ticker"] = t
-                st.session_state["pending_name"] = name
-                st.session_state["pending_action"] = "add"
-                if name:
-                    st.success(f"{t} → {name}")
-                else:
-                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
-    # 삭제 확인 버튼 (이미 등록된 종목)
-    if st.session_state.get("pending_action") == "delete" and st.session_state.get("pending_ticker"):
-        t = st.session_state["pending_ticker"]
-        st.warning(f"**{t}** 는 이미 등록된 종목입니다.")
-        if st.button(f"🗑 {t} 삭제", use_container_width=True, type="primary"):
-            try:
-                remove_ticker(t)
-                clear_cache()
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-                st.session_state["pending_action"] = ""
-                st.success(f"{t} 삭제 완료!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"삭제 실패: {e}")
-    # 추가 확인 버튼 (미등록 종목)
-    if st.session_state.get("pending_action") == "add" and st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
-        t    = st.session_state["pending_ticker"]
-        name = st.session_state["pending_name"]
-        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
-            try:
-                add_ticker(t, name)
-                _sort_tickers_by_mcap()
-                clear_cache()
-                st.session_state["pending_ticker"] = ""
-                st.session_state["pending_name"] = ""
-                st.session_state["pending_action"] = ""
-                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
-                st.rerun()
-            except Exception as e:
-                st.error(f"추가 실패: {e}")
-
-    st.markdown('<hr style="margin:10px 0;border-color:#313244;">', unsafe_allow_html=True)
-
-    # ── 매크로 지표 (공포탐욕지수 포함) ──────────────────────────
-    fg         = fetch_fear_greed()
+    # ── 매크로 지표 ──────────────────────────────────────────────
     fred_data  = fetch_fred_data()
     cape_info  = fetch_cape_data()
     cape_curr  = cape_info.get('current')
-    if fg or fred_data or cape_curr is not None:
+    if fred_data or cape_curr is not None:
         st.markdown(
             '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
             'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
             unsafe_allow_html=True)
+        # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
         def _rrow(label, value, color='#cdd6f4', sub='', tip=''):
             st.markdown(
                 f'<div style="background:#1e1e2e;border:1px solid #313244;'
                 f'border-radius:8px;padding:8px 12px;margin:2px 0;">'
                 f'{_macro_row(label, value, color, sub, tip)}'
-    ,
+                f'</div>',
                 unsafe_allow_html=True)
-        # ── 공포탐욕지수 (버핏지수와 동일 스타일 + 바 그래프) ──────
-        if fg:
-            _fg_score  = fg['score']
-            _fg_rating = fg['rating']
-            _fg_src    = fg['source']
-            if _fg_score >= 75:   _fg_color = '#f38ba8'
-            elif _fg_score >= 55: _fg_color = '#fab387'
-            elif _fg_score >= 45: _fg_color = '#f9e2af'
-            elif _fg_score >= 25: _fg_color = '#94e2d5'
-            else:                 _fg_color = '#89b4fa'
-            _fg_tip = (
-                '<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
-                'CNN이 산출하는 0~100 시장 심리 지수. 25↓=극도공포, 75↑=극도탐욕. '
-                '주가 모멘텀·옵션·채권 수요 등 7개 지표 합산<br>'
-                '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
-                '단기 심리를 반영해 노이즈가 크고, 추세 반전 시점을 정확히 포착하기 어려움<br>'
-                '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
-                '극도공포(25↓) 구간은 역발상 매수 기회, 극도탐욕(75↑) 구간은 비중 축소 신호로 참고'
-            )
-            _fg_now = kst_now_str()
-            st.markdown(
-                f'<div style="background:#1e1e2e;border:1px solid #313244;'
-                f'border-radius:8px;padding:8px 12px;margin:2px 0;">'
-                f'{_macro_row("공포탐욕지수", f"{_fg_score}  {_fg_rating}", _fg_color, _fg_now, _fg_tip)}'
-                f'<div style="background:#313244;border-radius:3px;height:4px;margin-top:6px;">'
-                f'<div style="background:{_fg_color};width:{_fg_score}%;height:4px;border-radius:3px;"></div>'
-                f'</div></div>',
-                unsafe_allow_html=True
-            )
 
         import pandas as _pd
         import plotly.graph_objects as _go
 
+        # ── 버핏지수 + 차트 ──────────────────────────────────────
         if 'buffett' in fred_data:
             b  = fred_data['buffett']['value']
             bd = fred_data['buffett']['date']
@@ -2993,8 +2124,10 @@ with st.sidebar:
             elif b > 100: bc, bl, be = '#f9e2af', '주의',   '🟡'
             elif b > 75:  bc, bl, be = '#a6e3a1', '보통',   '🟢'
             else:         bc, bl, be = '#89b4fa', '저평가', '🔵'
+            # 지표 행은 _rrow() 로 표시 → 다른 행과 동일한 폰트/색상
             _rrow('버핏지수', f'{b:.1f}%  {be} {bl}', bc, bd,
                   tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 주식 시총 ÷ GDP 비율. 100%=공정가치, 125%↑=과열, 175%↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 저금리·QE 환경에서 고수치가 수년간 지속 가능. 단기 타이밍 예측 불가<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 투자 밸류에이션 참고 및 포트폴리오 비중 조절 기준으로 활용')
+            # 차트는 별도 expander (라벨은 아이콘+텍스트만, 폰트 영향 최소화)
             buffett_hist = fetch_buffett_history()
             if buffett_hist:
                 with st.expander('📈 버핏지수 히스토리', expanded=False):
@@ -3030,12 +2163,14 @@ with st.sidebar:
                                     config={'displayModeBar': False})
                     st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
 
+        # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
             if cape_curr > 40:   cc2, ce, cl = '#f38ba8', '🔴', '극도과열'
             elif cape_curr > 30: cc2, ce, cl = '#fab387', '🟠', '과열'
             elif cape_curr > 20: cc2, ce, cl = '#f9e2af', '🟡', '주의'
             else:                cc2, ce, cl = '#a6e3a1', '🟢', '저평가'
             cape_hist_now = cape_info.get('history', [])
+            # 역사평균: 값이 50 미만인 것만 유효한 CAPE 값으로 판단
             valid_hist = [(y, v) for y, v in cape_hist_now if v < 200]
             if valid_hist:
                 hist_avg = sum(v for _, v in valid_hist) / len(valid_hist)
@@ -3045,7 +2180,9 @@ with st.sidebar:
                 hist_avg = 17.0
                 ratio    = cape_curr / hist_avg
                 cape_sub = f'역사평균 ~{hist_avg:.0f} ({ratio:.1f}x)'
+            # 차트용 cape_hist: 필터 없이 원본 사용 (차트는 항상 표시)
             cape_hist = cape_info.get('history', [])
+            # 지표 행은 _rrow() 로 표시
             _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, cape_sub,
                   tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 물가조정 주가순이익비율(10년 평균 EPS). 역사 평균 ~17, 30↑=과열, 40↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 타이밍 예측 부적합. 과열 상태가 수년간 지속 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용')
             if cape_hist:
@@ -3079,6 +2216,7 @@ with st.sidebar:
                                     config={'displayModeBar': False})
                     st.caption('출처: multpl.com / Robert Shiller')
 
+        # ── 나머지 지표 (하나의 블록) ────────────────────────────
         rest_html = ''
         if 'fed_rate' in fred_data:
             rest_html += _macro_row(
@@ -3089,27 +2227,23 @@ with st.sidebar:
         if 't10y' in fred_data:
             rest_html += _macro_row(
                 '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
-                '#cdd6f4', fred_data['t10y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 10년 만기 국채 수익률. 장기 경기 전망·인플레이션 기대 반영. 상승 시 성장주 압박<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행 채권 매입(QE)으로 금리가 인위적으로 억제될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용')
         if 't2y' in fred_data:
             rest_html += _macro_row(
                 '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
-                '#cdd6f4', fred_data['t2y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 2년 만기 국채 수익률. 단기 금리 전망과 연준 정책 방향을 가장 민감하게 반영<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 연준 위원 발언 하나에도 과도하게 반응해 단기 변동성이 큼<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y와의 차이(장단기 스프레드)로 경기침체 선행 신호 확인')
         if 'spread' in fred_data:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
             sl2 = '정상' if sp >= 0 else '역전'
-            _sp_date = fred_data.get('t10y', {}).get('date', '')
             rest_html += _macro_row(
-                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2, _sp_date,
+                '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 10Y-2Y 국채 금리 차이. 역전(마이너스) 시 과거 8회 중 7회 경기침체 발생한 선행지표<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 역전 후 실제 침체까지 6~18개월 시차 존재. 단기 매매 타이밍 도구로 부적합<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 역전 진입보다 역전 해소 이후 주가 하락 리스크를 더 주의할 것')
         if 'credit_spread' in fred_data:
             cs  = fred_data['credit_spread']['value']
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
-                fred_data['credit_spread']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 회사채(BBB)-국채 금리 차이. 스프레드 확대 = 기업 신용 위험 상승·시장 공포 신호<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행의 회사채 직접 매입 등 정책 개입으로 위기 신호가 희석될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 판단')
         if 'krw_usd' in fred_data:
             krw = fred_data['krw_usd']['value']
@@ -3134,59 +2268,90 @@ with st.sidebar:
                 f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
                 f'{rest_html}</div>',
                 unsafe_allow_html=True)
-
-        mp_data = fetch_market_prices()
-        if mp_data:
-            mp_html = ''
-            if 'vix' in mp_data:
-                vv = mp_data['vix']['value']
-                vc = '#f38ba8' if vv >= 30 else '#f9e2af' if vv >= 20 else '#a6e3a1'
-                vd = mp_data['vix']['date'] + ' (15분 지연)'
-                vt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
-                      'CBOE 변동성 지수. S&P500 옵션 내재변동성 기반. 20↑=주의, 30↑=공포<br>'
-                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
-                      '공포 정점 직후 반등 가능. 방향보다 수준으로 해석<br>'
-                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
-                      '30↑ 극도공포 구간은 역발상 매수 기회, 20↓ 안정 구간으로 참고')
-                mp_html += _macro_row('VIX 지수', f'{vv:.2f}', vc, vd, tip=vt)
-            if 'gold' in mp_data:
-                gv = mp_data['gold']['value']
-                gd = mp_data['gold']['date'] + ' (15분 지연)'
-                gt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
-                      '금 선물(GC=F) 가격(USD/oz). 안전자산 선호·달러 강약·인플레이션 기대 반영<br>'
-                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
-                      '금리 인상 시 무이자 자산인 금 가격은 하방 압력을 받음<br>'
-                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
-                      '주식·채권 동반 하락 시 포트폴리오 헤지 자산 동향 참고')
-                mp_html += _macro_row('금 (XAU/USD)', f'${gv:,.1f}/oz', '#f9e2af', gd, tip=gt)
-            if 'wti' in mp_data:
-                wv = mp_data['wti']['value']
-                wd2 = mp_data['wti']['date'] + ' (15분 지연)'
-                wt = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
-                      'WTI 원유 선물(CL=F) 가격(USD/배럴). 글로벌 경기 및 지정학 리스크 반영<br>'
-                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
-                      'OPEC+ 생산량 결정·허리케인 등 공급 충격에 과도 반응 가능<br>'
-                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
-                      '에너지·운송·항공 섹터 수익성 및 인플레이션 압력 점검에 활용')
-                mp_html += _macro_row('WTI 원유', f'${wv:.2f}/bbl', '#89b4fa', wd2, tip=wt)
-            if 'copper' in mp_data:
-                cv = mp_data['copper']['value']
-                cd = mp_data['copper']['date'] + ' (15분 지연)'
-                ct = ('<span style="color:#89dceb;font-weight:600">📊 설명</span> : '
-                      '구리 선물(HG=F) 가격(USD/lb). 제조업·인프라 수요 반영하는 경기 선행 지표<br>'
-                      '<span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : '
-                      '중국 제조업 의존도 높아 글로벌 수요 변화를 즉각 반영 못할 수 있음<br>'
-                      '<span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : '
-                      '구리 상승=경기 회복 신호, 하락=경기 둔화 선행 지표로 해석')
-                mp_html += _macro_row('구리 (HG/USD)', f'${cv:.3f}/lb', '#fab387', cd, tip=ct)
-            if mp_html:
+    st.divider()
+    st.subheader("+ 종목 추가")
+    if "pending_ticker" not in st.session_state:
+        st.session_state["pending_ticker"] = ""
+    if "pending_name" not in st.session_state:
+        st.session_state["pending_name"] = ""
+    with st.form("ticker_lookup_form", clear_on_submit=False):
+        ticker_input = st.text_input(
+            "티커 입력 (예: AAPL, SOXL)",
+            max_chars=10,
+            value=st.session_state["pending_ticker"]
+        )
+        lookup_clicked = st.form_submit_button("회사명 조회", use_container_width=True)
+    if lookup_clicked:
+        t = ticker_input.upper().strip()
+        if t:
+            existing_tickers = [r['ticker'] for r in load_tickers()]
+            if t in existing_tickers:
+                st.error(f"이미 등록되어 있는 티커명입니다. ({t})")
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+            else:
+                name = lookup_company_name(t)
+                st.session_state["pending_ticker"] = t
+                st.session_state["pending_name"] = name
+                if name:
+                    st.success(f"{t} -> {name}")
+                else:
+                    st.warning(f"{t}: 회사명을 찾을 수 없습니다.")
+    if st.session_state.get("pending_ticker") and st.session_state.get("pending_name"):
+        t = st.session_state["pending_ticker"]
+        name = st.session_state["pending_name"]
+        if st.button(f"{t} ({name}) 추가", use_container_width=True, type="primary"):
+            try:
+                add_ticker(t, name)
+                _sort_tickers_by_mcap()
+                clear_cache()
+                st.session_state["pending_ticker"] = ""
+                st.session_state["pending_name"] = ""
+                st.success(f"{t} 추가 완료! (시가총액 기준 자동 정렬)")
+                st.rerun()
+            except Exception as e:
+                st.error(f"추가 실패: {e}")
+    st.divider()
+    st.subheader("종목 순서 변경 / 삭제")
+    tickers_raw = load_tickers()
+    if tickers_raw:
+        n = len(tickers_raw)
+        for i, t in enumerate(tickers_raw):
+            sym   = t['ticker']
+            cname = t.get('company_name', '')
+            col_nm, col_up, col_dn, col_dl = st.columns([3, 1, 1, 1])
+            with col_nm:
                 st.markdown(
-                    f'<div style="background:#1e1e2e;border:1px solid #313244;'
-                    f'border-radius:8px;padding:10px 12px;margin:4px 0 8px 0;">'
-                    f'{mp_html}</div>',
-                    unsafe_allow_html=True)
+                    f'<div style="padding:5px 0;line-height:1.3;">'
+                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span><br>'
+                    f'<span style="font-size:0.7rem;color:#7f849c;">{cname}</span></div>',
+                    unsafe_allow_html=True
+                )
+            with col_up:
+                if i > 0:
+                    if st.button("↑", key=f"up_{sym}_{i}", use_container_width=True):
+                        new_order = list(tickers_raw)
+                        new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
+                        try:
+                            reorder_tickers(new_order)
+                            load_tickers.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"순서 변경 실패: {e}")
+                else:
+                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
+            with col_dl:
+                if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
+                    try:
+                        remove_ticker(sym)
+                        _sort_tickers_by_mcap()
+                        clear_cache()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"삭제 실패: {e}")
+    else:
+        st.info("등록된 종목이 없습니다.")
 
-    render_economic_calendar()
 
 # ── 메인 영역 ────────────────────────────────────────────────────
 tickers_list = load_tickers()
