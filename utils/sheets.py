@@ -139,7 +139,7 @@ def get_today_news():
         except gspread.WorksheetNotFound:
             return pd.DataFrame(columns=TODAY_HEADERS)
 
-        records = today_sheet.get_all_records()
+        records = today_sheet.get_all_records(expected_headers=TODAY_HEADERS)
         if not records:
             return pd.DataFrame(columns=TODAY_HEADERS)
         return pd.DataFrame(records)
@@ -278,7 +278,7 @@ def archive_and_reset():
         print("TODAY sheet not found, skipping")
         return
 
-    records = today_sheet.get_all_records()
+    records = today_sheet.get_all_records(expected_headers=TODAY_HEADERS)
     if not records:
         today_sheet.clear()
         today_sheet.append_row(TODAY_HEADERS)
@@ -311,7 +311,14 @@ def archive_and_reset():
         if new_rows:
             archive.append_rows(new_rows, value_input_option='RAW')
 
-        all_records = archive.get_all_records()
+        # 헤더행 손상 방어: 빈/중복 헤더 시 자동 복구 후 재조회
+        _first_row = archive.row_values(1) if archive.row_count > 0 else []
+        if not _first_row or _first_row[:len(TODAY_HEADERS)] != TODAY_HEADERS:
+            archive.clear()
+            archive.append_row(TODAY_HEADERS)
+            all_records = []
+        else:
+            all_records = archive.get_all_records(expected_headers=TODAY_HEADERS)
         keep, deleted = [], 0
         for r in all_records:
             try:
