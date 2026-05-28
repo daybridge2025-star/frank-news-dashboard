@@ -2311,46 +2311,7 @@ with st.sidebar:
                 st.rerun()
             except Exception as e:
                 st.error(f"추가 실패: {e}")
-    st.divider()
-    st.subheader("종목 순서 변경 / 삭제")
-    tickers_raw = load_tickers()
-    if tickers_raw:
-        n = len(tickers_raw)
-        for i, t in enumerate(tickers_raw):
-            sym   = t['ticker']
-            cname = t.get('company_name', '')
-            col_nm, col_up, col_dn, col_dl = st.columns([3, 1, 1, 1])
-            with col_nm:
-                st.markdown(
-                    f'<div style="padding:5px 0;line-height:1.3;">'
-                    f'<span style="font-size:0.85rem;font-weight:600;color:#cdd6f4;">{sym}</span><br>'
-                    f'<span style="font-size:0.7rem;color:#7f849c;">{cname}</span></div>',
-                    unsafe_allow_html=True
-                )
-            with col_up:
-                if i > 0:
-                    if st.button("↑", key=f"up_{sym}_{i}", use_container_width=True):
-                        new_order = list(tickers_raw)
-                        new_order[i], new_order[i - 1] = new_order[i - 1], new_order[i]
-                        try:
-                            reorder_tickers(new_order)
-                            load_tickers.clear()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"순서 변경 실패: {e}")
-                else:
-                    st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)
-            with col_dl:
-                if st.button("삭제", key=f"dl_{sym}_{i}", use_container_width=True):
-                    try:
-                        remove_ticker(sym)
-                        _sort_tickers_by_mcap()
-                        clear_cache()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"삭제 실패: {e}")
-    else:
-        st.info("등록된 종목이 없습니다.")
+
 
 
 # ── 메인 영역 ────────────────────────────────────────────────────
