@@ -3360,6 +3360,9 @@ with st.sidebar:
                                     config={'displayModeBar': False})
                     st.caption('출처: Yahoo Finance ^W5000 / FRED GDP')
 
+        else:
+            _rrow('버핏지수', '🔄 데이터 일시 불가', '#585b70')
+
         # ── Shiller CAPE + 인라인 차트 ───────────────────────────
         if cape_curr is not None:
             if cape_curr > 40:   cc2, ce, cl = '#f38ba8', '🔴', '극도과열'
