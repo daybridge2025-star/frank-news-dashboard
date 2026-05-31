@@ -366,9 +366,12 @@ def fetch_fear_greed():
     return None
 
 
-@st.cache_data(ttl=3600)
+import datetime as _dt_ttl
+_MACRO_TTL = 86400 if _dt_ttl.datetime.now().weekday() >= 5 else 3600
+
+@st.cache_data(ttl=_MACRO_TTL)
 def fetch_fred_data():
-    """Fetch macro indicators from FRED API (1h cache)."""
+    """Fetch macro indicators from FRED API (평일 1h / 주말 24h cache)."""
     api_key = os.environ.get('FRED_API_KEY', '')
     if not api_key:
         return {}
@@ -382,7 +385,7 @@ def fetch_fred_data():
             try:
                 r = requests.get(BASE, params={
                     'series_id': sid, 'api_key': api_key,
-                    'file_type': 'json', 'sort_order': 'desc', 'limit': 5,
+                    'file_type': 'json', 'sort_order': 'desc', 'limit': 10,
                 }, headers=H, timeout=10)
                 if r.ok:
                     for o in r.json().get('observations', []):
@@ -407,7 +410,7 @@ def fetch_fred_data():
     for _kattempt in range(3):
         try:
             _kurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                     'USDKRW%3DX?interval=1d&range=5d')
+                     'USDKRW%3DX?interval=1d&range=10d')
             _kr = requests.get(_kurl, headers=H, timeout=10)
             if _kr.ok:
                 _kch = _kr.json().get('chart', {}).get('result', [{}])[0]
@@ -440,7 +443,7 @@ def fetch_fred_data():
     for _wattempt in range(3):
         try:
             yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                    '%5EW5000?interval=1d&range=5d')
+                    '%5EW5000?interval=1d&range=10d')
             yr = requests.get(yurl, headers=H, timeout=10)
             if yr.ok:
                 _ch = yr.json().get('chart', {}).get('result', [{}])[0]
@@ -464,7 +467,7 @@ def fetch_fred_data():
     return result
 
 
-@st.cache_data(ttl=86400)
+@st.cache_data(ttl=_MACRO_TTL)
 def fetch_cape_data():
     """Shiller CAPE current + history from multpl.com (24h cache)."""
     import re as _re
@@ -519,10 +522,19 @@ def fetch_cape_data():
             history = sorted(seen.items(), key=lambda x: x[0])
     except Exception as e:
         print(f'[CAPE history] {e}')
-    return {'current': current, 'history': history}
+    # 최신 월 날짜 추출 (history 첫 번째 항목 기반)
+    cape_date = ''
+    if history:
+        try:
+            import datetime as _cdt
+            latest_yr = history[-1][0]  # history는 연도 오름차순
+            cape_date = f'{latest_yr}-01'
+        except Exception:
+            pass
+    return {'current': current, 'history': history, 'date': cape_date}
 
 
-@st.cache_data(ttl=86400)
+@st.cache_data(ttl=_MACRO_TTL)
 def fetch_buffett_history():
     """버핏지수 역사 데이터: Yahoo Finance ^W5000 분기 + FRED GDP 분기 병합 (24h cache)."""
     import os as _os, datetime as _dt
@@ -3383,7 +3395,9 @@ with st.sidebar:
             # 차트용 cape_hist: 필터 없이 원본 사용 (차트는 항상 표시)
             cape_hist = cape_info.get('history', [])
             # 지표 행은 _rrow() 로 표시
-            _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, cape_sub,
+            _cape_date = cape_info.get('date', '')
+            _cape_sub_full = f'{cape_sub}  {_cape_date}' if _cape_date else cape_sub
+            _rrow('Shiller CAPE', f'{cape_curr:.1f}  {ce} {cl}', cc2, _cape_sub_full,
                   tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 물가조정 주가순이익비율(10년 평균 EPS). 역사 평균 ~17, 30↑=과열, 40↑=극도과열<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 타이밍 예측 부적합. 과열 상태가 수년간 지속 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 장기 기대수익률 추정 및 분할매수 전략의 밸류에이션 기준으로 활용')
             if cape_hist:
                 with st.expander('📈 Shiller CAPE 히스토리', expanded=False):
@@ -3436,12 +3450,14 @@ with st.sidebar:
         if 't10y' in fred_data:
             rest_html += _macro_row(
                 '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
+                sub=fred_data['t10y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 10년 만기 국채 수익률. 장기 경기 전망·인플레이션 기대 반영. 상승 시 성장주 압박<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행 채권 매입(QE)으로 금리가 인위적으로 억제될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용')
         else:
             rest_html += _unavail('미국채 10Y')
         if 't2y' in fred_data:
             rest_html += _macro_row(
                 '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
+                sub=fred_data['t2y']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 2년 만기 국채 수익률. 단기 금리 전망과 연준 정책 방향을 가장 민감하게 반영<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 연준 위원 발언 하나에도 과도하게 반응해 단기 변동성이 큼<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y와의 차이(장단기 스프레드)로 경기침체 선행 신호 확인')
         else:
             rest_html += _unavail('미국채 2Y')
@@ -3449,8 +3465,10 @@ with st.sidebar:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
             sl2 = '정상' if sp >= 0 else '역전'
+            _sp_date = fred_data.get('t10y', {}).get('date', '')
             rest_html += _macro_row(
                 '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
+                sub=_sp_date,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 10Y-2Y 국채 금리 차이. 역전(마이너스) 시 과거 8회 중 7회 경기침체 발생한 선행지표<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 역전 후 실제 침체까지 6~18개월 시차 존재. 단기 매매 타이밍 도구로 부적합<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 역전 진입보다 역전 해소 이후 주가 하락 리스크를 더 주의할 것')
         else:
             rest_html += _unavail('장단기 스프레드')
@@ -3459,6 +3477,7 @@ with st.sidebar:
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
+                sub=fred_data['credit_spread']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 회사채(BBB)-국채 금리 차이. 스프레드 확대 = 기업 신용 위험 상승·시장 공포 신호<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행의 회사채 직접 매입 등 정책 개입으로 위기 신호가 희석될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 판단')
         else:
             rest_html += _unavail('크레딧 스프레드')
