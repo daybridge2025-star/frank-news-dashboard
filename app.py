@@ -557,20 +557,28 @@ def fetch_buffett_history():
     import os as _os, datetime as _dt
     H = {'User-Agent': 'Mozilla/5.0 (compatible; valuehunter/1.0)'}
     w_data = {}
-    try:
-        wurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                '%5EW5000?interval=3mo&range=max')
-        wr = requests.get(wurl, headers=H, timeout=20)
-        if wr.ok:
-            _wch = wr.json().get('chart', {}).get('result', [{}])[0]
-            _wt  = _wch.get('timestamp', [])
-            _wc  = _wch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
-            for t, c in zip(_wt, _wc):
-                if c is not None:
-                    d = _dt.datetime.fromtimestamp(t)
-                    w_data[f"{d.year}Q{(d.month-1)//3+1}"] = c
-    except Exception as _we:
-        print(f'[BuffettHist W5000] {_we}')
+    for _hist_url in [
+        'https://query1.finance.yahoo.com/v8/finance/chart/%5EW5000?interval=3mo&range=max',
+        'https://query1.finance.yahoo.com/v8/finance/chart/%5EW5000?interval=3mo&range=10y',
+        'https://query1.finance.yahoo.com/v8/finance/chart/%5EW5000?interval=3mo&range=5y',
+    ]:
+        if w_data:
+            break
+        try:
+            wr = requests.get(_hist_url, headers=H, timeout=20)
+            if wr.ok:
+                _wch = wr.json().get('chart', {}).get('result', [{}])[0]
+                _wt  = _wch.get('timestamp', [])
+                _wc  = _wch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                for t, c in zip(_wt, _wc):
+                    if c is not None:
+                        d = _dt.datetime.fromtimestamp(t)
+                        w_data[f"{d.year}Q{(d.month-1)//3+1}"] = c
+                print(f'[BuffettHist W5000] {len(w_data)}분기 로드 ({_hist_url[-10:]})')
+            else:
+                print(f'[BuffettHist W5000] HTTP {wr.status_code}')
+        except Exception as _we:
+            print(f'[BuffettHist W5000] 예외: {_we}')
     g_data = {}
     _api = _os.environ.get('FRED_API_KEY', '')
     if _api:
@@ -3325,19 +3333,10 @@ with st.sidebar:
     cape_info  = fetch_cape_data()
     cape_curr  = cape_info.get('current')
     if fred_data or cape_curr is not None:
-        _macro_col1, _macro_col2 = st.columns([3, 1])
-        with _macro_col1:
-            st.markdown(
-                '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
-                'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
-                unsafe_allow_html=True)
-        with _macro_col2:
-            if st.button('🔄', key='refresh_macro', help='매크로 데이터 새로고침',
-                         use_container_width=True):
-                fetch_fred_data.clear()
-                fetch_cape_data.clear()
-                fetch_buffett_history.clear()
-                st.rerun()
+        st.markdown(
+            '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
+            'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
+            unsafe_allow_html=True)
         # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
         def _rrow(label, value, color='#cdd6f4', sub='', tip=''):
             st.markdown(
