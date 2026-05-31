@@ -410,7 +410,7 @@ def fetch_fred_data():
     for _kattempt in range(3):
         try:
             _kurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                     'USDKRW%3DX?interval=1d&range=10d')
+                     'USDKRW%3DX?interval=1d&range=5d')
             _kr = requests.get(_kurl, headers=H, timeout=10)
             if _kr.ok:
                 _kch = _kr.json().get('chart', {}).get('result', [{}])[0]
@@ -443,7 +443,7 @@ def fetch_fred_data():
     for _wattempt in range(3):
         try:
             yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                    '%5EW5000?interval=1d&range=10d')
+                    '%5EW5000?interval=1d&range=1mo')
             yr = requests.get(yurl, headers=H, timeout=10)
             if yr.ok:
                 _ch = yr.json().get('chart', {}).get('result', [{}])[0]
@@ -3308,10 +3308,19 @@ with st.sidebar:
     cape_info  = fetch_cape_data()
     cape_curr  = cape_info.get('current')
     if fred_data or cape_curr is not None:
-        st.markdown(
-            '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
-            'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
-            unsafe_allow_html=True)
+        _macro_col1, _macro_col2 = st.columns([3, 1])
+        with _macro_col1:
+            st.markdown(
+                '<div style="font-size:0.72rem;color:#7f849c;margin:10px 0 2px 0;'
+                'font-weight:600;">📊 시장 매크로 지표(고평가 여부 확인)</div>',
+                unsafe_allow_html=True)
+        with _macro_col2:
+            if st.button('🔄', key='refresh_macro', help='매크로 데이터 새로고침',
+                         use_container_width=True):
+                fetch_fred_data.clear()
+                fetch_cape_data.clear()
+                fetch_buffett_history.clear()
+                st.rerun()
         # ── 행별 렌더링 헬퍼 (각 지표를 독립 박스로 출력) ───────────
         def _rrow(label, value, color='#cdd6f4', sub='', tip=''):
             st.markdown(
