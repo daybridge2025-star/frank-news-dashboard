@@ -377,17 +377,22 @@ def fetch_fred_data():
     result = {}
 
     def _latest(sid):
-        try:
-            r = requests.get(BASE, params={
-                'series_id': sid, 'api_key': api_key,
-                'file_type': 'json', 'sort_order': 'desc', 'limit': 5,
-            }, headers=H, timeout=10)
-            if r.ok:
-                for o in r.json().get('observations', []):
-                    if o['value'] != '.':
-                        return float(o['value']), o['date']
-        except Exception as e:
-            print(f'[FRED] {sid}: {e}')
+        import time as _time
+        for _attempt in range(3):
+            try:
+                r = requests.get(BASE, params={
+                    'series_id': sid, 'api_key': api_key,
+                    'file_type': 'json', 'sort_order': 'desc', 'limit': 5,
+                }, headers=H, timeout=10)
+                if r.ok:
+                    for o in r.json().get('observations', []):
+                        if o['value'] != '.':
+                            return float(o['value']), o['date']
+            except Exception as e:
+                if _attempt == 2:
+                    print(f'[FRED] {sid} 3회 실패: {e}')
+                else:
+                    _time.sleep(0.5)
         return None, None
 
     for key, sid in [('fed_rate', 'FEDFUNDS'), ('t10y', 'DGS10'),
@@ -398,21 +403,27 @@ def fetch_fred_data():
             result[key] = {'value': v, 'date': d}
 
     # 원/달러 환율: Yahoo Finance USDKRW=X (실시간) → DEXKOUS(FRED) 폴백
-    try:
-        _kurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                 'USDKRW%3DX?interval=1d&range=5d')
-        _kr = requests.get(_kurl, headers=H, timeout=10)
-        if _kr.ok:
-            _kch = _kr.json().get('chart', {}).get('result', [{}])[0]
-            _kc  = _kch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
-            _kt  = _kch.get('timestamp', [])
-            _kc  = [c for c in _kc if c is not None]
-            if _kc and _kt:
-                import datetime as _dt2
-                _kdate = _dt2.datetime.fromtimestamp(_kt[-1]).strftime('%Y-%m-%d')
-                result['krw_usd'] = {'value': round(_kc[-1], 2), 'date': _kdate}
-    except Exception as _ke:
-        print(f'[KRW Yahoo] {_ke}')
+    import time as _time_y
+    for _kattempt in range(3):
+        try:
+            _kurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
+                     'USDKRW%3DX?interval=1d&range=5d')
+            _kr = requests.get(_kurl, headers=H, timeout=10)
+            if _kr.ok:
+                _kch = _kr.json().get('chart', {}).get('result', [{}])[0]
+                _kc  = _kch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                _kt  = _kch.get('timestamp', [])
+                _kc  = [c for c in _kc if c is not None]
+                if _kc and _kt:
+                    import datetime as _dt2
+                    _kdate = _dt2.datetime.fromtimestamp(_kt[-1]).strftime('%Y-%m-%d')
+                    result['krw_usd'] = {'value': round(_kc[-1], 2), 'date': _kdate}
+                    break
+        except Exception as _ke:
+            if _kattempt == 2:
+                print(f'[KRW Yahoo] 3회 실패: {_ke}')
+            else:
+                _time_y.sleep(0.5)
     # 폴백: FRED DEXKOUS (주 1회 업데이트)
     if 'krw_usd' not in result:
         _kv, _kd = _latest('DEXKOUS')
@@ -425,22 +436,27 @@ def fetch_fred_data():
 
     # Buffett Indicator: Wilshire5000 / GDP * 100
     # FRED removed all Wilshire data June 2024 → use Yahoo Finance ^W5000
-    try:
-        yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                '%5EW5000?interval=1d&range=5d')
-        yr = requests.get(yurl, headers=H, timeout=10)
-        if yr.ok:
-            _ch = yr.json().get('chart', {}).get('result', [{}])[0]
-            _closes = _ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
-            _times  = _ch.get('timestamp', [])
-            _closes = [c for c in _closes if c is not None]
-            if _closes and _times:
-                w  = _closes[-1]
-                import datetime as _dt
-                wd = _dt.datetime.fromtimestamp(_times[-1]).strftime('%Y-%m-%d')
-    except Exception as _e:
-        print(f'[Buffett Yahoo] {_e}')
-        w = None
+    w = None
+    for _wattempt in range(3):
+        try:
+            yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
+                    '%5EW5000?interval=1d&range=5d')
+            yr = requests.get(yurl, headers=H, timeout=10)
+            if yr.ok:
+                _ch = yr.json().get('chart', {}).get('result', [{}])[0]
+                _closes = _ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                _times  = _ch.get('timestamp', [])
+                _closes = [c for c in _closes if c is not None]
+                if _closes and _times:
+                    w  = _closes[-1]
+                    import datetime as _dt
+                    wd = _dt.datetime.fromtimestamp(_times[-1]).strftime('%Y-%m-%d')
+                    break
+        except Exception as _e:
+            if _wattempt == 2:
+                print(f'[Buffett Yahoo] 3회 실패: {_e}')
+            else:
+                _time_y.sleep(0.5)
     g, _  = _latest('GDP')
     if w is not None and g is not None and g > 0:
         result['buffett'] = {'value': round(w / g * 100, 1), 'date': wd}
@@ -3398,6 +3414,13 @@ with st.sidebar:
                     st.caption('출처: multpl.com / Robert Shiller')
 
         # ── 나머지 지표 (하나의 블록) ────────────────────────────
+        def _unavail(label):
+            return (f'<div style="display:flex;justify-content:space-between;'
+                    f'align-items:center;padding:2px 0;">'
+                    f'<span style="color:#7f849c;font-size:0.78rem;">{label}</span>'
+                    f'<span style="color:#585b70;font-size:0.75rem;">🔄 데이터 일시 불가</span>'
+                    f'</div>')
+
         rest_html = ''
         if 'fed_rate' in fred_data:
             rest_html += _macro_row(
@@ -3405,14 +3428,20 @@ with st.sidebar:
                 f"{fred_data['fed_rate']['value']:.2f}%",
                 '#cdd6f4', fred_data['fed_rate']['date'],
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 연준(Fed)이 설정하는 단기 기준금리. 인상 시 주식 할인율 상승 → 주가 하방 압력<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 시장은 금리 기대치를 미리 선반영. 실제 인상 발표 시 주가가 오히려 상승 가능<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : FOMC 회의 일정과 함께 금리 추세 방향 확인')
+        else:
+            rest_html += _unavail('기준금리 (FFR)')
         if 't10y' in fred_data:
             rest_html += _macro_row(
                 '미국채 10Y', f"{fred_data['t10y']['value']:.2f}%",
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 10년 만기 국채 수익률. 장기 경기 전망·인플레이션 기대 반영. 상승 시 성장주 압박<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행 채권 매입(QE)으로 금리가 인위적으로 억제될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y-2Y 스프레드와 함께 경기 사이클 판단에 활용')
+        else:
+            rest_html += _unavail('미국채 10Y')
         if 't2y' in fred_data:
             rest_html += _macro_row(
                 '미국채 2Y', f"{fred_data['t2y']['value']:.2f}%",
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 미국 2년 만기 국채 수익률. 단기 금리 전망과 연준 정책 방향을 가장 민감하게 반영<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 연준 위원 발언 하나에도 과도하게 반응해 단기 변동성이 큼<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 10Y와의 차이(장단기 스프레드)로 경기침체 선행 신호 확인')
+        else:
+            rest_html += _unavail('미국채 2Y')
         if 'spread' in fred_data:
             sp  = fred_data['spread']
             sc2 = '#a6e3a1' if sp >= 0 else '#f38ba8'
@@ -3420,18 +3449,24 @@ with st.sidebar:
             rest_html += _macro_row(
                 '장단기 스프레드', f'{sp:+.2f}%p ({sl2})', sc2,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 10Y-2Y 국채 금리 차이. 역전(마이너스) 시 과거 8회 중 7회 경기침체 발생한 선행지표<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 역전 후 실제 침체까지 6~18개월 시차 존재. 단기 매매 타이밍 도구로 부적합<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 역전 진입보다 역전 해소 이후 주가 하락 리스크를 더 주의할 것')
+        else:
+            rest_html += _unavail('장단기 스프레드')
         if 'credit_spread' in fred_data:
             cs  = fred_data['credit_spread']['value']
             cc3 = ('#f38ba8' if cs > 3 else
                    '#fab387' if cs > 2 else '#a6e3a1')
             rest_html += _macro_row('크레딧 스프레드', f'{cs:.2f}%p', cc3,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 회사채(BBB)-국채 금리 차이. 스프레드 확대 = 기업 신용 위험 상승·시장 공포 신호<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 중앙은행의 회사채 직접 매입 등 정책 개입으로 위기 신호가 희석될 수 있음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 2%p 초과 시 주의, 3%p 초과 시 위험 신호로 판단')
+        else:
+            rest_html += _unavail('크레딧 스프레드')
         if 'krw_usd' in fred_data:
             krw = fred_data['krw_usd']['value']
             kd  = fred_data['krw_usd']['date']
             rest_html += _macro_row(
                 '원/달러 환율', f'{krw:,.0f} KRW', '#cdd6f4', kd,
                 tip='<span style="color:#89dceb;font-weight:600">📊 설명</span> : 1달러 기준 원화 환율. 원화 약세(↑)는 수출주 유리, 수입 물가 상승·외국인 이탈 요인<br><span style="color:#f9e2af;font-weight:600">⚠️ 한계</span> : 단기 변동성이 매우 크고 지정학·금리차·수급 등 복합 요인에 영향받음<br><span style="color:#a6e3a1;font-weight:600">🎯 활용</span> : 1,400원 이상 고환율 지속 시 한국 시장 외국인 수급 악화 주의')
+        else:
+            rest_html += _unavail('원/달러 환율')
         if 'us_debt' in fred_data and 'krw_usd' in fred_data:
             debt_m     = fred_data['us_debt']['value']
             dd         = fred_data['us_debt']['date']
