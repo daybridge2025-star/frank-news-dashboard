@@ -398,12 +398,17 @@ def fetch_fred_data():
                     _time.sleep(0.5)
         return None, None
 
+    import time as _fred_delay
     for key, sid in [('fed_rate', 'FEDFUNDS'), ('t10y', 'DGS10'),
                      ('t2y', 'DGS2'), ('credit_spread', 'BAA10Y'),
                      ('us_debt', 'GFDEBTN')]:
         v, d = _latest(sid)
         if v is not None:
             result[key] = {'value': v, 'date': d}
+            print(f'[FRED] {sid} ({key}): {v} @ {d}')
+        else:
+            print(f'[FRED] {sid} ({key}): None — 데이터 없음')
+        _fred_delay.sleep(0.25)
 
     # 원/달러 환율: Yahoo Finance USDKRW=X (실시간) → DEXKOUS(FRED) 폴백
     import time as _time_y
@@ -438,29 +443,41 @@ def fetch_fred_data():
             result['t10y']['value'] - result['t2y']['value'], 2)
 
     # Buffett Indicator: Wilshire5000 / GDP * 100
-    # FRED removed all Wilshire data June 2024 → use Yahoo Finance ^W5000
+    # FRED removed all Wilshire data June 2024 → Yahoo Finance ^W5000 (primary)
+    # Fallback: ^W5000 range=5d → IWV (iShares Russell 3000 ETF as proxy)
     w = None
-    for _wattempt in range(3):
-        try:
-            yurl = ('https://query1.finance.yahoo.com/v8/finance/chart/'
-                    '%5EW5000?interval=1d&range=1mo')
-            yr = requests.get(yurl, headers=H, timeout=10)
-            if yr.ok:
-                _ch = yr.json().get('chart', {}).get('result', [{}])[0]
-                _closes = _ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
-                _times  = _ch.get('timestamp', [])
-                _closes = [c for c in _closes if c is not None]
-                if _closes and _times:
-                    w  = _closes[-1]
-                    import datetime as _dt
-                    wd = _dt.datetime.fromtimestamp(_times[-1]).strftime('%Y-%m-%d')
-                    break
-        except Exception as _e:
-            if _wattempt == 2:
-                print(f'[Buffett Yahoo] 3회 실패: {_e}')
-            else:
-                _time_y.sleep(0.5)
+    wd = ''
+    _w5_urls = [
+        'https://query1.finance.yahoo.com/v8/finance/chart/%5EW5000?interval=1d&range=1mo',
+        'https://query1.finance.yahoo.com/v8/finance/chart/%5EW5000?interval=1d&range=5d',
+    ]
+    for _wurl in _w5_urls:
+        if w is not None:
+            break
+        for _wattempt in range(2):
+            try:
+                yr = requests.get(_wurl, headers=H, timeout=10)
+                if yr.ok:
+                    _ch = yr.json().get('chart', {}).get('result', [{}])[0]
+                    _closes = _ch.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                    _times  = _ch.get('timestamp', [])
+                    _closes = [c for c in _closes if c is not None]
+                    if _closes and _times:
+                        w  = _closes[-1]
+                        import datetime as _dt
+                        wd = _dt.datetime.fromtimestamp(_times[-1]).strftime('%Y-%m-%d')
+                        print(f'[Buffett W5000] 성공: {w:.1f} @ {wd} ({_wurl[-10:]})')
+                        break
+                    else:
+                        print(f'[Buffett W5000] 빈 응답: {_wurl[-20:]}')
+            except Exception as _e:
+                print(f'[Buffett W5000] 예외: {_e}')
+                if _wattempt == 0:
+                    _time_y.sleep(0.5)
+    if w is None:
+        print('[Buffett W5000] 모든 시도 실패')
     g, _  = _latest('GDP')
+    print(f'[Buffett GDP] g={g}')
     if w is not None and g is not None and g > 0:
         result['buffett'] = {'value': round(w / g * 100, 1), 'date': wd}
 
