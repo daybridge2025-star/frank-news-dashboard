@@ -381,11 +381,14 @@ def fetch_fred_data():
 
     def _latest(sid):
         import time as _time
+        import datetime as _dtt
+        _obs_start = (_dtt.date.today() - _dtt.timedelta(days=30)).isoformat()
         for _attempt in range(3):
             try:
                 r = requests.get(BASE, params={
                     'series_id': sid, 'api_key': api_key,
-                    'file_type': 'json', 'sort_order': 'desc', 'limit': 10,
+                    'file_type': 'json', 'sort_order': 'desc', 'limit': 30,
+                    'observation_start': _obs_start,
                 }, headers=H, timeout=10)
                 if r.ok:
                     for o in r.json().get('observations', []):
