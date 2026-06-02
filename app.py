@@ -2778,9 +2778,12 @@ SOTP_CONFIG['GOOG'] = SOTP_CONFIG['GOOGL']
 
 @st.cache_data(ttl=86400)
 def fetch_edgar_financials(ticker):
-    """TTM Revenue·OI·NetDebt·Shares: yfinance quarterly 합산 + EDGAR 보완"""
+    """TTM Revenue·OI·NetDebt·Shares — 3단계 폴백
+    1단계: quarterly_income_stmt 키워드 탐색 (TTM)
+    2단계: income_stmt 연간 (키워드 탐색)
+    3단계: info.totalRevenue (연간)
+    """
     import yfinance as _yf
-    import pandas as _pd2
 
     result = {'ticker': ticker, 'rev': None, 'oi': None,
               'net_debt': None, 'shares': None, 'price': None,
@@ -2789,73 +2792,103 @@ def fetch_edgar_financials(ticker):
     if ticker not in SOTP_CONFIG:
         return None, 'not_supported'
 
-    # GOOG → GOOGL (yfinance는 GOOGL이 더 안정적)
     _yf_ticker = 'GOOGL' if ticker == 'GOOG' else ticker
+
+    def _find_row(df, keywords, anti_keywords=None):
+        """키워드로 row 탐색 (대소문자 무시)"""
+        if df is None or df.empty:
+            return None, None
+        anti_keywords = anti_keywords or []
+        for row in df.index:
+            rl = row.lower().replace(' ', '').replace('_', '')
+            if any(k.lower().replace(' ','') in rl for k in keywords):
+                if not any(a.lower().replace(' ','') in rl for a in anti_keywords):
+                    vals = df.loc[row].iloc[:4].dropna()
+                    if len(vals) > 0 and vals.abs().sum() > 0:
+                        return float(vals.sum()), row
+        return None, None
 
     try:
         t = _yf.Ticker(_yf_ticker)
-        info = t.info
+        info = t.info or {}
 
-        # ── TTM Revenue & Operating Income (최근 4분기 합산) ─────
-        q_inc = t.quarterly_income_stmt
-        REV_ROWS = ['Total Revenue', 'Revenue', 'TotalRevenue',
-                    'Net Revenue', 'Revenues', 'Net Sales',
-                    'RevenueFromContractWithCustomerExcludingAssessedTax']
-        OI_ROWS  = ['Operating Income', 'Operating Income Loss',
-                    'Total Operating Income As Reported',
-                    'OperatingIncome', 'Operating Profit',
-                    'EBIT', 'Ebit']
-        ttm_rev = None
-        ttm_oi  = None
-        print(f'[SOTP] {ticker} quarterly_income_stmt rows: {list(q_inc.index)[:10]}')
-        for row in REV_ROWS:
-            if row in q_inc.index:
-                vals = q_inc.loc[row].iloc[:4]
-                ttm_rev = float(vals.dropna().sum()) / 1e9
-                print(f'[SOTP] {ticker} rev row={row}, TTM={ttm_rev:.1f}B')
-                break
-        for row in OI_ROWS:
-            if row in q_inc.index:
-                vals = q_inc.loc[row].iloc[:4]
-                ttm_oi = float(vals.dropna().sum()) / 1e9
-                break
-        # TTM 기준일
-        if not q_inc.empty:
-            result['ttm_date'] = str(q_inc.columns[0])[:10]
+        # ── 1단계: quarterly TTM ──────────────────────────────────
+        try:
+            q_inc = t.quarterly_income_stmt
+            if q_inc is not None and not q_inc.empty:
+                print(f'[SOTP] {ticker} q_inc rows: {list(q_inc.index)[:8]}')
+                ttm_rev, rev_row = _find_row(q_inc,
+                    ['totalrevenue','revenue','netsales','netsalesorrevenues'],
+                    anti_keywords=['cost','expense','other','interest','gain','loss'])
+                ttm_oi,  oi_row  = _find_row(q_inc,
+                    ['operatingincome','operatingprofit','ebit'],
+                    anti_keywords=['non','other','interest','pretax','minority'])
+                if ttm_rev and ttm_rev > 0:
+                    result['rev'] = ttm_rev / 1e9
+                    result['ttm_date'] = str(q_inc.columns[0])[:10]
+                    print(f'[SOTP] {ticker} TTM rev={result["rev"]:.1f}B row={rev_row}')
+                if ttm_oi:
+                    result['oi'] = ttm_oi / 1e9
+        except Exception as qe:
+            print(f'[SOTP] {ticker} quarterly 실패: {qe}')
 
-        result['rev'] = ttm_rev
-        result['oi']  = ttm_oi
+        # ── 2단계: 연간 income_stmt ───────────────────────────────
+        if not result['rev']:
+            try:
+                a_inc = t.income_stmt
+                if a_inc is not None and not a_inc.empty:
+                    ann_rev, _ = _find_row(a_inc,
+                        ['totalrevenue','revenue','netsales'],
+                        anti_keywords=['cost','expense','other','interest'])
+                    ann_oi,  _ = _find_row(a_inc,
+                        ['operatingincome','operatingprofit','ebit'],
+                        anti_keywords=['non','other','interest','pretax'])
+                    if ann_rev and ann_rev > 0:
+                        result['rev'] = ann_rev / 1e9
+                        result['ttm_date'] = str(a_inc.columns[0])[:10] + ' (연간)'
+                        print(f'[SOTP] {ticker} annual rev={result["rev"]:.1f}B')
+                    if ann_oi and not result['oi']:
+                        result['oi'] = ann_oi / 1e9
+            except Exception as ae:
+                print(f'[SOTP] {ticker} annual 실패: {ae}')
 
-        # ── Net Debt & Shares ──────────────────────────────────────
-        bs = t.balance_sheet
-        cash = 0.0
-        for r in ['Cash And Cash Equivalents',
-                  'Cash Cash Equivalents And Short Term Investments',
-                  'Cash And Short Term Investments']:
-            if r in bs.index:
-                cash = float(bs.loc[r].iloc[0]) / 1e9
-                break
-        debt = 0.0
-        for r in ['Total Debt', 'Long Term Debt And Capital Lease Obligation',
-                  'Long Term Debt']:
-            if r in bs.index:
-                debt = float(bs.loc[r].iloc[0]) / 1e9
-                break
-        result['net_debt'] = round(debt - cash, 2)
-        result['shares']   = float(info.get('sharesOutstanding', 0)) / 1e9
-        result['price']    = float(
+        # ── 3단계: info 폴백 ──────────────────────────────────────
+        if not result['rev']:
+            rev_i = float(info.get('totalRevenue', 0) or 0)
+            if rev_i > 0:
+                result['rev'] = rev_i / 1e9
+                result['ttm_date'] = 'yfinance info (연간)'
+                print(f'[SOTP] {ticker} info rev={result["rev"]:.1f}B')
+        if not result['oi']:
+            oi_i = float(info.get('operatingIncome', 0) or 0)
+            if oi_i:
+                result['oi'] = oi_i / 1e9
+
+        # ── 순부채·주식수·현재가 ───────────────────────────────────
+        try:
+            bs = t.balance_sheet
+            cash = 0.0
+            for r in ['Cash And Cash Equivalents',
+                      'Cash Cash Equivalents And Short Term Investments',
+                      'Cash And Short Term Investments']:
+                if r in bs.index:
+                    cash = float(bs.loc[r].iloc[0]) / 1e9; break
+            debt = 0.0
+            for r in ['Total Debt', 'Long Term Debt And Capital Lease Obligation',
+                      'Long Term Debt']:
+                if r in bs.index:
+                    debt = float(bs.loc[r].iloc[0]) / 1e9; break
+            result['net_debt'] = round(debt - cash, 2)
+        except Exception as be:
+            print(f'[SOTP] {ticker} balance sheet 실패: {be}')
+            result['net_debt'] = 0.0
+
+        result['shares'] = float(info.get('sharesOutstanding', 0) or 0) / 1e9
+        result['price']  = float(
             info.get('currentPrice') or info.get('regularMarketPrice') or 0)
 
-        # yfinance TTM 실패 시 info 연간 폴백
-        if not result['rev'] or result['rev'] == 0:
-            rev_info = float(info.get('totalRevenue', 0) or 0)
-            if rev_info > 0:
-                result['rev'] = rev_info / 1e9
-                print(f'[SOTP] {ticker} rev fallback from info: {result["rev"]:.1f}B')
-        if not result['oi'] or result['oi'] == 0:
-            result['oi'] = float(info.get('operatingIncome', 0) or 0) / 1e9
     except Exception as e:
-        print(f'[SOTP fetch] {ticker}: {e}')
+        print(f'[SOTP fetch] {ticker} 전체 실패: {e}')
 
     if result['rev']:
         return result, 'ok'
@@ -2907,7 +2940,13 @@ def render_sotp_section(ticker_sym, current_price=None):
                 k = f'sotp_{ticker_sym}_{i}'
                 if k in st.session_state:
                     del st.session_state[k]
-            st.rerun()
+            try:
+                st.rerun()
+            except Exception:
+                try:
+                    st.experimental_rerun()
+                except Exception:
+                    pass
 
     # ── 세그먼트 카드 + 슬라이더 ─────────────────────────────────
     seg_mults  = []
