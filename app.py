@@ -2273,6 +2273,20 @@ HYPSCALER_GUIDANCE = {
 HYPSCALER_GUIDANCE_TOTAL = sum(HYPSCALER_GUIDANCE.values())   # 710
 HYPSCALER_GUIDANCE_NOTE  = '2026년 Q1 실적발표 기준 (2026년 4~5월 공시) — 캘린더 연간 기준'
 
+# 하이퍼스케일러 회사명·색상 (render_hyperscaler_tab + _render_company_section 공용)
+_COMPANY_NAMES  = {
+    'MSFT':  'Microsoft',
+    'GOOGL': 'Alphabet (Google)',
+    'AMZN':  'Amazon',
+    'META':  'Meta Platforms',
+}
+_COMPANY_COLORS = {
+    'MSFT':  '#4a9eff',
+    'GOOGL': '#f9e2af',
+    'AMZN':  '#fab387',
+    'META':  '#cba6f7',
+}
+
 @st.cache_data(ttl=3600)
 def fetch_hyperscaler_data():
     """MSFT·GOOGL·AMZN·META 하이브리드 재무 취득
