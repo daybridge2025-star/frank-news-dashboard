@@ -2637,98 +2637,138 @@ def render_hyperscaler_tab():
 # ════════════════════════════════════════════════════════════════
 SOTP_CONFIG = {
     'MSFT': {
-        'name': 'Microsoft', 'fy_note': 'FY2024 (10-K 2024.07)',
+        'name': 'Microsoft', 'fy_note': 'FY2024 10-K',
         'segments': [
-            {'name': 'Productivity & Business Processes',
-             'pct': 0.328, 'method': 'EV/Rev', 'mult': 10.0, 'rng': (4.0, 22.0),
-             'desc': 'Office 365, LinkedIn, Dynamics'},
             {'name': 'Intelligent Cloud',
-             'pct': 0.432, 'method': 'EV/Rev', 'mult': 14.0, 'rng': (6.0, 28.0),
-             'desc': 'Azure, Server & Tools'},
+             'pct': 0.432, 'method': 'EV/Rev',
+             'mult': 14.0, 'mult_c': 9.0, 'mult_a': 22.0, 'rng': (4.0, 28.0),
+             'desc': 'Azure, Server & Tools',
+             'growth_est': 22.0, 'oi_margin_est': 43.0},
+            {'name': 'Productivity & Business Processes',
+             'pct': 0.328, 'method': 'EV/Rev',
+             'mult': 10.0, 'mult_c': 7.0, 'mult_a': 16.0, 'rng': (4.0, 22.0),
+             'desc': 'Office 365, LinkedIn, Dynamics',
+             'growth_est': 12.0, 'oi_margin_est': 52.0},
             {'name': 'More Personal Computing',
-             'pct': 0.240, 'method': 'EV/Rev', 'mult': 5.0, 'rng': (2.0, 12.0),
-             'desc': 'Windows, Xbox, Surface, Search'},
+             'pct': 0.240, 'method': 'EV/Rev',
+             'mult': 5.0, 'mult_c': 3.0, 'mult_a': 9.0, 'rng': (2.0, 12.0),
+             'desc': 'Windows, Xbox, Surface, Bing',
+             'growth_est': 4.0, 'oi_margin_est': 24.0},
         ],
     },
     'GOOGL': {
-        'name': 'Alphabet', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'name': 'Alphabet', 'fy_note': 'FY2024 10-K',
         'segments': [
             {'name': 'Google Services',
-             'pct': 0.875, 'method': 'EV/Rev', 'mult': 7.0, 'rng': (3.0, 15.0),
-             'desc': 'Search, YouTube, Maps, Ads, Play'},
+             'pct': 0.875, 'method': 'EV/Rev',
+             'mult': 7.0, 'mult_c': 5.0, 'mult_a': 12.0, 'rng': (3.0, 15.0),
+             'desc': 'Search, YouTube, Ads, Maps, Play',
+             'growth_est': 13.0, 'oi_margin_est': 39.0},
             {'name': 'Google Cloud',
-             'pct': 0.115, 'method': 'EV/Rev', 'mult': 12.0, 'rng': (5.0, 25.0),
-             'desc': 'GCP, Workspace'},
+             'pct': 0.115, 'method': 'EV/Rev',
+             'mult': 12.0, 'mult_c': 8.0, 'mult_a': 20.0, 'rng': (5.0, 25.0),
+             'desc': 'GCP, Workspace',
+             'growth_est': 30.0, 'oi_margin_est': 17.0},
             {'name': 'Other Bets',
-             'pct': 0.010, 'method': 'EV/Rev', 'mult': 0.0, 'rng': (0.0, 5.0),
-             'desc': 'Waymo, DeepMind 등 (손실 구조)'},
+             'pct': 0.010, 'method': 'EV/Rev',
+             'mult': 0.0, 'mult_c': 0.0, 'mult_a': 5.0, 'rng': (0.0, 8.0),
+             'desc': 'Waymo, DeepMind 등 (손실)',
+             'growth_est': 20.0, 'oi_margin_est': -400.0},
         ],
     },
     'AMZN': {
-        'name': 'Amazon', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'name': 'Amazon', 'fy_note': 'FY2024 10-K',
         'segments': [
-            {'name': 'North America',
-             'pct': 0.595, 'method': 'EV/Rev', 'mult': 1.5, 'rng': (0.5, 4.0),
-             'desc': '미국·캐나다 이커머스·광고'},
-            {'name': 'International',
-             'pct': 0.248, 'method': 'EV/Rev', 'mult': 0.8, 'rng': (0.2, 3.0),
-             'desc': '글로벌 이커머스 (적자 구간 포함)'},
             {'name': 'AWS',
-             'pct': 0.157, 'method': 'EV/Rev', 'mult': 16.0, 'rng': (8.0, 30.0),
-             'desc': '클라우드 인프라 (전체 영업이익 대부분)'},
+             'pct': 0.157, 'method': 'EV/Rev',
+             'mult': 16.0, 'mult_c': 10.0, 'mult_a': 24.0, 'rng': (6.0, 30.0),
+             'desc': '클라우드 인프라 (전체 영업이익 핵심)',
+             'growth_est': 19.0, 'oi_margin_est': 37.0},
+            {'name': 'North America',
+             'pct': 0.595, 'method': 'EV/Rev',
+             'mult': 1.5, 'mult_c': 0.8, 'mult_a': 3.0, 'rng': (0.3, 5.0),
+             'desc': '미국·캐나다 이커머스·광고',
+             'growth_est': 10.0, 'oi_margin_est': 6.0},
+            {'name': 'International',
+             'pct': 0.248, 'method': 'EV/Rev',
+             'mult': 0.8, 'mult_c': 0.3, 'mult_a': 2.0, 'rng': (0.0, 4.0),
+             'desc': '글로벌 이커머스 (수익성 회복 중)',
+             'growth_est': 9.0, 'oi_margin_est': 2.0},
         ],
     },
     'META': {
-        'name': 'Meta Platforms', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'name': 'Meta Platforms', 'fy_note': 'FY2024 10-K',
         'segments': [
             {'name': 'Family of Apps',
-             'pct': 0.983, 'method': 'EV/Rev', 'mult': 7.0, 'rng': (3.0, 15.0),
-             'desc': 'Facebook, Instagram, WhatsApp, Messenger'},
+             'pct': 0.983, 'method': 'EV/Rev',
+             'mult': 7.0, 'mult_c': 5.0, 'mult_a': 12.0, 'rng': (3.0, 16.0),
+             'desc': 'Facebook, Instagram, WhatsApp, Ads',
+             'growth_est': 19.0, 'oi_margin_est': 57.0},
             {'name': 'Reality Labs',
-             'pct': 0.017, 'method': 'EV/Rev', 'mult': 0.0, 'rng': (0.0, 8.0),
-             'desc': 'VR/AR 하드웨어·소프트웨어 (대규모 적자)'},
+             'pct': 0.017, 'method': 'EV/Rev',
+             'mult': 0.0, 'mult_c': 0.0, 'mult_a': 5.0, 'rng': (0.0, 10.0),
+             'desc': 'VR/AR 하드웨어 (대규모 적자)',
+             'growth_est': 28.0, 'oi_margin_est': -170.0},
         ],
     },
     'AAPL': {
-        'name': 'Apple', 'fy_note': 'FY2024 (10-K 2024.11)',
+        'name': 'Apple', 'fy_note': 'FY2024 10-K',
         'segments': [
             {'name': 'Products',
-             'pct': 0.754, 'method': 'EV/Rev', 'mult': 4.0, 'rng': (2.0, 9.0),
-             'desc': 'iPhone, Mac, iPad, Wearables & Accessories'},
+             'pct': 0.754, 'method': 'EV/Rev',
+             'mult': 4.0, 'mult_c': 2.5, 'mult_a': 7.0, 'rng': (1.5, 10.0),
+             'desc': 'iPhone, Mac, iPad, Wearables',
+             'growth_est': 4.0, 'oi_margin_est': 37.0},
             {'name': 'Services',
-             'pct': 0.246, 'method': 'EV/Rev', 'mult': 12.0, 'rng': (5.0, 25.0),
-             'desc': 'App Store, Apple TV+, iCloud, Apple Pay'},
+             'pct': 0.246, 'method': 'EV/Rev',
+             'mult': 12.0, 'mult_c': 8.0, 'mult_a': 20.0, 'rng': (5.0, 28.0),
+             'desc': 'App Store, Apple TV+, iCloud, Pay',
+             'growth_est': 14.0, 'oi_margin_est': 74.0},
         ],
     },
     'NVDA': {
-        'name': 'NVIDIA', 'fy_note': 'FY2025 (10-K 2025.02)',
+        'name': 'NVIDIA', 'fy_note': 'FY2025 10-K',
         'segments': [
             {'name': 'Data Center',
-             'pct': 0.882, 'method': 'EV/Rev', 'mult': 18.0, 'rng': (8.0, 35.0),
-             'desc': 'AI GPU (H100/H200/B200), NVLink, DGX'},
+             'pct': 0.882, 'method': 'EV/Rev',
+             'mult': 18.0, 'mult_c': 10.0, 'mult_a': 28.0, 'rng': (5.0, 35.0),
+             'desc': 'AI GPU H100/H200/B200, NVLink',
+             'growth_est': 142.0, 'oi_margin_est': 68.0},
             {'name': 'Gaming',
-             'pct': 0.083, 'method': 'EV/Rev', 'mult': 6.0, 'rng': (3.0, 12.0),
-             'desc': 'GeForce GPU, SHIELD'},
+             'pct': 0.083, 'method': 'EV/Rev',
+             'mult': 6.0, 'mult_c': 3.5, 'mult_a': 10.0, 'rng': (2.0, 14.0),
+             'desc': 'GeForce GPU, SHIELD',
+             'growth_est': 9.0, 'oi_margin_est': 40.0},
             {'name': 'Professional Visualization',
-             'pct': 0.020, 'method': 'EV/Rev', 'mult': 8.0, 'rng': (3.0, 15.0),
-             'desc': 'Quadro / RTX Pro 워크스테이션'},
+             'pct': 0.020, 'method': 'EV/Rev',
+             'mult': 8.0, 'mult_c': 4.0, 'mult_a': 14.0, 'rng': (2.0, 18.0),
+             'desc': 'RTX Pro 워크스테이션',
+             'growth_est': 17.0, 'oi_margin_est': 45.0},
             {'name': 'Automotive & OEM',
-             'pct': 0.015, 'method': 'EV/Rev', 'mult': 8.0, 'rng': (3.0, 20.0),
-             'desc': 'DRIVE 플랫폼, OEM & IP'},
+             'pct': 0.015, 'method': 'EV/Rev',
+             'mult': 8.0, 'mult_c': 4.0, 'mult_a': 15.0, 'rng': (2.0, 22.0),
+             'desc': 'DRIVE 플랫폼, IP',
+             'growth_est': 55.0, 'oi_margin_est': 30.0},
         ],
     },
     'TSLA': {
-        'name': 'Tesla', 'fy_note': 'FY2024 (10-K 2025.01)',
+        'name': 'Tesla', 'fy_note': 'FY2024 10-K',
         'segments': [
             {'name': 'Automotive',
-             'pct': 0.780, 'method': 'EV/Rev', 'mult': 4.0, 'rng': (1.0, 10.0),
-             'desc': '차량 판매·리스, FSD 소프트웨어'},
+             'pct': 0.780, 'method': 'EV/Rev',
+             'mult': 4.0, 'mult_c': 1.5, 'mult_a': 8.0, 'rng': (0.8, 12.0),
+             'desc': '차량 판매·리스, FSD 소프트웨어',
+             'growth_est': -6.0, 'oi_margin_est': 8.0},
             {'name': 'Energy Generation & Storage',
-             'pct': 0.112, 'method': 'EV/Rev', 'mult': 5.0, 'rng': (2.0, 12.0),
-             'desc': 'Powerwall, Megapack, 태양광'},
+             'pct': 0.112, 'method': 'EV/Rev',
+             'mult': 5.0, 'mult_c': 2.5, 'mult_a': 9.0, 'rng': (1.0, 14.0),
+             'desc': 'Powerwall, Megapack, 태양광',
+             'growth_est': 67.0, 'oi_margin_est': 24.0},
             {'name': 'Services & Other',
-             'pct': 0.108, 'method': 'EV/Rev', 'mult': 2.0, 'rng': (0.5, 6.0),
-             'desc': '수퍼차저, 보험, 차량 수리'},
+             'pct': 0.108, 'method': 'EV/Rev',
+             'mult': 2.0, 'mult_c': 0.8, 'mult_a': 4.0, 'rng': (0.3, 7.0),
+             'desc': '수퍼차저, 보험, 차량 수리',
+             'growth_est': 27.0, 'oi_margin_est': 10.0},
         ],
     },
 }
@@ -2736,85 +2776,70 @@ SOTP_CONFIG = {
 
 @st.cache_data(ttl=86400)
 def fetch_edgar_financials(ticker):
-    """EDGAR companyfacts에서 전사 Revenue·OperatingIncome·Cash·Debt·Shares 취득"""
-    import requests as _req
+    """TTM Revenue·OI·NetDebt·Shares: yfinance quarterly 합산 + EDGAR 보완"""
     import yfinance as _yf
-    H = {'User-Agent': 'valuehunter daybridge2025@gmail.com'}
-
-    # CIK 조회
-    _CIK_MAP = {
-        'MSFT': '0000789019', 'GOOGL': '0001652044', 'AMZN': '0001018724',
-        'META': '0001326801', 'AAPL': '0000320193', 'NVDA': '0001045810',
-        'TSLA': '0001318605',
-    }
-    cik = _CIK_MAP.get(ticker)
-    if not cik:
-        return None, 'not_supported'
+    import pandas as _pd2
 
     result = {'ticker': ticker, 'rev': None, 'oi': None,
-              'net_debt': None, 'shares': None, 'currency': 'USD'}
+              'net_debt': None, 'shares': None, 'price': None,
+              'ttm_date': '', 'currency': 'USD'}
 
-    # EDGAR companyfacts
-    try:
-        url = f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json'
-        r = _req.get(url, headers=H, timeout=20)
-        if r.ok:
-            facts = r.json().get('facts', {}).get('us-gaap', {})
+    if ticker not in SOTP_CONFIG:
+        return None, 'not_supported'
 
-            def _latest_annual(concept_list):
-                for concept in concept_list:
-                    data = facts.get(concept, {}).get('units', {}).get('USD', [])
-                    # 10-K 연간만, segment 없는 것(consolidated), 최신순
-                    ann = [x for x in data
-                           if x.get('form') == '10-K'
-                           and 'segment' not in x
-                           and x.get('fp') == 'FY']
-                    if ann:
-                        ann.sort(key=lambda x: x.get('end', ''), reverse=True)
-                        return ann[0]['val'] / 1e9, ann[0]['end']
-                return None, None
-
-            rev, rev_dt = _latest_annual([
-                'RevenueFromContractWithCustomerExcludingAssessedTax',
-                'Revenues', 'SalesRevenueNet',
-            ])
-            oi, oi_dt = _latest_annual(['OperatingIncomeLoss'])
-            result['rev'] = rev
-            result['oi']  = oi
-            result['rev_date'] = rev_dt
-            print(f'[EDGAR] {ticker}: rev={rev:.1f}B oi={oi}B' if rev else f'[EDGAR] {ticker}: rev 없음')
-    except Exception as e:
-        print(f'[EDGAR] {ticker}: {e}')
-
-    # 순부채·주식수: yfinance 보완
     try:
         t = _yf.Ticker(ticker)
-        bs = t.balance_sheet
         info = t.info
-        # 현금성 자산
-        cash = 0.0
-        for _r in ['Cash And Cash Equivalents', 'Cash Cash Equivalents And Short Term Investments',
-                   'Cash And Short Term Investments']:
-            if _r in bs.index:
-                cash = float(bs.loc[_r].iloc[0]) / 1e9
+
+        # ── TTM Revenue & Operating Income (최근 4분기 합산) ─────
+        q_inc = t.quarterly_income_stmt
+        REV_ROWS = ['Total Revenue', 'Revenue']
+        OI_ROWS  = ['Operating Income', 'Operating Income Loss',
+                    'Total Operating Income As Reported']
+        ttm_rev = None
+        ttm_oi  = None
+        for row in REV_ROWS:
+            if row in q_inc.index:
+                ttm_rev = float(q_inc.loc[row].iloc[:4].sum()) / 1e9
                 break
-        # 총부채
+        for row in OI_ROWS:
+            if row in q_inc.index:
+                ttm_oi = float(q_inc.loc[row].iloc[:4].sum()) / 1e9
+                break
+        # TTM 기준일
+        if not q_inc.empty:
+            result['ttm_date'] = str(q_inc.columns[0])[:10]
+
+        result['rev'] = ttm_rev
+        result['oi']  = ttm_oi
+
+        # ── Net Debt & Shares ──────────────────────────────────────
+        bs = t.balance_sheet
+        cash = 0.0
+        for r in ['Cash And Cash Equivalents',
+                  'Cash Cash Equivalents And Short Term Investments',
+                  'Cash And Short Term Investments']:
+            if r in bs.index:
+                cash = float(bs.loc[r].iloc[0]) / 1e9
+                break
         debt = 0.0
-        for _r in ['Total Debt', 'Long Term Debt And Capital Lease Obligation',
-                   'Long Term Debt']:
-            if _r in bs.index:
-                debt = float(bs.loc[_r].iloc[0]) / 1e9
+        for r in ['Total Debt', 'Long Term Debt And Capital Lease Obligation',
+                  'Long Term Debt']:
+            if r in bs.index:
+                debt = float(bs.loc[r].iloc[0]) / 1e9
                 break
         result['net_debt'] = round(debt - cash, 2)
         result['shares']   = float(info.get('sharesOutstanding', 0)) / 1e9
-        result['price']    = float(info.get('currentPrice', 0) or info.get('regularMarketPrice', 0))
-        # EDGAR rev 실패 시 yfinance 보완
-        if result['rev'] is None:
+        result['price']    = float(
+            info.get('currentPrice') or info.get('regularMarketPrice') or 0)
+
+        # yfinance TTM 실패 시 info 연간 폴백
+        if not result['rev']:
             result['rev'] = float(info.get('totalRevenue', 0)) / 1e9
-        if result['oi'] is None:
-            result['oi'] = float(info.get('operatingIncome', 0) or 0) / 1e9
+        if not result['oi']:
+            result['oi']  = float(info.get('operatingIncome', 0) or 0) / 1e9
     except Exception as e:
-        print(f'[yfinance SOTP] {ticker}: {e}')
+        print(f'[SOTP fetch] {ticker}: {e}')
 
     if result['rev']:
         return result, 'ok'
@@ -2822,131 +2847,203 @@ def fetch_edgar_financials(ticker):
 
 
 def render_sotp_section(ticker_sym, current_price=None):
-    """SOTP 분석 expander 렌더링"""
+    """SOTP 분석 — TTM 기반, 멀티플 가이드 트랙 + 3가지 시나리오"""
     import plotly.graph_objects as _go3
 
     cfg = SOTP_CONFIG.get(ticker_sym)
     if not cfg:
         st.markdown(
-            '<div style="font-size:0.78rem;color:#7f849c;padding:8px 0;">'
-            '현재 SOTP 지원 종목: MSFT · GOOGL · AMZN · META · AAPL · NVDA · TSLA<br>'
+            '<div style="font-size:0.78rem;color:#7f849c;padding:6px 0;">'
+            '현재 SOTP 지원 종목: <b>MSFT · GOOGL · AMZN · META · AAPL · NVDA · TSLA</b><br>'
             '기타 종목은 추후 추가 예정입니다.</div>',
             unsafe_allow_html=True)
         return
 
     fin, status = fetch_edgar_financials(ticker_sym)
-    if fin is None or fin.get('rev') is None:
+    if fin is None or not fin.get('rev'):
         st.warning('재무 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.')
         return
 
-    total_rev  = fin['rev']       # 십억달러
-    total_oi   = fin.get('oi') or 0.0
-    net_debt   = fin.get('net_debt') or 0.0
-    shares     = fin.get('shares') or 0.0
-    price      = current_price or fin.get('price') or 0.0
-    rev_date   = fin.get('rev_date', '')
+    total_rev = fin['rev']
+    net_debt  = fin.get('net_debt') or 0.0
+    shares    = fin.get('shares') or 0.0
+    price     = current_price or fin.get('price') or 0.0
+    ttm_date  = fin.get('ttm_date', '')
+    segs      = cfg['segments']
+    n         = len(segs)
 
-    segs = cfg['segments']
-    n    = len(segs)
+    # ── 헤더: TTM 배지 + 컨센서스 초기화 ────────────────────────
+    _h1, _h2 = st.columns([3, 1])
+    with _h1:
+        st.markdown(
+            f'<div style="font-size:0.72rem;color:#7f849c;margin-bottom:4px;">'
+            f'<span style="background:#1e3a5f;color:#89b4fa;padding:2px 7px;'
+            f'border-radius:5px;font-size:0.68rem;margin-right:6px;">'
+            f'TTM 기준</span>'
+            f'EDGAR 10-Q 최근 4분기 합산 · {ttm_date} · 세그먼트 비율: {cfg["fy_note"]}'
+            f'</div>',
+            unsafe_allow_html=True)
+    with _h2:
+        if st.button('↺ 컨센서스 초기화',
+                     key=f'sotp_reset_{ticker_sym}',
+                     use_container_width=True):
+            for i in range(n):
+                k = f'sotp_{ticker_sym}_{i}'
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
 
-    # ── 데이터 소스 안내 ─────────────────────────────────────────
-    st.markdown(
-        f'<div style="font-size:0.72rem;color:#7f849c;margin-bottom:10px;">'
-        f'📌 전사 매출 출처: SEC EDGAR 10-K ({rev_date[:7] if rev_date else "최근 연간"}) · '
-        f'세그먼트 비율: {cfg["fy_note"]} · 멀티플: 슬라이더로 조정 가능</div>',
-        unsafe_allow_html=True)
-
-    # ── 멀티플 슬라이더 ──────────────────────────────────────────
-    st.markdown('<div style="font-size:0.78rem;color:#a6adc8;margin-bottom:6px;font-weight:600;">세그먼트별 EV/Revenue 멀티플 조정</div>',
-                unsafe_allow_html=True)
-
-    mults = []
-    _cols = st.columns(n)
-    for i, seg in enumerate(segs):
-        with _cols[i]:
-            mv = st.slider(
-                seg['name'].split('/')[0][:18],
-                min_value=float(seg['rng'][0]),
-                max_value=float(seg['rng'][1]),
-                value=float(seg['mult']),
-                step=0.5,
-                key=f'sotp_{ticker_sym}_{i}',
-                help=seg['desc'],
-            )
-            mults.append(mv)
+    # ── 세그먼트 카드 + 슬라이더 ─────────────────────────────────
+    seg_mults  = []
+    ncols = min(n, 3)
+    col_chunks = [segs[i:i+ncols] for i in range(0, n, ncols)]
+    idx = 0
+    for chunk in col_chunks:
+        cols = st.columns(len(chunk))
+        for ci, seg in enumerate(chunk):
+            with cols[ci]:
+                r40 = seg['growth_est'] + seg['oi_margin_est']
+                r40_color = '#a6e3a1' if r40 >= 40 else '#f9e2af' if r40 >= 20 else '#f38ba8'
+                r40_icon  = '✓' if r40 >= 40 else '△' if r40 >= 20 else '✕'
+                # 카드 헤더
+                st.markdown(
+                    f'<div style="background:#1e1e2e;border:1px solid #313244;'
+                    f'border-radius:8px;padding:8px 10px;margin-bottom:4px;">'
+                    f'<div style="font-size:0.72rem;font-weight:600;color:#cdd6f4;'
+                    f'margin-bottom:2px;">{seg["name"]}</div>'
+                    f'<div style="font-size:0.65rem;color:#6c7086;margin-bottom:6px;">'
+                    f'{seg["desc"][:35]}</div>'
+                    f'<div style="display:flex;justify-content:space-between;'
+                    f'align-items:center;">'
+                    f'<span style="font-size:0.65rem;color:#7f849c;">'
+                    f'매출비중 {seg["pct"]*100:.1f}%</span>'
+                    f'<span style="font-size:0.65rem;color:{r40_color};">'
+                    f'Rule of 40: {r40:.0f} {r40_icon}</span>'
+                    f'</div></div>',
+                    unsafe_allow_html=True)
+                # 슬라이더
+                mv = st.slider(
+                    'EV/Rev',
+                    min_value=float(seg['rng'][0]),
+                    max_value=float(seg['rng'][1]),
+                    value=float(seg['mult']),
+                    step=0.5,
+                    key=f'sotp_{ticker_sym}_{idx}',
+                    label_visibility='collapsed',
+                )
+                seg_mults.append(mv)
+                # 가이드 트랙 표시
+                lo, hi = seg['rng']
+                rng_w  = hi - lo if hi != lo else 1
+                c_pct  = (seg['mult_c'] - lo) / rng_w * 100
+                f_pct  = (seg['mult']   - lo) / rng_w * 100
+                a_pct  = (seg['mult_a'] - lo) / rng_w * 100
+                thumb  = (mv - lo) / rng_w * 100
+                st.markdown(
+                    f'<div style="position:relative;height:6px;border-radius:3px;'
+                    f'background:#313244;margin:-6px 0 2px;">'
+                    f'<div style="position:absolute;left:0;width:{c_pct:.0f}%;'
+                    f'height:6px;border-radius:3px 0 0 3px;background:#1a4731;"></div>'
+                    f'<div style="position:absolute;left:{c_pct:.0f}%;'
+                    f'width:{a_pct-c_pct:.0f}%;height:6px;background:#3b3020;"></div>'
+                    f'<div style="position:absolute;left:{a_pct:.0f}%;'
+                    f'width:{100-a_pct:.0f}%;height:6px;border-radius:0 3px 3px 0;'
+                    f'background:#3b1a1a;"></div>'
+                    f'</div>'
+                    f'<div style="display:flex;justify-content:space-between;'
+                    f'font-size:0.6rem;color:#585b70;margin-bottom:4px;">'
+                    f'<span style="color:#a6e3a1;">보수적 {seg["mult_c"]:.0f}x</span>'
+                    f'<span style="color:#f9e2af;">적정 {seg["mult"]:.0f}x</span>'
+                    f'<span style="color:#f38ba8;">공격적 {seg["mult_a"]:.0f}x</span>'
+                    f'</div>',
+                    unsafe_allow_html=True)
+                idx += 1
 
     # ── SOTP 계산 ─────────────────────────────────────────────────
     seg_revs = [total_rev * seg['pct'] for seg in segs]
-    seg_evs  = [rev * m for rev, m in zip(seg_revs, mults)]
+    seg_evs  = [rev * m for rev, m in zip(seg_revs, seg_mults)]
     total_ev = sum(seg_evs)
     eq_val   = total_ev - net_debt
-    sotp_per_share = eq_val / shares if shares > 0 else 0.0
-    updown   = (sotp_per_share / price - 1) * 100 if price > 0 else 0.0
+    sotp_per = eq_val / shares if shares > 0 else 0.0
+    updown   = (sotp_per / price - 1) * 100 if price > 0 else 0.0
 
-    # ── 요약 카드 ─────────────────────────────────────────────────
+    # 3 시나리오
+    def _scenario(mult_key):
+        evs = [total_rev * seg['pct'] * seg[mult_key] for seg in segs]
+        eq  = sum(evs) - net_debt
+        return eq / shares if shares > 0 else 0.0
+
+    sotp_c = _scenario('mult_c')
+    sotp_f = _scenario('mult')
+    sotp_a = _scenario('mult_a')
+
+    # ── 요약 메트릭 ───────────────────────────────────────────────
+    st.markdown('<div style="margin:8px 0 4px 0;border-top:1px solid #313244;"></div>',
+                unsafe_allow_html=True)
     _mc1, _mc2, _mc3, _mc4 = st.columns(4)
     with _mc1:
-        st.metric('전사 매출', f'${total_rev:.0f}B')
+        st.metric('TTM 전사 매출', f'${total_rev:.0f}B')
     with _mc2:
-        st.metric('합산 EV', f'${total_ev:.0f}B')
+        st.metric('합산 EV (현재 설정)', f'${total_ev:.0f}B')
     with _mc3:
-        nd_lbl = f'({"-" if net_debt>0 else "+"})${abs(net_debt):.0f}B'
-        st.metric('순부채 차감', nd_lbl)
+        nd_lbl = f'-${abs(net_debt):.0f}B' if net_debt > 0 else f'+${abs(net_debt):.0f}B'
+        st.metric('순부채', nd_lbl)
     with _mc4:
         _delta_clr = 'normal' if updown >= 0 else 'inverse'
-        st.metric('SOTP 주당가치', f'${sotp_per_share:.1f}',
-                  delta=f'{updown:+.1f}% vs 현재가',
-                  delta_color=_delta_clr if updown >= 0 else 'inverse')
+        st.metric('SOTP 주당 가치', f'${sotp_per:.1f}',
+                  delta=f'{updown:+.1f}% vs ${price:.0f}',
+                  delta_color=_delta_clr)
 
     # ── 세그먼트 테이블 ───────────────────────────────────────────
     tbl_rows = ''
-    for seg, rev, m, ev in zip(segs, seg_revs, mults, seg_evs):
+    for seg, rev, m, ev in zip(segs, seg_revs, seg_mults, seg_evs):
         pct_ev = ev / total_ev * 100 if total_ev > 0 else 0
+        r40 = seg['growth_est'] + seg['oi_margin_est']
+        r40c = '#a6e3a1' if r40 >= 40 else '#f9e2af' if r40 >= 20 else '#f38ba8'
         tbl_rows += (
-            f'<tr>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#cdd6f4">{seg["name"]}</td>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#7f849c">{seg["desc"][:30]}</td>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#a6adc8;text-align:right">{seg["pct"]*100:.1f}%</td>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#f9e2af;text-align:right">${rev:.1f}B</td>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#89dceb;text-align:right">{m:.1f}x</td>'
-            f'<td style="padding:5px 10px;font-size:0.75rem;color:#a6e3a1;font-weight:600;text-align:right">${ev:.1f}B</td>'
-            f'<td style="padding:5px 10px;font-size:0.72rem;color:#585b70;text-align:right">{pct_ev:.1f}%</td>'
+            f'<tr style="border-bottom:1px solid #181825;">'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:#cdd6f4">{seg["name"]}</td>'
+            f'<td style="padding:5px 8px;font-size:0.7rem;color:#7f849c">{seg["desc"][:28]}</td>'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:#a6adc8;text-align:right">{seg["pct"]*100:.1f}%</td>'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:#f9e2af;text-align:right">${rev:.1f}B</td>'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:{r40c};text-align:center">{r40:.0f}</td>'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:#89dceb;text-align:right">{m:.1f}x</td>'
+            f'<td style="padding:5px 8px;font-size:0.72rem;color:#a6e3a1;font-weight:600;text-align:right">${ev:.1f}B</td>'
+            f'<td style="padding:5px 8px;font-size:0.7rem;color:#585b70;text-align:right">{pct_ev:.1f}%</td>'
             f'</tr>'
         )
-    # 합계 행
     tbl_rows += (
         f'<tr style="border-top:1px solid #45475a;">'
-        f'<td colspan="3" style="padding:6px 10px;font-size:0.75rem;color:#a6adc8;font-weight:600">합계</td>'
-        f'<td style="padding:6px 10px;font-size:0.75rem;color:#f9e2af;font-weight:600;text-align:right">${total_rev:.1f}B</td>'
-        f'<td style="padding:6px 10px;font-size:0.75rem;color:#89dceb;text-align:right">—</td>'
-        f'<td style="padding:6px 10px;font-size:0.75rem;color:#a6e3a1;font-weight:600;text-align:right">${total_ev:.1f}B</td>'
-        f'<td style="padding:6px 10px;font-size:0.75rem;color:#585b70;text-align:right">100%</td>'
+        f'<td colspan="3" style="padding:6px 8px;font-size:0.72rem;color:#a6adc8;font-weight:600">합계</td>'
+        f'<td style="padding:6px 8px;font-size:0.72rem;color:#f9e2af;font-weight:600;text-align:right">${total_rev:.1f}B</td>'
+        f'<td style="padding:6px 8px;text-align:center;color:#585b70">—</td>'
+        f'<td style="padding:6px 8px;color:#585b70;text-align:right">—</td>'
+        f'<td style="padding:6px 8px;font-size:0.72rem;color:#a6e3a1;font-weight:600;text-align:right">${total_ev:.1f}B</td>'
+        f'<td style="padding:6px 8px;font-size:0.7rem;color:#585b70;text-align:right">100%</td>'
         f'</tr>'
     )
-
     st.markdown(
-        f'<div style="overflow-x:auto;margin:10px 0;">'
+        f'<div style="overflow-x:auto;margin:6px 0;">'
         f'<table style="width:100%;border-collapse:collapse;">'
         f'<thead><tr style="border-bottom:1px solid #313244;">'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:left">세그먼트</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:left">주요 사업</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">매출 비중</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">세그먼트 매출</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">EV/Rev 멀티플</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">세그먼트 EV</th>'
-        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">EV 기여</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:left">세그먼트</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:left">주요 사업</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:right">비중</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:right">TTM 매출</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:center">Rule of 40</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:right">멀티플</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:right">세그먼트 EV</th>'
+        f'<th style="padding:4px 8px;font-size:0.68rem;color:#6c7086;text-align:right">EV 기여</th>'
         f'</tr></thead><tbody>{tbl_rows}</tbody></table></div>',
         unsafe_allow_html=True,
     )
 
     # ── EV 워터폴 차트 ────────────────────────────────────────────
-    names  = [s['name'].split('/')[0][:15] for s in segs] + ['순부채 차감', 'Equity Value']
-    values = seg_evs + [-net_debt, 0]
-    colors = ['#89b4fa'] * n + ['#f38ba8', '#a6e3a1']
+    names   = [s['name'].split('/')[0][:14] for s in segs] + ['순부채', 'Equity Value']
+    values  = seg_evs + [-net_debt, 0]
     measure = ['relative'] * n + ['relative', 'total']
     fig3 = _go3.Figure(_go3.Waterfall(
-        name='SOTP', orientation='v',
-        measure=measure,
+        name='SOTP', orientation='v', measure=measure,
         x=names, y=values,
         text=[f'${v:.0f}B' for v in values],
         textposition='outside',
@@ -2956,46 +3053,52 @@ def render_sotp_section(ticker_sym, current_price=None):
         totals=dict(marker=dict(color='#a6e3a1')),
     ))
     fig3.update_layout(
-        height=300,
-        margin=dict(l=40, r=20, t=30, b=60),
+        height=280, margin=dict(l=40, r=15, t=25, b=55),
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#cdd6f4', size=10),
         xaxis=dict(tickangle=-20),
-        yaxis=dict(gridcolor='#313244', showgrid=True,
-                   title='십억달러 (B)', zeroline=True, zerolinecolor='#45475a'),
+        yaxis=dict(gridcolor='#313244', showgrid=True, title='십억달러 (B)',
+                   zeroline=True, zerolinecolor='#45475a'),
         showlegend=False,
     )
     st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
 
-    # ── 현재가 vs SOTP 비교 바 ────────────────────────────────────
-    if price > 0 and sotp_per_share > 0:
-        gap_clr = '#a6e3a1' if sotp_per_share > price else '#f38ba8'
-        gap_txt = '저평가' if sotp_per_share > price else '고평가'
-        ratio   = min(sotp_per_share, price) / max(sotp_per_share, price) * 100
-        st.markdown(
-            f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
-            f'padding:12px 16px;margin:4px 0;">'
-            f'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
-            f'<span style="font-size:0.75rem;color:#a6adc8;">현재가 <b>${price:.1f}</b></span>'
-            f'<span style="font-size:0.75rem;color:{gap_clr};font-weight:600;">'
-            f'{gap_txt} {abs(updown):.1f}%</span>'
-            f'<span style="font-size:0.75rem;color:#a6adc8;">SOTP <b>${sotp_per_share:.1f}</b></span>'
-            f'</div>'
-            f'<div style="background:#313244;border-radius:4px;height:8px;position:relative;">'
-            f'<div style="background:{gap_clr};height:8px;border-radius:4px;'
-            f'width:{ratio:.0f}%;"></div>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+    # ── 3 시나리오 비교 ───────────────────────────────────────────
+    def _pct(v): return f'{(v/price-1)*100:+.1f}%' if price > 0 else '—'
+    def _clr(v): return '#a6e3a1' if price > 0 and v > price else '#f38ba8'
+    st.markdown(
+        f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:4px 0 8px 0;">'
+        f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+        f'padding:10px 12px;text-align:center;">'
+        f'<div style="font-size:0.68rem;color:#6c7086;margin-bottom:4px;">보수적 시나리오</div>'
+        f'<div style="font-size:1.1rem;font-weight:600;color:{_clr(sotp_c)};">${sotp_c:.1f}</div>'
+        f'<div style="font-size:0.68rem;color:{_clr(sotp_c)};">{_pct(sotp_c)} vs ${price:.0f}</div>'
+        f'</div>'
+        f'<div style="background:#1e1e2e;border:1px solid #45475a;border-radius:8px;'
+        f'padding:10px 12px;text-align:center;">'
+        f'<div style="font-size:0.68rem;color:#a6adc8;margin-bottom:4px;">적정 시나리오 ★</div>'
+        f'<div style="font-size:1.1rem;font-weight:600;color:{_clr(sotp_f)};">${sotp_f:.1f}</div>'
+        f'<div style="font-size:0.68rem;color:{_clr(sotp_f)};">{_pct(sotp_f)} vs ${price:.0f}</div>'
+        f'</div>'
+        f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+        f'padding:10px 12px;text-align:center;">'
+        f'<div style="font-size:0.68rem;color:#6c7086;margin-bottom:4px;">공격적 시나리오</div>'
+        f'<div style="font-size:1.1rem;font-weight:600;color:{_clr(sotp_a)};">${sotp_a:.1f}</div>'
+        f'<div style="font-size:0.68rem;color:{_clr(sotp_a)};">{_pct(sotp_a)} vs ${price:.0f}</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── 주석 ─────────────────────────────────────────────────────
     st.markdown(
-        '<div style="font-size:0.68rem;color:#585b70;margin-top:8px;line-height:1.7;">'
-        '⚠️ 세그먼트 매출 비중은 최신 연간보고서(10-K) 기준이며 분기마다 변동될 수 있습니다. '
-        'EV/Revenue 멀티플은 시장 상황·성장률·마진에 따라 크게 달라질 수 있으며, '
+        '<div style="font-size:0.65rem;color:#585b70;line-height:1.7;">'
+        '⚠️ TTM 매출: yfinance 최근 4분기 합산 · 세그먼트 비율: 최신 10-K 기준 (분기마다 변동 가능) · '
+        'Rule of 40 = 매출 YoY 성장률 + 영업이익률 (40 이상: 고멀티플 정당화 가능) · '
         '본 분석은 참고 목적으로만 활용하십시오.</div>',
         unsafe_allow_html=True,
     )
+
 
 # ── 개별 회사 분석 헬퍼 ────────────────────────────────────────────────────
 _COMPANY_NAMES  = {'MSFT': 'Microsoft', 'GOOGL': 'Alphabet (Google)',
