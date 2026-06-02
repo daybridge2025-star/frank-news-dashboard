@@ -2630,6 +2630,373 @@ def render_hyperscaler_tab():
             _render_company_section(_tk, _tk_df, _tk_guide)
 
 
+
+# ════════════════════════════════════════════════════════════════
+# SOTP (Sum of the Parts) 분석
+# 데이터: yfinance 전사 재무 + 최신 연간보고서 기반 세그먼트 비율
+# ════════════════════════════════════════════════════════════════
+SOTP_CONFIG = {
+    'MSFT': {
+        'name': 'Microsoft', 'fy_note': 'FY2024 (10-K 2024.07)',
+        'segments': [
+            {'name': 'Productivity & Business Processes',
+             'pct': 0.328, 'method': 'EV/Rev', 'mult': 10.0, 'rng': (4.0, 22.0),
+             'desc': 'Office 365, LinkedIn, Dynamics'},
+            {'name': 'Intelligent Cloud',
+             'pct': 0.432, 'method': 'EV/Rev', 'mult': 14.0, 'rng': (6.0, 28.0),
+             'desc': 'Azure, Server & Tools'},
+            {'name': 'More Personal Computing',
+             'pct': 0.240, 'method': 'EV/Rev', 'mult': 5.0, 'rng': (2.0, 12.0),
+             'desc': 'Windows, Xbox, Surface, Search'},
+        ],
+    },
+    'GOOGL': {
+        'name': 'Alphabet', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'segments': [
+            {'name': 'Google Services',
+             'pct': 0.875, 'method': 'EV/Rev', 'mult': 7.0, 'rng': (3.0, 15.0),
+             'desc': 'Search, YouTube, Maps, Ads, Play'},
+            {'name': 'Google Cloud',
+             'pct': 0.115, 'method': 'EV/Rev', 'mult': 12.0, 'rng': (5.0, 25.0),
+             'desc': 'GCP, Workspace'},
+            {'name': 'Other Bets',
+             'pct': 0.010, 'method': 'EV/Rev', 'mult': 0.0, 'rng': (0.0, 5.0),
+             'desc': 'Waymo, DeepMind 등 (손실 구조)'},
+        ],
+    },
+    'AMZN': {
+        'name': 'Amazon', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'segments': [
+            {'name': 'North America',
+             'pct': 0.595, 'method': 'EV/Rev', 'mult': 1.5, 'rng': (0.5, 4.0),
+             'desc': '미국·캐나다 이커머스·광고'},
+            {'name': 'International',
+             'pct': 0.248, 'method': 'EV/Rev', 'mult': 0.8, 'rng': (0.2, 3.0),
+             'desc': '글로벌 이커머스 (적자 구간 포함)'},
+            {'name': 'AWS',
+             'pct': 0.157, 'method': 'EV/Rev', 'mult': 16.0, 'rng': (8.0, 30.0),
+             'desc': '클라우드 인프라 (전체 영업이익 대부분)'},
+        ],
+    },
+    'META': {
+        'name': 'Meta Platforms', 'fy_note': 'FY2024 (10-K 2025.02)',
+        'segments': [
+            {'name': 'Family of Apps',
+             'pct': 0.983, 'method': 'EV/Rev', 'mult': 7.0, 'rng': (3.0, 15.0),
+             'desc': 'Facebook, Instagram, WhatsApp, Messenger'},
+            {'name': 'Reality Labs',
+             'pct': 0.017, 'method': 'EV/Rev', 'mult': 0.0, 'rng': (0.0, 8.0),
+             'desc': 'VR/AR 하드웨어·소프트웨어 (대규모 적자)'},
+        ],
+    },
+    'AAPL': {
+        'name': 'Apple', 'fy_note': 'FY2024 (10-K 2024.11)',
+        'segments': [
+            {'name': 'Products',
+             'pct': 0.754, 'method': 'EV/Rev', 'mult': 4.0, 'rng': (2.0, 9.0),
+             'desc': 'iPhone, Mac, iPad, Wearables & Accessories'},
+            {'name': 'Services',
+             'pct': 0.246, 'method': 'EV/Rev', 'mult': 12.0, 'rng': (5.0, 25.0),
+             'desc': 'App Store, Apple TV+, iCloud, Apple Pay'},
+        ],
+    },
+    'NVDA': {
+        'name': 'NVIDIA', 'fy_note': 'FY2025 (10-K 2025.02)',
+        'segments': [
+            {'name': 'Data Center',
+             'pct': 0.882, 'method': 'EV/Rev', 'mult': 18.0, 'rng': (8.0, 35.0),
+             'desc': 'AI GPU (H100/H200/B200), NVLink, DGX'},
+            {'name': 'Gaming',
+             'pct': 0.083, 'method': 'EV/Rev', 'mult': 6.0, 'rng': (3.0, 12.0),
+             'desc': 'GeForce GPU, SHIELD'},
+            {'name': 'Professional Visualization',
+             'pct': 0.020, 'method': 'EV/Rev', 'mult': 8.0, 'rng': (3.0, 15.0),
+             'desc': 'Quadro / RTX Pro 워크스테이션'},
+            {'name': 'Automotive & OEM',
+             'pct': 0.015, 'method': 'EV/Rev', 'mult': 8.0, 'rng': (3.0, 20.0),
+             'desc': 'DRIVE 플랫폼, OEM & IP'},
+        ],
+    },
+    'TSLA': {
+        'name': 'Tesla', 'fy_note': 'FY2024 (10-K 2025.01)',
+        'segments': [
+            {'name': 'Automotive',
+             'pct': 0.780, 'method': 'EV/Rev', 'mult': 4.0, 'rng': (1.0, 10.0),
+             'desc': '차량 판매·리스, FSD 소프트웨어'},
+            {'name': 'Energy Generation & Storage',
+             'pct': 0.112, 'method': 'EV/Rev', 'mult': 5.0, 'rng': (2.0, 12.0),
+             'desc': 'Powerwall, Megapack, 태양광'},
+            {'name': 'Services & Other',
+             'pct': 0.108, 'method': 'EV/Rev', 'mult': 2.0, 'rng': (0.5, 6.0),
+             'desc': '수퍼차저, 보험, 차량 수리'},
+        ],
+    },
+}
+
+
+@st.cache_data(ttl=86400)
+def fetch_edgar_financials(ticker):
+    """EDGAR companyfacts에서 전사 Revenue·OperatingIncome·Cash·Debt·Shares 취득"""
+    import requests as _req
+    import yfinance as _yf
+    H = {'User-Agent': 'valuehunter daybridge2025@gmail.com'}
+
+    # CIK 조회
+    _CIK_MAP = {
+        'MSFT': '0000789019', 'GOOGL': '0001652044', 'AMZN': '0001018724',
+        'META': '0001326801', 'AAPL': '0000320193', 'NVDA': '0001045810',
+        'TSLA': '0001318605',
+    }
+    cik = _CIK_MAP.get(ticker)
+    if not cik:
+        return None, 'not_supported'
+
+    result = {'ticker': ticker, 'rev': None, 'oi': None,
+              'net_debt': None, 'shares': None, 'currency': 'USD'}
+
+    # EDGAR companyfacts
+    try:
+        url = f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json'
+        r = _req.get(url, headers=H, timeout=20)
+        if r.ok:
+            facts = r.json().get('facts', {}).get('us-gaap', {})
+
+            def _latest_annual(concept_list):
+                for concept in concept_list:
+                    data = facts.get(concept, {}).get('units', {}).get('USD', [])
+                    # 10-K 연간만, segment 없는 것(consolidated), 최신순
+                    ann = [x for x in data
+                           if x.get('form') == '10-K'
+                           and 'segment' not in x
+                           and x.get('fp') == 'FY']
+                    if ann:
+                        ann.sort(key=lambda x: x.get('end', ''), reverse=True)
+                        return ann[0]['val'] / 1e9, ann[0]['end']
+                return None, None
+
+            rev, rev_dt = _latest_annual([
+                'RevenueFromContractWithCustomerExcludingAssessedTax',
+                'Revenues', 'SalesRevenueNet',
+            ])
+            oi, oi_dt = _latest_annual(['OperatingIncomeLoss'])
+            result['rev'] = rev
+            result['oi']  = oi
+            result['rev_date'] = rev_dt
+            print(f'[EDGAR] {ticker}: rev={rev:.1f}B oi={oi}B' if rev else f'[EDGAR] {ticker}: rev 없음')
+    except Exception as e:
+        print(f'[EDGAR] {ticker}: {e}')
+
+    # 순부채·주식수: yfinance 보완
+    try:
+        t = _yf.Ticker(ticker)
+        bs = t.balance_sheet
+        info = t.info
+        # 현금성 자산
+        cash = 0.0
+        for _r in ['Cash And Cash Equivalents', 'Cash Cash Equivalents And Short Term Investments',
+                   'Cash And Short Term Investments']:
+            if _r in bs.index:
+                cash = float(bs.loc[_r].iloc[0]) / 1e9
+                break
+        # 총부채
+        debt = 0.0
+        for _r in ['Total Debt', 'Long Term Debt And Capital Lease Obligation',
+                   'Long Term Debt']:
+            if _r in bs.index:
+                debt = float(bs.loc[_r].iloc[0]) / 1e9
+                break
+        result['net_debt'] = round(debt - cash, 2)
+        result['shares']   = float(info.get('sharesOutstanding', 0)) / 1e9
+        result['price']    = float(info.get('currentPrice', 0) or info.get('regularMarketPrice', 0))
+        # EDGAR rev 실패 시 yfinance 보완
+        if result['rev'] is None:
+            result['rev'] = float(info.get('totalRevenue', 0)) / 1e9
+        if result['oi'] is None:
+            result['oi'] = float(info.get('operatingIncome', 0) or 0) / 1e9
+    except Exception as e:
+        print(f'[yfinance SOTP] {ticker}: {e}')
+
+    if result['rev']:
+        return result, 'ok'
+    return result, 'partial'
+
+
+def render_sotp_section(ticker_sym, current_price=None):
+    """SOTP 분석 expander 렌더링"""
+    import plotly.graph_objects as _go3
+
+    cfg = SOTP_CONFIG.get(ticker_sym)
+    if not cfg:
+        st.markdown(
+            '<div style="font-size:0.78rem;color:#7f849c;padding:8px 0;">'
+            '현재 SOTP 지원 종목: MSFT · GOOGL · AMZN · META · AAPL · NVDA · TSLA<br>'
+            '기타 종목은 추후 추가 예정입니다.</div>',
+            unsafe_allow_html=True)
+        return
+
+    fin, status = fetch_edgar_financials(ticker_sym)
+    if fin is None or fin.get('rev') is None:
+        st.warning('재무 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.')
+        return
+
+    total_rev  = fin['rev']       # 십억달러
+    total_oi   = fin.get('oi') or 0.0
+    net_debt   = fin.get('net_debt') or 0.0
+    shares     = fin.get('shares') or 0.0
+    price      = current_price or fin.get('price') or 0.0
+    rev_date   = fin.get('rev_date', '')
+
+    segs = cfg['segments']
+    n    = len(segs)
+
+    # ── 데이터 소스 안내 ─────────────────────────────────────────
+    st.markdown(
+        f'<div style="font-size:0.72rem;color:#7f849c;margin-bottom:10px;">'
+        f'📌 전사 매출 출처: SEC EDGAR 10-K ({rev_date[:7] if rev_date else "최근 연간"}) · '
+        f'세그먼트 비율: {cfg["fy_note"]} · 멀티플: 슬라이더로 조정 가능</div>',
+        unsafe_allow_html=True)
+
+    # ── 멀티플 슬라이더 ──────────────────────────────────────────
+    st.markdown('<div style="font-size:0.78rem;color:#a6adc8;margin-bottom:6px;font-weight:600;">세그먼트별 EV/Revenue 멀티플 조정</div>',
+                unsafe_allow_html=True)
+
+    mults = []
+    _cols = st.columns(n)
+    for i, seg in enumerate(segs):
+        with _cols[i]:
+            mv = st.slider(
+                seg['name'].split('/')[0][:18],
+                min_value=float(seg['rng'][0]),
+                max_value=float(seg['rng'][1]),
+                value=float(seg['mult']),
+                step=0.5,
+                key=f'sotp_{ticker_sym}_{i}',
+                help=seg['desc'],
+            )
+            mults.append(mv)
+
+    # ── SOTP 계산 ─────────────────────────────────────────────────
+    seg_revs = [total_rev * seg['pct'] for seg in segs]
+    seg_evs  = [rev * m for rev, m in zip(seg_revs, mults)]
+    total_ev = sum(seg_evs)
+    eq_val   = total_ev - net_debt
+    sotp_per_share = eq_val / shares if shares > 0 else 0.0
+    updown   = (sotp_per_share / price - 1) * 100 if price > 0 else 0.0
+
+    # ── 요약 카드 ─────────────────────────────────────────────────
+    _mc1, _mc2, _mc3, _mc4 = st.columns(4)
+    with _mc1:
+        st.metric('전사 매출', f'${total_rev:.0f}B')
+    with _mc2:
+        st.metric('합산 EV', f'${total_ev:.0f}B')
+    with _mc3:
+        nd_lbl = f'({"-" if net_debt>0 else "+"})${abs(net_debt):.0f}B'
+        st.metric('순부채 차감', nd_lbl)
+    with _mc4:
+        _delta_clr = 'normal' if updown >= 0 else 'inverse'
+        st.metric('SOTP 주당가치', f'${sotp_per_share:.1f}',
+                  delta=f'{updown:+.1f}% vs 현재가',
+                  delta_color=_delta_clr if updown >= 0 else 'inverse')
+
+    # ── 세그먼트 테이블 ───────────────────────────────────────────
+    tbl_rows = ''
+    for seg, rev, m, ev in zip(segs, seg_revs, mults, seg_evs):
+        pct_ev = ev / total_ev * 100 if total_ev > 0 else 0
+        tbl_rows += (
+            f'<tr>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#cdd6f4">{seg["name"]}</td>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#7f849c">{seg["desc"][:30]}</td>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#a6adc8;text-align:right">{seg["pct"]*100:.1f}%</td>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#f9e2af;text-align:right">${rev:.1f}B</td>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#89dceb;text-align:right">{m:.1f}x</td>'
+            f'<td style="padding:5px 10px;font-size:0.75rem;color:#a6e3a1;font-weight:600;text-align:right">${ev:.1f}B</td>'
+            f'<td style="padding:5px 10px;font-size:0.72rem;color:#585b70;text-align:right">{pct_ev:.1f}%</td>'
+            f'</tr>'
+        )
+    # 합계 행
+    tbl_rows += (
+        f'<tr style="border-top:1px solid #45475a;">'
+        f'<td colspan="3" style="padding:6px 10px;font-size:0.75rem;color:#a6adc8;font-weight:600">합계</td>'
+        f'<td style="padding:6px 10px;font-size:0.75rem;color:#f9e2af;font-weight:600;text-align:right">${total_rev:.1f}B</td>'
+        f'<td style="padding:6px 10px;font-size:0.75rem;color:#89dceb;text-align:right">—</td>'
+        f'<td style="padding:6px 10px;font-size:0.75rem;color:#a6e3a1;font-weight:600;text-align:right">${total_ev:.1f}B</td>'
+        f'<td style="padding:6px 10px;font-size:0.75rem;color:#585b70;text-align:right">100%</td>'
+        f'</tr>'
+    )
+
+    st.markdown(
+        f'<div style="overflow-x:auto;margin:10px 0;">'
+        f'<table style="width:100%;border-collapse:collapse;">'
+        f'<thead><tr style="border-bottom:1px solid #313244;">'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:left">세그먼트</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:left">주요 사업</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">매출 비중</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">세그먼트 매출</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">EV/Rev 멀티플</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">세그먼트 EV</th>'
+        f'<th style="padding:4px 10px;font-size:0.7rem;color:#6c7086;text-align:right">EV 기여</th>'
+        f'</tr></thead><tbody>{tbl_rows}</tbody></table></div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── EV 워터폴 차트 ────────────────────────────────────────────
+    names  = [s['name'].split('/')[0][:15] for s in segs] + ['순부채 차감', 'Equity Value']
+    values = seg_evs + [-net_debt, 0]
+    colors = ['#89b4fa'] * n + ['#f38ba8', '#a6e3a1']
+    measure = ['relative'] * n + ['relative', 'total']
+    fig3 = _go3.Figure(_go3.Waterfall(
+        name='SOTP', orientation='v',
+        measure=measure,
+        x=names, y=values,
+        text=[f'${v:.0f}B' for v in values],
+        textposition='outside',
+        connector=dict(line=dict(color='#45475a', width=1)),
+        increasing=dict(marker=dict(color='#89b4fa')),
+        decreasing=dict(marker=dict(color='#f38ba8')),
+        totals=dict(marker=dict(color='#a6e3a1')),
+    ))
+    fig3.update_layout(
+        height=300,
+        margin=dict(l=40, r=20, t=30, b=60),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#cdd6f4', size=10),
+        xaxis=dict(tickangle=-20),
+        yaxis=dict(gridcolor='#313244', showgrid=True,
+                   title='십억달러 (B)', zeroline=True, zerolinecolor='#45475a'),
+        showlegend=False,
+    )
+    st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+
+    # ── 현재가 vs SOTP 비교 바 ────────────────────────────────────
+    if price > 0 and sotp_per_share > 0:
+        gap_clr = '#a6e3a1' if sotp_per_share > price else '#f38ba8'
+        gap_txt = '저평가' if sotp_per_share > price else '고평가'
+        ratio   = min(sotp_per_share, price) / max(sotp_per_share, price) * 100
+        st.markdown(
+            f'<div style="background:#1e1e2e;border:1px solid #313244;border-radius:8px;'
+            f'padding:12px 16px;margin:4px 0;">'
+            f'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
+            f'<span style="font-size:0.75rem;color:#a6adc8;">현재가 <b>${price:.1f}</b></span>'
+            f'<span style="font-size:0.75rem;color:{gap_clr};font-weight:600;">'
+            f'{gap_txt} {abs(updown):.1f}%</span>'
+            f'<span style="font-size:0.75rem;color:#a6adc8;">SOTP <b>${sotp_per_share:.1f}</b></span>'
+            f'</div>'
+            f'<div style="background:#313244;border-radius:4px;height:8px;position:relative;">'
+            f'<div style="background:{gap_clr};height:8px;border-radius:4px;'
+            f'width:{ratio:.0f}%;"></div>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── 주석 ─────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:0.68rem;color:#585b70;margin-top:8px;line-height:1.7;">'
+        '⚠️ 세그먼트 매출 비중은 최신 연간보고서(10-K) 기준이며 분기마다 변동될 수 있습니다. '
+        'EV/Revenue 멀티플은 시장 상황·성장률·마진에 따라 크게 달라질 수 있으며, '
+        '본 분석은 참고 목적으로만 활용하십시오.</div>',
+        unsafe_allow_html=True,
+    )
+
 # ── 개별 회사 분석 헬퍼 ────────────────────────────────────────────────────
 _COMPANY_NAMES  = {'MSFT': 'Microsoft', 'GOOGL': 'Alphabet (Google)',
                     'AMZN': 'Amazon', 'META': 'Meta Platforms'}
@@ -2921,6 +3288,11 @@ def render_ticker_content(ticker_sym, ticker_df, tab_idx=0):
 
     # ── 프리미엄 분석 섹션 ──────────────────────────────────────
     render_premium_analysis(ticker_sym, fundamentals=fundamentals if fundamentals else None)
+
+    # ── SOTP 분석 ────────────────────────────────────────────────
+    with st.expander('📐 SOTP — 사업부문별 가치분석', expanded=False):
+        _sotp_price = float(fin_data.get('current') or fin_data.get('prev_close') or 0)
+        render_sotp_section(ticker_sym, current_price=_sotp_price if _sotp_price > 0 else None)
 
     # ── 감성 분석 카드 ──────────────────────────────────────────
     _sentiment_df = load_sentiment_data()
