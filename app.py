@@ -2772,6 +2772,8 @@ SOTP_CONFIG = {
         ],
     },
 }
+# GOOG = GOOGL 알리아스
+SOTP_CONFIG['GOOG'] = SOTP_CONFIG['GOOGL']
 
 
 @st.cache_data(ttl=86400)
@@ -2787,24 +2789,35 @@ def fetch_edgar_financials(ticker):
     if ticker not in SOTP_CONFIG:
         return None, 'not_supported'
 
+    # GOOG → GOOGL (yfinance는 GOOGL이 더 안정적)
+    _yf_ticker = 'GOOGL' if ticker == 'GOOG' else ticker
+
     try:
-        t = _yf.Ticker(ticker)
+        t = _yf.Ticker(_yf_ticker)
         info = t.info
 
         # ── TTM Revenue & Operating Income (최근 4분기 합산) ─────
         q_inc = t.quarterly_income_stmt
-        REV_ROWS = ['Total Revenue', 'Revenue']
+        REV_ROWS = ['Total Revenue', 'Revenue', 'TotalRevenue',
+                    'Net Revenue', 'Revenues', 'Net Sales',
+                    'RevenueFromContractWithCustomerExcludingAssessedTax']
         OI_ROWS  = ['Operating Income', 'Operating Income Loss',
-                    'Total Operating Income As Reported']
+                    'Total Operating Income As Reported',
+                    'OperatingIncome', 'Operating Profit',
+                    'EBIT', 'Ebit']
         ttm_rev = None
         ttm_oi  = None
+        print(f'[SOTP] {ticker} quarterly_income_stmt rows: {list(q_inc.index)[:10]}')
         for row in REV_ROWS:
             if row in q_inc.index:
-                ttm_rev = float(q_inc.loc[row].iloc[:4].sum()) / 1e9
+                vals = q_inc.loc[row].iloc[:4]
+                ttm_rev = float(vals.dropna().sum()) / 1e9
+                print(f'[SOTP] {ticker} rev row={row}, TTM={ttm_rev:.1f}B')
                 break
         for row in OI_ROWS:
             if row in q_inc.index:
-                ttm_oi = float(q_inc.loc[row].iloc[:4].sum()) / 1e9
+                vals = q_inc.loc[row].iloc[:4]
+                ttm_oi = float(vals.dropna().sum()) / 1e9
                 break
         # TTM 기준일
         if not q_inc.empty:
@@ -2834,10 +2847,13 @@ def fetch_edgar_financials(ticker):
             info.get('currentPrice') or info.get('regularMarketPrice') or 0)
 
         # yfinance TTM 실패 시 info 연간 폴백
-        if not result['rev']:
-            result['rev'] = float(info.get('totalRevenue', 0)) / 1e9
-        if not result['oi']:
-            result['oi']  = float(info.get('operatingIncome', 0) or 0) / 1e9
+        if not result['rev'] or result['rev'] == 0:
+            rev_info = float(info.get('totalRevenue', 0) or 0)
+            if rev_info > 0:
+                result['rev'] = rev_info / 1e9
+                print(f'[SOTP] {ticker} rev fallback from info: {result["rev"]:.1f}B')
+        if not result['oi'] or result['oi'] == 0:
+            result['oi'] = float(info.get('operatingIncome', 0) or 0) / 1e9
     except Exception as e:
         print(f'[SOTP fetch] {ticker}: {e}')
 
