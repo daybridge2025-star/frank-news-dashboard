@@ -2383,7 +2383,37 @@ def fetch_hyperscaler_data():
         'fcf':        fcf_final,
     }).sort_index().dropna(subset=['net_income'])
 
-    return result, 'ok'
+    # ── 종목별 개별 DataFrame 구성 ────────────────────────────────
+    per_company = {}
+    for ticker in HYPSCALER_TICKERS:
+        try:
+            def _single(d_a, d_q, fn):
+                s_a = fn(d_a[ticker]) if ticker in d_a else pd.Series(dtype=float)
+                s_q_raw = d_q[ticker] if ticker in d_q else pd.Series(dtype=float)
+                if not isinstance(s_q_raw.index, pd.DatetimeIndex):
+                    s_q_raw.index = pd.to_datetime(s_q_raw.index)
+                s_q_raw = s_q_raw.sort_index()
+                s_q = s_q_raw.rolling(4).sum().dropna() / 1e9 if not s_q_raw.empty else pd.Series(dtype=float)
+                if not isinstance(s_a.index, pd.DatetimeIndex):
+                    s_a.index = pd.to_datetime(s_a.index)
+                return _merge(s_a.sort_index(), s_q)
+
+            t_ni  = _single(a_ni,  q_ni,  _annual)
+            t_ocf = _single(a_ocf, q_ocf, _annual)
+            t_cap = _single(a_cap, q_cap, _annual)
+            t_fcf = t_ocf + t_cap
+
+            df_t = pd.DataFrame({
+                'net_income': t_ni,
+                'ocf':        t_ocf,
+                'fcf':        t_fcf,
+            }).sort_index().dropna(subset=['net_income'])
+            if not df_t.empty:
+                per_company[ticker] = df_t
+        except Exception as _te:
+            print(f'[hyperscaler per_company] {ticker}: {_te}')
+
+    return result, per_company, 'ok'
 
 
 def render_hyperscaler_tab():
@@ -2398,7 +2428,7 @@ def render_hyperscaler_tab():
         unsafe_allow_html=True,
     )
 
-    df, status = fetch_hyperscaler_data()
+    df, per_company, status = fetch_hyperscaler_data()
     if status != 'ok' or df is None or df.empty:
         st.warning(f'데이터 로드 실패 ({status}). 잠시 후 새로고침해주세요.')
         return
@@ -2583,6 +2613,108 @@ def render_hyperscaler_tab():
             unsafe_allow_html=True,
         )
 
+    # ── 개별 회사 분석 (expander) ──────────────────────────────────
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px 0;">'
+        '<div style="flex:1;height:1px;background:#313244;"></div>'
+        '<span style="font-size:0.75rem;color:#7f849c;white-space:nowrap;">개별 회사 분석</span>'
+        '<div style="flex:1;height:1px;background:#313244;"></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    for _tk in HYPSCALER_TICKERS:
+        _tk_name  = _COMPANY_NAMES.get(_tk, _tk)
+        _tk_guide = HYPSCALER_GUIDANCE.get(_tk, 0)
+        _tk_df    = per_company.get(_tk)
+        with st.expander(f'**{_tk}** — {_tk_name}  |  Capex 가이던스 ${_tk_guide}B', expanded=False):
+            _render_company_section(_tk, _tk_df, _tk_guide)
+
+
+# ── 개별 회사 분석 헬퍼 ────────────────────────────────────────────────────
+_COMPANY_NAMES  = {'MSFT': 'Microsoft', 'GOOGL': 'Alphabet (Google)',
+                    'AMZN': 'Amazon', 'META': 'Meta Platforms'}
+_COMPANY_COLORS = {'MSFT': '#4a9eff', 'GOOGL': '#f9e2af',
+                    'AMZN': '#fab387', 'META': '#cba6f7'}
+
+def _render_company_section(ticker, df_t, guidance_b):
+    import plotly.graph_objects as _go2
+    import pandas as _pd2
+
+    clr = _COMPANY_COLORS.get(ticker, '#cdd6f4')
+
+    if df_t is None or df_t.empty:
+        st.warning(f'{ticker} 데이터 없음')
+        return
+
+    latest   = df_t.iloc[-1]
+    ni_val   = float(latest['net_income'])
+    fcf_val  = float(latest['fcf'])
+    ocf_val  = float(latest['ocf'])
+    fwd_fcf  = ocf_val * 1.12 - guidance_b
+    fwd_ni   = ni_val  * 1.15
+    lat_date = df_t.index[-1]
+    fwd_date = lat_date + _pd2.DateOffset(years=1)
+
+    cc1, cc2, cc3, cc4 = st.columns(4)
+    with cc1:
+        st.metric('순이익 (최근)', f'${ni_val:.0f}B')
+    with cc2:
+        st.metric('FCF (최근)', f'${fcf_val:.0f}B')
+    with cc3:
+        st.metric('2026 Capex 가이던스', f'${guidance_b}B')
+    with cc4:
+        st.metric('추정 FCF (1년)', f'${fwd_fcf:.0f}B')
+
+    fig2 = _go2.Figure()
+    fig2.add_trace(_go2.Scatter(
+        x=df_t.index, y=df_t['net_income'],
+        name='순이익 (실제)',
+        line=dict(color=clr, width=2.5),
+        mode='lines+markers', marker=dict(size=4, color=clr),
+        hovertemplate='%{x|%Y} 순이익: $%{y:.1f}B<extra></extra>',
+    ))
+    fig2.add_trace(_go2.Scatter(
+        x=df_t.index, y=df_t['fcf'],
+        name='FCF (실제)',
+        line=dict(color='#a6adc8', width=2, dash='dot'),
+        mode='lines+markers', marker=dict(size=4, color='#a6adc8'),
+        hovertemplate='%{x|%Y} FCF: $%{y:.1f}B<extra></extra>',
+    ))
+    fig2.add_trace(_go2.Scatter(
+        x=[lat_date, fwd_date], y=[ni_val, fwd_ni],
+        name='순이익 추정',
+        line=dict(color=clr, width=1.5, dash='dash'),
+        mode='lines+markers', marker=dict(size=5, color=clr, symbol='circle-open'),
+        hovertemplate='추정 순이익: $%{y:.1f}B<extra></extra>',
+    ))
+    fcf_line_clr = '#f38ba8' if fwd_fcf < 0 else '#a6adc8'
+    fig2.add_trace(_go2.Scatter(
+        x=[lat_date, fwd_date], y=[fcf_val, fwd_fcf],
+        name=f'FCF 추정 (Capex ${guidance_b}B 반영)',
+        line=dict(color=fcf_line_clr, width=1.5, dash='dash'),
+        mode='lines+markers', marker=dict(size=5, color=fcf_line_clr, symbol='circle-open'),
+        hovertemplate='추정 FCF: $%{y:.1f}B<extra></extra>',
+    ))
+    fig2.add_vline(x=lat_date, line_dash='dot', line_color='#585b70', line_width=1)
+    fig2.add_vrect(
+        x0=lat_date, x1=fwd_date,
+        fillcolor='rgba(88,91,112,0.06)', line_width=0,
+        annotation_text='추정', annotation_position='top left',
+        annotation_font_size=9, annotation_font_color='#585b70',
+    )
+    fig2.add_hline(y=0, line_dash='solid', line_color='#45475a', line_width=1)
+    fig2.update_layout(
+        height=280,
+        margin=dict(l=50, r=15, t=30, b=35),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#cdd6f4', size=10),
+        xaxis=dict(gridcolor='#313244', showgrid=True, tickformat='%y', dtick='M12'),
+        yaxis=dict(gridcolor='#313244', showgrid=True, title='십억달러 (B)', zeroline=False),
+        legend=dict(orientation='h', yanchor='bottom', y=1.01, xanchor='left', x=0,
+                    font=dict(size=9), bgcolor='rgba(0,0,0,0)'),
+        hovermode='x unified',
+    )
+    st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
 
 def clear_cache():
     load_news.clear()
