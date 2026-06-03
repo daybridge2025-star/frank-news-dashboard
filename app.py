@@ -3198,13 +3198,9 @@ def render_sotp_section(ticker_sym, current_price=None):
                 k = f'sotp_{ticker_sym}_{i}'
                 if k in st.session_state:
                     del st.session_state[k]
-            try:
-                st.rerun()
-            except Exception:
-                try:
-                    st.experimental_rerun()
-                except Exception:
-                    pass
+            # st.rerun() 제거: 버튼 클릭 자체가 rerun을 트리거하며,
+            # 동일 run에서 슬라이더가 key 없이 기본값(mult)으로 렌더링됨.
+            # 추가 rerun 호출 시 expander가 닫혀 초기화 결과가 보이지 않는 버그 수정.
 
     # ── 세그먼트 카드 + 슬라이더 ─────────────────────────────────
     seg_mults = []
