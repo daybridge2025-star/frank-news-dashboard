@@ -89,16 +89,19 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
             text = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
             if text.startswith('json'):
                 text = text[4:].strip()
-        # grounding이 JSON 앞뒤에 텍스트를 추가한 경우 JSON 블록만 추출
         m = re.search(r'\{[\s\S]*\}', text)
         if m:
             text = m.group(0)
         return json.loads(text)
 
-    # ── 1차 시도: Google Search Grounding ────────────────────────
+    # ── 1차 시도: Google Search Grounding + Thinking 비활성 ──────
+    # [C21 2026-06-04] thinking_budget=0 설정 (품질 유지, 비용 ~40% 절감)
+    # Thinking($3.50/1M토큰)은 번역/JSON 변환에 불필요 → 0으로 고정
+    # Grounding은 유지 (실시간 뉴스 보완 품질 유지)
     try:
         from google.genai import types
         config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             tools=[types.Tool(google_search=types.GoogleSearch())]
         )
         response = model.models.generate_content(
@@ -107,7 +110,7 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
             config=config
         )
         result = _parse_json(response.text)
-        print(f"  [Gemini+Grounding] {ticker} 브리핑 완료 (Google Search 보완)")
+        print(f"  [Gemini+Grounding] {ticker} 브리핑 완료")
         return {
             'articles': result.get('articles', empty['articles']),
             'summary_kr': result.get('summary_kr', '')
@@ -117,9 +120,14 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
 
     # ── 2차 시도: Grounding 없이 기본 모드 ───────────────────────
     try:
+        from google.genai import types
+        config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
+        )
         response = model.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt
+            contents=prompt,
+            config=config
         )
         result = _parse_json(response.text)
         print(f"  [Gemini] {ticker} 브리핑 완료 (기본 모드)")
