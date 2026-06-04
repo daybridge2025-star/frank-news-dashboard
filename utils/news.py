@@ -41,19 +41,15 @@ def _get_gemini_model():
 
 def translate_and_summarize(articles, model, ticker='', company_name='', today_str=''):
     """
-    기사 목록을 Gemini로 번역 + 요약 (1 API 호출/종목).
-    content(Finnhub snippet)가 있으면 활용, 없으면 제목 기반.
+    신규 기사 목록을 Gemini로 번역 (1 API 호출/종목).
+    summary_kr은 생성하지 않음 — 일일 브리핑은 daily_briefing.py에서 별도 생성.
 
     articles: [{'title': str, 'content': str or None}, ...]
     반환: {
         'articles': [{'title_kr': str, 'article_summary_kr': str}, ...],
-        'summary_kr': str
     }
     """
-    empty = {
-        'articles': [{'title_kr': '', 'article_summary_kr': ''} for _ in articles],
-        'summary_kr': ''
-    }
+    empty = {'articles': [{'title_kr': '', 'article_summary_kr': ''} for _ in articles]}
     if not model or not articles:
         return empty
 
@@ -65,11 +61,9 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
             articles_text += f"\n[기사 {i}]\n제목: {a['title']}\n내용: (스니펫 없음)\n"
 
     date_ctx = f"기준일: {today_str}\n" if today_str else ''
-    prompt = f"""{date_ctx}다음은 Finnhub에서 수집한 {ticker}({company_name}) 관련 최신 뉴스입니다.
+    prompt = f"""{date_ctx}다음은 {ticker}({company_name}) 관련 최신 뉴스입니다.
 {articles_text}
-위 Finnhub 기사들을 기반으로, Google 검색을 활용해 {ticker} 관련 추가 뉴스와 시장 분석을 보완하여 아래 JSON을 작성하세요.
-검색 범위: 기준일 당일 뉴스를 우선하되, 당일 기사가 부족하면 최근 2일 이내 기사까지 포함하세요.
-반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+각 기사를 한국어로 번역·요약하여 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
 
 {{
   "articles": [
@@ -77,8 +71,7 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
       "title_kr": "기사 0 제목을 자연스러운 한국어로 번역",
       "article_summary_kr": "기사 0 핵심 내용을 500자 이내 한국어로 요약"
     }}
-  ],
-  "summary_kr": "Finnhub 기사와 Google 검색 결과를 종합한 최신 뉴스 브리핑. 불필요한 수식어 없이 핵심 위주로 각 섹션 2~3문장 간결하게 서술. 총 800자 이내.\\n\\n[핵심 이슈] 🔥 가장 중요한 이슈 2~3가지를 구체적 수치·사실 중심으로 서술\\n\\n[투자 포인트] 💡 투자자 관점에서 주목해야 할 내용과 리스크 요인\\n\\n[시장 분위기] 📊 전반적인 시장 및 종목 동향 — 센티멘트 평가"
+  ]
 }}"""
 
     def _parse_json(text):
@@ -94,31 +87,8 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
             text = m.group(0)
         return json.loads(text)
 
-    # ── 1차 시도: Google Search Grounding + Thinking 비활성 ──────
-    # [C21 2026-06-04] thinking_budget=0 설정 (품질 유지, 비용 ~40% 절감)
-    # Thinking($3.50/1M토큰)은 번역/JSON 변환에 불필요 → 0으로 고정
-    # Grounding은 유지 (실시간 뉴스 보완 품질 유지)
-    try:
-        from google.genai import types
-        config = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-            tools=[types.Tool(google_search=types.GoogleSearch())]
-        )
-        response = model.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=config
-        )
-        result = _parse_json(response.text)
-        print(f"  [Gemini+Grounding] {ticker} 브리핑 완료")
-        return {
-            'articles': result.get('articles', empty['articles']),
-            'summary_kr': result.get('summary_kr', '')
-        }
-    except Exception as e1:
-        print(f"  [Gemini] Grounding 실패 ({e1}), 기본 모드로 재시도")
-
-    # ── 2차 시도: Grounding 없이 기본 모드 ───────────────────────
+    # ── 번역 전용 모드 (Thinking 비활성, Grounding 불필요) ───────
+    # 개별 기사 번역은 단순 변환 작업 → thinking/grounding 모두 불필요
     try:
         from google.genai import types
         config = types.GenerateContentConfig(
@@ -130,21 +100,21 @@ def translate_and_summarize(articles, model, ticker='', company_name='', today_s
             config=config
         )
         result = _parse_json(response.text)
-        print(f"  [Gemini] {ticker} 브리핑 완료 (기본 모드)")
-        return {
-            'articles': result.get('articles', empty['articles']),
-            'summary_kr': result.get('summary_kr', '')
-        }
-    except Exception as e2:
-        print(f"  [Gemini 오류] 번역/요약 실패: {e2}")
+        print(f"  [Gemini] {ticker} 번역 완료 ({len(result.get('articles', []))}건)")
+        return {'articles': result.get('articles', empty['articles'])}
+    except Exception as e:
+        print(f"  [Gemini 오류] 번역 실패: {e}")
         return empty
 
 
-def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
+def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None, existing_hashes=None):
     """
-    Finnhub API로 뉴스 수집 → Gemini 번역/요약.
-    직접 기사 URL + summary snippet 제공.
+    Finnhub API로 뉴스 수집 → 신규 기사만 Gemini 번역.
+    existing_hashes: 이미 Sheets에 저장된 url_hash set — 신규 기사만 Gemini 호출.
+    summary_kr은 생성하지 않음 (daily_briefing.py에서 KST 07:00에 별도 생성).
     """
+    if existing_hashes is None:
+        existing_hashes = set()
     api_key = os.environ.get('FINNHUB_API_KEY', '')
     if not api_key:
         print(f"  [ERROR] FINNHUB_API_KEY 없음")
@@ -194,25 +164,30 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
         if not collected:
             return []
 
-        # Gemini 번역 + 요약
-        summary_kr = ''
-        gemini_articles = [{'title_kr': '', 'article_summary_kr': ''} for _ in collected]
+        # 신규 기사 판별
+        new_articles  = [a for a in collected if a['url_hash'] not in existing_hashes]
+        seen_articles = [a for a in collected if a['url_hash'] in existing_hashes]
+        print(f"  {ticker}: 신규 {len(new_articles)}건 / 기존 {len(seen_articles)}건")
 
+        # 신규 기사가 없으면 Gemini 호출 없이 종료
+        if not new_articles:
+            print(f"  {ticker}: 신규 기사 없음 — Gemini 스킵")
+            return []
+
+        # 신규 기사만 Gemini 번역 (summary_kr은 daily_briefing.py에서 생성)
+        gemini_map = {}  # url_hash → {title_kr, article_summary_kr}
         if model:
-            print(f"  [Gemini] {ticker} 번역 및 요약 중...")
-            gemini_input = [{'title': a['title'], 'content': a['content']} for a in collected]
-            today_label = now_kst.strftime('%Y년 %m월 %d일')
-            result = translate_and_summarize(gemini_input, model, ticker, company_name, today_str=today_label)
-            raw_arts = result.get('articles', [])
-            # collected 수에 맞게 패딩 (Gemini가 적게 반환해도 안전)
-            gemini_articles = raw_arts + [{'title_kr': '', 'article_summary_kr': ''}
-                                          for _ in range(max(0, len(collected) - len(raw_arts)))]
-            summary_kr = result['summary_kr']
+            today_label  = now_kst.strftime('%Y년 %m월 %d일')
+            gemini_input = [{'title': a['title'], 'content': a['content']} for a in new_articles]
+            result       = translate_and_summarize(gemini_input, model, ticker, company_name, today_str=today_label)
+            raw_arts     = result.get('articles', [])
+            for i, a in enumerate(new_articles):
+                gemini_map[a['url_hash']] = raw_arts[i] if i < len(raw_arts) else {}
 
-        # news_items 조합
+        # 신규 기사만 news_items 조합 (summary_kr은 빈 값 — 브리핑은 07:00에 생성)
         news_items = []
-        for i, a in enumerate(collected):
-            g = gemini_articles[i] if i < len(gemini_articles) else {}
+        for a in new_articles:
+            g = gemini_map.get(a['url_hash'], {})
             news_items.append({
                 'ticker':             ticker,
                 'company':            company_name,
@@ -222,7 +197,7 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
                 'collected_at':       now_kst_str,
                 'url_hash':           a['url_hash'],
                 'title_kr':           g.get('title_kr', ''),
-                'summary_kr':         summary_kr if i == 0 else '',
+                'summary_kr':         '',  # 일일 브리핑 스크립트(KST 07:00)에서 채움
                 'article_summary_kr': g.get('article_summary_kr', ''),
             })
 
@@ -235,12 +210,21 @@ def fetch_news_for_ticker(ticker, company_name, max_items=10, model=None):
 
 
 def fetch_all_news(tickers, delay=1.0):
-    """전체 종목 뉴스 일괄 수집"""
-    model = _get_gemini_model()
+    """전체 종목 뉴스 일괄 수집 — 신규 기사만 Gemini 번역."""
+    from utils.sheets import get_today_hashes_set
+    model         = _get_gemini_model()
+    existing      = get_today_hashes_set()  # Sheets 기존 hash 선취득
+    print(f"[중복 체크] 기존 저장 기사: {len(existing)}건")
     all_news = []
     for t in tickers:
-        items = fetch_news_for_ticker(t['ticker'], t['company_name'], model=model)
+        items = fetch_news_for_ticker(
+            t['ticker'], t['company_name'],
+            model=model, existing_hashes=existing
+        )
         all_news.extend(items)
+        # 신규 hash를 existing에 추가 (동일 run 내 중복 방지)
+        for item in items:
+            existing.add(item['url_hash'])
         if delay > 0:
             time.sleep(delay)
     return all_news
