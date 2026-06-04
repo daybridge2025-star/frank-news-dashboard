@@ -2681,7 +2681,7 @@ SOTP_CONFIG = {
             # Q1 2026 총 $109.9B | Services $89.6B(81.6%), Cloud $20.0B(18.2%), OtherBets $411M(0.4%)
             # Cloud OI margin 33% (vs 작년 17%), Cloud 63% YoY 성장
             {'name': 'Google Services',
-             'pct': 0.816, 'method': 'EV/Rev',
+             'pct': 0.814, 'method': 'EV/Rev',
              'mult': 8.0, 'mult_c': 6.0, 'mult_a': 13.0, 'rng': (4.0, 16.0),
              'desc': 'Search, YouTube, Ads, Maps, Play | OI margin 45%',
              'growth_est': 22.0, 'oi_margin_est': 45.0},
