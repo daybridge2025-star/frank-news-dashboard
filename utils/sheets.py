@@ -348,6 +348,51 @@ def archive_and_reset():
     today_sheet.append_row(TODAY_HEADERS)
     print("TODAY sheet reset complete")
 
+def get_today_hashes_set() -> set:
+    """TODAY 시트의 전체 url_hash set 반환 — 신규 기사 판별용."""
+    try:
+        ss = get_spreadsheet()
+        try:
+            today_sheet = ss.worksheet('TODAY')
+        except gspread.WorksheetNotFound:
+            return set()
+        hashes = today_sheet.col_values(7)  # url_hash 컬럼 (7번째)
+        return set(hashes[1:])              # 헤더 제외
+    except Exception as e:
+        print(f'[ERROR] get_today_hashes_set: {e}')
+        return set()
+
+
+def update_daily_summary(ticker: str, summary_kr: str) -> bool:
+    """
+    TODAY 시트에서 ticker 첫 번째 행의 summary_kr 셀을 갱신.
+    일일 종합 브리핑(daily_briefing.py)에서 호출.
+    """
+    try:
+        ss = get_spreadsheet()
+        today_sheet = ss.worksheet('TODAY')
+        all_values = today_sheet.get_all_values()
+        headers = all_values[0] if all_values else []
+        try:
+            summary_col = headers.index('summary_kr') + 1  # 1-based
+            ticker_col  = headers.index('ticker') + 1
+        except ValueError:
+            print(f'[ERROR] update_daily_summary: 헤더 컬럼 없음')
+            return False
+
+        for row_idx, row in enumerate(all_values[1:], start=2):
+            if len(row) >= ticker_col and row[ticker_col - 1] == ticker.upper():
+                today_sheet.update_cell(row_idx, summary_col, summary_kr)
+                print(f'  [Sheets] {ticker} summary_kr 업데이트 완료 (row {row_idx})')
+                return True
+
+        print(f'  [Sheets] {ticker} TODAY 시트에 해당 행 없음 — 업데이트 스킵')
+        return False
+    except Exception as e:
+        print(f'[ERROR] update_daily_summary({ticker}): {e}')
+        return False
+
+
 def get_latest_ticker_summary(ticker: str) -> dict:
     """
     티커 아카이브 시트에서 가장 최근 summary_kr 반환.
