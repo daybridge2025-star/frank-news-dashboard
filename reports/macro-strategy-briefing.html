@@ -1,0 +1,1044 @@
+<title>매크로 전략 브리핑</title>
+<style>
+:root{
+  --page:#f9f9f7; --card:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --hair:#e1e0d9; --ring:rgba(11,11,11,.10); --accent:#2a78d6; --accent-ink:#1c5cab;
+  --good:#0ca30c; --good-text:#006300; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300; --s5:#4a3aa7; --s6:#e34948;
+  --bull:#2a78d6; --base-g:#b5b4ad; --bear:#d03b3b;
+  --wash:rgba(42,120,214,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --page:#0d0d0d; --card:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --hair:#2c2c2a; --ring:rgba(255,255,255,.10); --accent:#3987e5; --accent-ink:#6da7ec;
+    --good:#0ca30c; --good-text:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+    --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+    --bull:#3987e5; --base-g:#52514e; --bear:#e66767;
+    --wash:rgba(57,135,229,.14);
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0d0d0d; --card:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --hair:#2c2c2a; --ring:rgba(255,255,255,.10); --accent:#3987e5; --accent-ink:#6da7ec;
+  --good:#0ca30c; --good-text:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+  --bull:#3987e5; --base-g:#52514e; --bear:#e66767;
+  --wash:rgba(57,135,229,.14);
+}
+:root[data-theme="light"]{
+  --page:#f9f9f7; --card:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --hair:#e1e0d9; --ring:rgba(11,11,11,.10); --accent:#2a78d6; --accent-ink:#1c5cab;
+  --good:#0ca30c; --good-text:#006300; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300; --s5:#4a3aa7; --s6:#e34948;
+  --bull:#2a78d6; --base-g:#b5b4ad; --bear:#d03b3b;
+  --wash:rgba(42,120,214,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:15px; line-height:1.55;
+  -webkit-text-size-adjust:100%;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:680px; margin:0 auto; padding:0 14px}
+
+/* ---------- masthead ---------- */
+header.mast{padding:22px 0 6px}
+.eyebrow{font-size:11px; letter-spacing:.14em; color:var(--ink-3); text-transform:uppercase; font-weight:600}
+h1{font-size:24px; font-weight:800; letter-spacing:-.02em; margin:4px 0 2px; text-wrap:balance}
+.byline{font-size:12px; color:var(--ink-3); margin-bottom:8px; display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+.byline b{color:var(--ink-2); font-weight:700}
+.byline a{color:var(--accent-ink); text-decoration:none; border-bottom:1px dashed var(--accent-ink)}
+.byline a:hover, .byline a:focus-visible{border-bottom-style:solid}
+.dateline{font-size:13px; color:var(--ink-2); display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.stance{
+  margin-top:14px; border:1px solid var(--ring); border-radius:14px; background:var(--card);
+  padding:14px 16px;
+}
+.stance .lbl{font-size:11px; letter-spacing:.12em; font-weight:700; color:var(--accent-ink); text-transform:uppercase}
+.stance .val{font-size:19px; font-weight:800; letter-spacing:-.01em; margin:2px 0 4px}
+.stance p{margin:0; font-size:13.5px; color:var(--ink-2)}
+.stance .srow{display:flex; gap:10px; align-items:flex-start; padding:9px 0}
+.stance .srow + .srow{border-top:1px dashed var(--hair)}
+.stance .srow .bg{
+  flex:none; font-size:10px; font-weight:800; letter-spacing:.04em; border-radius:6px;
+  padding:2px 7px; margin-top:2px; border:1px solid var(--ring); color:var(--ink); white-space:nowrap;
+}
+.stance .srow .sv{font-size:15px; font-weight:800; letter-spacing:-.01em}
+.stance .srow p{font-size:12.5px; margin-top:1px}
+
+/* ---------- sections & tabs ---------- */
+main section{display:none; padding-top:16px}
+main section.on{display:block}
+h2{font-size:17px; font-weight:800; letter-spacing:-.01em; margin:18px 0 10px}
+h2 small{font-weight:500; color:var(--ink-3); font-size:12px; margin-left:6px}
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
+  background:var(--card); border-top:1px solid var(--hair);
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  display:flex; justify-content:space-around;
+}
+.tabbar button{
+  appearance:none; background:none; border:0; flex:1; max-width:120px;
+  padding:7px 2px 5px; border-radius:10px; cursor:pointer;
+  font-family:inherit; font-size:11px; font-weight:600; color:var(--ink-3);
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.tabbar button .ico{font-size:17px; line-height:1}
+.tabbar button.on{color:var(--accent-ink); background:var(--wash)}
+.tabbar button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+/* ---------- indicator cards ---------- */
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (min-width:560px){.grid{grid-template-columns:1fr 1fr 1fr}}
+.ind{
+  background:var(--card); border:1px solid var(--ring); border-radius:12px;
+  padding:12px 12px 10px; cursor:pointer; position:relative;
+}
+.ind:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.ind .k{font-size:11.5px; color:var(--ink-3); font-weight:600; letter-spacing:.02em}
+.ind .v{font-size:20px; font-weight:800; letter-spacing:-.015em; margin:2px 0 1px; font-variant-numeric:tabular-nums}
+.ind .v small{font-size:12px; font-weight:600; color:var(--ink-2)}
+.ind .sub{font-size:11.5px; color:var(--ink-2)}
+.chip{
+  display:inline-flex; align-items:center; gap:4px; margin-top:7px;
+  font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:99px;
+  border:1px solid var(--ring); color:var(--ink-2);
+}
+.chip::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--dot,var(--ink-3))}
+.chip.g{--dot:var(--good)} .chip.w{--dot:var(--warn)} .chip.s{--dot:var(--serious)} .chip.c{--dot:var(--crit)}
+.ind .more{
+  display:none; margin-top:9px; padding-top:9px; border-top:1px dashed var(--hair);
+  font-size:12.5px; color:var(--ink-2);
+}
+.ind.open .more{display:block}
+.ind::after{
+  content:"＋"; position:absolute; top:10px; right:12px; color:var(--ink-3); font-size:13px; font-weight:700;
+}
+.ind.open::after{content:"−"}
+
+/* ---------- callout / prose ---------- */
+.callout{
+  border-radius:12px; padding:14px 16px; margin:12px 0;
+  background:var(--card); border:1px solid var(--ring); border-left:4px solid var(--crit);
+}
+.callout.blue{border-left-color:var(--accent)}
+.callout h3{margin:0 0 4px; font-size:14.5px; font-weight:800}
+.callout p{margin:0; font-size:13.5px; color:var(--ink-2)}
+.callout p + p{margin-top:9px}
+.prose{background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:14px 16px; margin:10px 0}
+.prose h3{margin:0 0 6px; font-size:15px; font-weight:800}
+.prose p{margin:6px 0; font-size:13.5px; color:var(--ink-2)}
+.prose ul{margin:6px 0; padding-left:18px; font-size:13.5px; color:var(--ink-2)}
+.prose li{margin:4px 0}
+.prose strong{color:var(--ink)}
+
+/* ---------- scenarios ---------- */
+.scn{background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:14px 16px; margin:10px 0; cursor:pointer}
+.scn:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.scn .row{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.scn .nm{font-size:14.5px; font-weight:800}
+.scn .pc{font-size:18px; font-weight:800; font-variant-numeric:tabular-nums}
+.scn .bar{height:8px; border-radius:4px; background:var(--hair); margin:9px 0 7px; overflow:hidden}
+.scn .bar i{display:block; height:100%; border-radius:4px; background:var(--sc,var(--base-g)); transition:width .5s ease}
+.scn.bull{--sc:var(--bull)} .scn.bear{--sc:var(--bear)}
+.scn .desc{font-size:12.5px; color:var(--ink-2)}
+.scn .tgt{display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--hair); gap:8px}
+.scn.open .tgt{display:grid; grid-template-columns:1fr 1fr}
+.scn .tgt div{font-size:12px; color:var(--ink-2)}
+.scn .tgt b{display:block; font-size:15px; color:var(--ink); font-variant-numeric:tabular-nums}
+
+/* ---------- allocation ---------- */
+.alloc-bar{display:flex; height:34px; border-radius:9px; overflow:hidden; gap:2px; margin:12px 0 4px}
+.alloc-bar span{display:block; height:100%; background:var(--sg); cursor:pointer; transition:opacity .2s; min-width:4px}
+.alloc-bar.dim span{opacity:.25}
+.alloc-bar.dim span.hot{opacity:1}
+.legend{margin:10px 0 0; padding:0; list-style:none}
+.legend li{
+  display:flex; align-items:center; gap:9px; padding:9px 6px; border-bottom:1px solid var(--hair);
+  font-size:13.5px; cursor:pointer; border-radius:8px;
+}
+.legend li:last-child{border-bottom:0}
+.legend li.hot{background:var(--wash)}
+.legend .sw{width:11px; height:11px; border-radius:3px; background:var(--sg); flex:none}
+.legend .nm{flex:1; font-weight:600}
+.legend .pct{font-weight:800; font-variant-numeric:tabular-nums}
+.legend .note{flex-basis:100%; font-size:12px; color:var(--ink-2); padding-left:20px; display:none; margin-top:2px}
+.legend li.hot .note{display:block}
+.legend li{flex-wrap:wrap}
+
+/* detail tables */
+.dtl{width:100%; border-collapse:collapse; font-size:13px; margin:8px 0 2px}
+.dtl th{text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:700; padding:6px 8px; border-bottom:1px solid var(--hair)}
+.dtl td{padding:8px; border-bottom:1px solid var(--hair); vertical-align:top; color:var(--ink-2)}
+.dtl td:first-child{font-weight:700; color:var(--ink); white-space:nowrap}
+.dtl td.num{font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); white-space:nowrap}
+.tbl-scroll{overflow-x:auto}
+
+/* ---------- kospi range ---------- */
+.range{margin:16px 4px 6px; position:relative; height:64px}
+.range .track{position:absolute; left:0; right:0; top:26px; height:8px; border-radius:4px; background:var(--hair)}
+.range .zone{position:absolute; top:26px; height:8px; background:var(--wash); border:1px solid var(--accent); border-radius:4px}
+.range .mk{position:absolute; top:20px; width:2px; height:20px; background:var(--ink-3); transform:translateX(-1px)}
+.range .mk.now{background:var(--accent); width:3px}
+.range .lb{position:absolute; font-size:10.5px; color:var(--ink-3); transform:translateX(-50%); white-space:nowrap; font-variant-numeric:tabular-nums}
+.range .lb.top{top:0} .range .lb.bot{top:44px}
+.range .lb b{color:var(--ink)}
+
+/* ---------- triggers ---------- */
+.trg{background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:12px 14px; margin:9px 0; display:flex; gap:11px}
+.trg .st{width:4px; border-radius:2px; background:var(--tc,var(--ink-3)); flex:none}
+.trg.buy{--tc:var(--good)} .trg.sell{--tc:var(--crit)} .trg.watch{--tc:var(--warn)}
+.trg .cond{font-size:13.5px; font-weight:700; margin-bottom:3px}
+.trg .act{font-size:13px; color:var(--ink-2)}
+.trg .tag{font-size:10px; font-weight:800; letter-spacing:.08em; color:var(--ink-3); text-transform:uppercase; margin-bottom:2px}
+
+/* tap-to-define jargon term */
+/* jargon term: keyword gets a visual "has a note" cue; the emoji button is the tap target */
+.jt{display:inline}
+.jt .kw{border-bottom:1px dashed var(--accent-ink); color:var(--accent-ink)}
+.jt.open .kw{border-bottom-style:solid}
+.qmark{
+  border:0; background:none; padding:0; margin:0 0 0 2px; cursor:pointer;
+  font-size:11px; line-height:1; vertical-align:1px; display:inline-block;
+  filter:grayscale(35%); opacity:.85;
+}
+.qmark:hover, .qmark:focus-visible{opacity:1}
+.qmark:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+.jt .def{
+  display:none; font-size:12px; font-weight:500; line-height:1.5; color:var(--ink-2);
+  background:var(--wash); border:1px solid var(--ring); border-radius:9px;
+  padding:7px 10px; margin-top:5px;
+}
+.jt.open .def{display:block}
+
+/* data provenance labels */
+.dlabel{
+  font-size:9.5px; font-weight:800; letter-spacing:.03em; padding:2px 7px 2px 6px;
+  border-radius:99px; border:1px solid; display:inline-flex; align-items:center; gap:4px;
+  white-space:nowrap; vertical-align:middle;
+}
+.dlabel::before{content:""; width:6px; height:6px; border-radius:50%}
+.dlabel.verified{color:var(--good-text); border-color:var(--good); background:var(--wash)}
+.dlabel.verified::before{background:var(--good)}
+.dlabel.ai{color:var(--s5); border-color:var(--s5); background:rgba(74,58,167,.08)}
+.dlabel.ai::before{background:var(--s5)}
+.secttl{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0 8px}
+.secttl h3{margin:0; font-size:14.5px; font-weight:800}
+
+/* period x investor-type flow matrix (KOSPI/KOSDAQ, shared structure) */
+.flowmatrix{margin:8px 0 4px}
+.fm-head{display:grid; grid-template-columns:44px 1fr 1fr 1fr; gap:6px; margin-bottom:8px}
+.fm-head span{font-size:10px; font-weight:700; color:var(--ink-3); text-align:center}
+.fm-head span:first-child{text-align:left}
+.fm-row{display:grid; grid-template-columns:44px 1fr 1fr 1fr; gap:6px; align-items:center; margin-bottom:10px}
+.fm-lbl{font-size:12px; font-weight:700; color:var(--ink-2)}
+.fm-cell{display:flex; flex-direction:column; align-items:center; gap:3px}
+.fm-cell .track{position:relative; width:100%; height:9px; background:var(--hair); border-radius:3px; overflow:hidden}
+.fm-cell .track .zero{position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--ink-3); opacity:.5}
+.fm-cell .track .fill{position:absolute; top:1px; bottom:1px; border-radius:3px}
+.fm-cell .track .fill.buy{background:var(--bull); left:50%}
+.fm-cell .track .fill.sell{background:var(--bear); right:50%}
+.fm-cell .v{font-size:10.5px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.fm-cell .v.buy{color:var(--bull)} .fm-cell .v.sell{color:var(--bear)}
+.fm-note{font-size:11px; color:var(--ink-3); text-align:center; margin-top:2px}
+
+/* inline micro-bar for table cells (sector / stock ranking rows) */
+.mbar-wrap{display:flex; align-items:center; gap:6px; min-width:88px}
+.mbar-wrap .track{position:relative; flex:1; height:8px; background:var(--hair); border-radius:3px; overflow:hidden; min-width:40px}
+.mbar-wrap .track .zero{position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--ink-3); opacity:.5}
+.mbar-wrap .track .fill{position:absolute; top:1px; bottom:1px; border-radius:3px}
+.mbar-wrap .track .fill.buy{background:var(--bull); left:50%}
+.mbar-wrap .track .fill.sell{background:var(--bear); right:50%}
+.mbar-wrap .n{font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; min-width:52px; text-align:right}
+.mbar-wrap .n.buy{color:var(--bull)} .mbar-wrap .n.sell{color:var(--bear)}
+
+/* investor flow diverging bars */
+.flowbar{display:flex; flex-direction:column; gap:11px; margin:10px 0 4px}
+.flowbar .row{display:grid; grid-template-columns:52px 1fr 78px; align-items:center; gap:8px}
+.flowbar .nm{font-size:12.5px; font-weight:700; color:var(--ink-2)}
+.flowbar .track{position:relative; height:14px; background:var(--hair); border-radius:4px; overflow:hidden}
+.flowbar .zero{position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--ink-3); opacity:.5}
+.flowbar .fill{position:absolute; top:1px; bottom:1px; border-radius:3px}
+.flowbar .fill.buy{background:var(--bull); left:50%}
+.flowbar .fill.sell{background:var(--bear); right:50%}
+.flowbar .val{font-size:12.5px; font-weight:800; text-align:right; font-variant-numeric:tabular-nums}
+.flowbar .val.buy{color:var(--bull)} .flowbar .val.sell{color:var(--bear)}
+.flowlbl{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-3); margin-top:2px}
+
+/* mini 1-year range bar (inside indicator cards) */
+.mrange{margin-top:9px}
+.mrange .tk{position:relative; height:6px; border-radius:3px; background:var(--hair)}
+.mrange .tk i{position:absolute; top:-3px; width:3px; height:12px; border-radius:2px; background:var(--accent); transform:translateX(-1px)}
+.mrange .lbs{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-3); margin-top:3px; font-variant-numeric:tabular-nums}
+
+/* daily issues */
+.iss{background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:13px 14px; margin:9px 0}
+.iss .hd{font-size:14px; font-weight:800; letter-spacing:-.01em; margin-bottom:3px; text-wrap:balance}
+.iss .ds{font-size:12.5px; color:var(--ink-2); margin-bottom:9px}
+.iss .imp{display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-top:1px dashed var(--hair); font-size:12.5px; color:var(--ink-2)}
+.iss .imp .bg{
+  flex:none; font-size:10px; font-weight:800; letter-spacing:.04em; border-radius:6px;
+  padding:2px 7px; margin-top:1px; border:1px solid var(--ring); color:var(--ink);
+  display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+}
+.iss .imp .bg::after{content:""; width:7px; height:7px; border-radius:50%; background:var(--io,var(--ink-3))}
+.iss .imp.g{--io:var(--good)} .iss .imp.w{--io:var(--warn)} .iss .imp.c{--io:var(--crit)}
+
+/* strategy switcher */
+.seg{display:flex; gap:6px; background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:5px; margin:14px 0 4px}
+.seg button{
+  appearance:none; flex:1; border:0; background:none; border-radius:8px; padding:9px 6px;
+  font-family:inherit; font-size:12.5px; font-weight:700; color:var(--ink-3); cursor:pointer;
+}
+.seg button.on{background:var(--wash); color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.seg button small{display:block; font-weight:500; font-size:10.5px; margin-top:1px}
+.strat-pane{display:none}
+.strat-pane.on{display:block}
+
+/* footer */
+footer{margin-top:26px; padding:14px 2px 8px; border-top:1px solid var(--hair); font-size:11.5px; color:var(--ink-3)}
+footer p{margin:5px 0}
+.credit{
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+  margin-top:12px; padding-top:12px; border-top:1px dashed var(--hair);
+  font-size:12px; color:var(--ink-2);
+}
+.credit .who b{color:var(--ink); font-weight:800}
+.credit a{color:var(--accent-ink); text-decoration:none; border-bottom:1px dashed var(--accent-ink)}
+.credit a:hover, .credit a:focus-visible{border-bottom-style:solid}
+.updated{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-3); border:1px solid var(--ring); border-radius:99px; padding:2px 9px}
+.updated::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--good)}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <div class="eyebrow">Macro Strategy Briefing · Daily</div>
+  <h1>매크로 전략 브리핑</h1>
+  <div class="byline">작성 <b>JM.SEO</b> <a href="mailto:niseo@naver.com">niseo@naver.com</a></div>
+  <div class="dateline">2026년 7월 10일 (금) <span class="updated">최종 업데이트 07-10 06시 · 미국장 마감 기준(7/9)</span></div>
+  <div class="stance">
+    <div class="lbl">오늘의 스탠스 · 전략별</div>
+    <div class="srow">
+      <span class="bg">A 바벨</span>
+      <div><div class="sv">순노출 50~60% 유지 · 한국 매수 트리거 임박</div>
+      <p>KOSPI 7,247(−5.35%)로 매수구간 상단 코앞 + 외국인 14일 만에 순매수 전환. 순매수 지속 1~2일 확인 후 1차 분할 투입. 헤지(풋·금·에너지)는 작동 중.</p></div>
+    </div>
+    <div class="srow">
+      <span class="bg">B 모멘텀</span>
+      <div><div class="sv">롱 코어 절반만 · 신규 진입 보류</div>
+      <p>폭락으로 가격 모멘텀 추가 훼손 — 50일선 회복 전 신규 롱 금지 유지(바닥 잡기는 B의 영역이 아님). 잔여 롱은 ADR 데뷔 흥행 + 50일선 회복 확인 후. VIX 16.9, 크래시 룰(25)까지 여유.</p></div>
+    </div>
+    <div class="srow">
+      <span class="bg">C 초장기</span>
+      <div><div class="sv">계획대로 정액매수 지속 · 무반응</div>
+      <p>VIX·금리·환율 등 오늘의 매크로 이벤트는 전략 C의 매수 계획에 영향을 주지 않음. 오히려 조정은 다음 정액매수 단가를 낮추는 기회로 처리.</p></div>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:12px">
+    <h3>전략 A·B·C — 뭐가 다른가</h3>
+    <p><strong>A</strong>는 분산 + 보험으로 어떤 시나리오에서도 살아남는 구조 — 베이스·베어에 강하다.</p>
+    <p><strong>B</strong>는 집중 + 손절 규율로 추세가 이어질 때 수익을 극대화하는 구조 — 불 시나리오에 강하고, 급반전·횡보에 취약하다.</p>
+    <p><strong>C</strong>는 시계 자체를 10년 이상으로 늘려 매크로를 무시하는 구조 — 이번 분기의 VIX·연준·환율은 C의 의사결정에 아예 들어오지 않는다.</p>
+    <p>세 전략은 시계와 반응 방식이 다를 뿐 상호 배타적이지 않다 — 자본 일부씩 셋에 나눠 갖는 것도 합리적 선택.</p>
+  </div>
+</header>
+
+<main>
+
+<!-- ======================= 1. 대시보드 ======================= -->
+<section id="tab-dash" class="on">
+  <h2>전일 주요 이슈 <small>미국 7/9 마감 기준 · 전략별 영향</small></h2>
+
+  <div class="iss">
+    <div class="hd">이란 확전에도 반도체 랠리로 상승 마감</div>
+    <div class="ds">미국의 이란 추가 공습, 이란은 걸프 지역 미군 시설 타격으로 응수 — 휴전은 사실상 붕괴 상태다.</div>
+    <div class="ds">그럼에도 반도체 반등과 유가 하락(WTI −2.2%)에 힘입어 S&amp;P 500 +0.81%, 나스닥 +1.30%, 다우 +0.27%로 마감했다.</div>
+    <div class="imp g"><span class="bg">A 바벨</span><span>지정학 리스크는 여전히 살아있다 — 에너지·금·풋 헤지 유지. VIX는 16.9로 오히려 안정, 보험이 여전히 저렴하다는 뜻.</span></div>
+    <div class="imp g"><span class="bg">B 모멘텀</span><span>반도체 반등이 AI 메모리 롱(32%)에 우호적 — 다만 지정학 변동성이 남아있어 팩터 크래시 방어선(VIX 25)은 계속 주시.</span></div>
+  </div>
+
+  <div class="iss">
+    <div class="hd">SpaceX 26% 급락 — 머스크 트릴리언네어 지위 상실</div>
+    <div class="ds">6/12 상장 이후 SPCX가 26% 빠지면서 일론 머스크의 개인자산이 1조달러 아래로 내려갔다.</div>
+    <div class="ds">동시에 테슬라-SpaceX 합병설이 돌면서 RBC는 테슬라 목표주가를 $500로 상향했고, JPMorgan은 "서류상 전략적으로는 말이 되지만" 다국가 인허가·중국 리스크를 지적했다.</div>
+    <div class="imp w"><span class="bg">A 바벨</span><span>A는 SpaceX·테슬라를 보유하지 않아 직접 영향 없음.</span></div>
+    <div class="imp c"><span class="bg">B 모멘텀</span><span>B도 개별 종목 리스크는 지지 않으나, 전략 C(테슬라 25%·SpaceX 20%)의 핵심 이벤트 — C 규율상 손절 없이 정액매수 지속.</span></div>
+  </div>
+
+  <div class="iss">
+    <div class="hd">SK하이닉스 ADR 티커 SKHY 확정 · 내일 나스닥 데뷔</div>
+    <div class="ds">$28~29B 규모로 알리바바(2014년 $21.8B)를 넘는 사상 최대 ADR 상장이 될 전망이다.</div>
+    <div class="ds">회사 측은 날짜가 "잠정, 변경 가능"이라 밝혔고, 레버리지 ADR인 SKUU·SKDD는 7/13 상장 예정이다.</div>
+    <div class="imp w"><span class="bg">A 바벨</span><span>환전략 플레이북 D-day — 데뷔 후 환율 반등 시 전술적 달러 익절, 외국인 국내주→ADR 이동 여부로 한국 증액 판단.</span></div>
+    <div class="imp g"><span class="bg">B 모멘텀</span><span>AI 메모리 32% 롱의 핵심 이벤트 — 데뷔 흥행 + 국내주 50일선 회복 확인되면 보류 중인 잔여 롱 투입 신호.</span></div>
+  </div>
+
+  <div class="iss">
+    <div class="hd">국채금리 계속 상승 — 10년물 4.58%, 2년물 4.19%</div>
+    <div class="ds">인플레·재정 우려로 장단기 금리 모두 오름세를 지속하고 있다. 스프레드는 +39bp로 소폭 확대(정상 곡선 유지, 역전 아님).</div>
+    <div class="imp g"><span class="bg">A 바벨</span><span>단기채 30% 배분과 장기채·HY 회피 논리 강화 — 금리 상승이 계속될수록 이 포지셔닝이 유효해진다.</span></div>
+    <div class="imp c"><span class="bg">B 모멘텀</span><span>금리 상승은 고베타 성장주 멀티플에 직접 역풍 — 손절 라인(−15%·50일선) 점검 필수.</span></div>
+  </div>
+
+  <div class="iss">
+    <div class="hd">금값 소폭 상승, 상단은 제한적</div>
+    <div class="ds">지정학 리스크에도 금은 $4,110 수준 — 연준의 장기 고금리 전망이 금 상승폭을 억제하고 있다는 분석이다.</div>
+    <div class="imp g"><span class="bg">A 바벨</span><span>포트 10% 금 배분은 여전히 레인지 하단(34%)에서 할인가 매집 구간 — 변경 없음.</span></div>
+    <div class="imp w"><span class="bg">B 모멘텀</span><span>금은 B의 편입 대상이 아님 — 중립.</span></div>
+  </div>
+
+  <h2>핵심 지표 <span class="dlabel verified">검증</span> <small>탭하면 해석이 열립니다</small></h2>
+  <div class="grid">
+    <div class="ind" tabindex="0"><div class="k"><span class="jt"><span class="kw">VIX</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"공포지수". S&amp;P500 옵션 가격으로 계산한, 앞으로 30일간 예상되는 시장 변동폭. 낮으면 "조용할 것"이라 방심 중, 높으면 큰 출렁임을 각오 중이라는 뜻.</span></span></div><div class="v">16.9</div><div class="sub">횡보 · 반도체 랠리가 이란 리스크 상쇄</div><span class="chip w">저점 이탈</span>
+      <div class="more">15.5 저점에서 반등 시작 — 미리 담은 풋·VIX콜이 작동하기 시작. 아직 절대 레벨은 낮아 신규 헤지도 여전히 저렴. 30 돌파 + 공포탐욕 20 미만 시 역발상 매수 신호로 반전.</div></div>
+    <div class="ind" tabindex="0"><div class="k">공포탐욕지수</div><div class="v">43</div><div class="sub">Fear 구간</div><span class="chip w">중립~공포</span>
+      <div class="more">극단적 공포(20 미만)가 아니므로 역발상 전량 매수 신호는 아직 아님. VIX와 달리 심리는 이미 식는 중 — 괴리 자체가 후반부 신호.</div></div>
+    <div class="ind" tabindex="0"><div class="k">원/달러</div><div class="v">1,498.5<small>원</small></div><div class="sub">−29.7원 · 두 달 만에 1,500 하회</div><span class="chip w">ADR 선반영</span>
+      <div class="more">DXY 보합(~101) 속 5거래일 −3.8%의 독립 강세 — SK하이닉스 ADR $29B 유입 기대가 선물환으로 선반영(당국도 인정).<br><br>거시 리프라이싱이 아닌 일회성 수급 이벤트 — 상세 플레이북은 전략 탭 환전략 참조.</div></div>
+    <div class="ind" tabindex="0"><div class="k">미 2년물</div><div class="v">4.19<small>%</small></div><div class="sub">인상 가능성 반영 중</div><span class="chip w">상승 압력</span>
+      <div class="more">연준 10월 인상이 현실화되면 4.4~4.5%까지 열려 있음. 짧은 만기 채권을 사서 만기까지 들고 가는 것은 유효하지만,
+        <span class="jt"><span class="kw">듀레이션 베팅</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">만기가 긴 채권일수록 금리 변화에 가격이 더 크게 출렁인다. "듀레이션 베팅"은 이 긴 만기 채권의 가격 변동에 거는 것 — 금리가 계속 오르는 지금 국면에서는 손실 위험이 커서 피해야 한다는 뜻.</span></span>
+        (장기채에 베팅)은 금지.</div></div>
+    <div class="ind" tabindex="0"><div class="k">미 10년물</div><div class="v">4.58<small>%</small></div><div class="sub">30년물은 5%대</div><span class="chip s">베어 스티프닝</span>
+      <div class="more">정부 재정적자 + 인플레 부담으로 장기 국채를 기피하는 분위기 — 장기채,
+        <span class="jt"><span class="kw">리츠</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">REITs(Real Estate Investment Trust). 부동산에 직접 투자하는 대신 주식처럼 사고팔 수 있게 만든 상품. 빌린 돈(대출)에 많이 의존하는 구조라 금리가 오르면 이자 부담이 커져 타격을 받는 편.</span></span>,
+        비싼 값에 거래되는 성장주(고밸류 성장주)에 역풍. 30년물 금리가 5%를 넘어도 들인 위험 대비 얻는 게 적어(손익비 나쁨) 회피.</div></div>
+    <div class="ind" tabindex="0"><div class="k"><span class="jt"><span class="kw">장단기금리차</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">보통 돈을 오래 빌려줄수록(장기) 이자를 더 받아야 정상인데(장기금리 > 단기금리), 가끔 반대로 뒤집힌다(장기금리 < 단기금리) — 이걸 "역전"이라 부르고 경기침체가 다가온다는 대표적 경고 신호로 통한다. 지금은 역전이 아니라 정상 상태(+39bp)라는 뜻.</span></span> (10년물−2년물)</div><div class="v">+39<small>bp</small></div><div class="sub">역전 아님 · 우상향 곡선</div><span class="chip w">나쁜 스티프닝</span>
+      <div class="more">2년 국채 금리 4.19% vs 10년 국채 금리 4.58%. 침체 신호인 "역전"은 아니지만,
+        <span class="jt"><span class="kw">스티프닝</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">장기금리와 단기금리의 차이가 벌어지는 현상. 보통은 "경기가 좋아질 것"이란 기대로 벌어지면 좋은 신호다.<br><br>하지만 지금처럼 물가·정부 빚 걱정 때문에 장기금리만 억지로 밀려 올라가면 "나쁜 스티프닝"이라 부른다 — 겉모습은 비슷해도 원인이 다르면 해석이 정반대가 된다.</span></span>이라 부르는
+        상태다. 성장 기대가 아니라 인플레·정부 재정 부담이 장기금리를 밀어올리고 있다는 뜻 — "나쁜 스티프닝".<br><br>이 격차가 다시 마이너스(역전)로 바뀌면 침체 경고로 해석을 전환하고 방어를 강화한다.</div></div>
+    <div class="ind" tabindex="0"><div class="k"><span class="jt"><span class="kw">HY 스프레드</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">High Yield(투기등급) 회사채가 "안전한" 국채보다 얼마나 더 높은 이자를 주는지 나타내는 격차(spread). 이 격차가 좁으면 "부도 위험이 있는 회사에 돈을 빌려줘도 별 걱정 없다"고 시장이 방심하고 있다는 뜻 — 위험 대비 보상이 박하다는 신호.</span></span></div><div class="v">274<small>bp</small></div><div class="sub">20년 평균 490bp</div><span class="chip c">보상 없는 위험</span>
+      <div class="more">역사적으로 가장 좁은 수준(참고: <span class="jt"><span class="kw">bp</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">basis point(베이시스 포인트)의 줄임말. 1bp = 0.01%포인트. 예를 들어 274bp는 2.74%포인트라는 뜻 — 금리·스프레드처럼 작은 차이를 다룰 때 쓰는 단위.</span></span>). 신용 리스크에 대한 보상이 사실상 없다는 뜻 — 이런 회사채(HY)는 전면 회피.<br><br>이 격차가 갑자기 확 벌어지면(스프레드 급확대) "투자자들이 위험자산에서 일제히 손을 떼기 시작했다"는 신호로 미리 감지할 수 있다.</div></div>
+    <div class="ind" tabindex="0"><div class="k">CPI (5월)</div><div class="v">4.2<small>%</small></div><div class="sub">코어 2.8% · 6월치 7/14 발표</div><span class="chip c">재점화</span>
+      <div class="more">유가·관세발 헤드라인 급등. 7/14 6월 CPI가 4.5% 상회 시 주식 순노출 10%p 추가 축소 트리거.</div></div>
+    <div class="ind" tabindex="0"><div class="k">PCE (5월)</div><div class="v">4.1<small>%</small></div><div class="sub">코어 3.4% (23년 10월 이후 최고)</div><span class="chip c">코어도 반등</span>
+      <div class="more">연준이 보는 물가. 코어가 3.3→3.4%로 상승 반전한 것이 인상 논거의 핵심. 코어 하락 반전 확인 전까지 방어 유지.</div></div>
+    <div class="ind" tabindex="0"><div class="k">고용 (6월)</div><div class="v">+5.7<small>만</small></div><div class="sub">실업률 4.2% · 참가율 61.5%↓</div><span class="chip s">균열 시작</span>
+      <div class="more">예상(11.5만) 대폭 미달 + 가계조사 고용 -50.7만 + 레저·접객 -6.1만. 실업률이 낮아 보이는 건 참가율 급락 때문 — 착시.</div></div>
+    <div class="ind" tabindex="0"><div class="k">연준 기준금리</div><div class="v">3.50–3.75<small>%</small></div><div class="sub">7/8 의사록 공개 · 연내 인상 확률 80%+</div><span class="chip c">인상 리스크</span>
+      <div class="more">인하 전망 삭제, 점도표 9명 인상 지지. 7/8 공개된 6월 의사록 이후 시장은 연내 25bp 인상 확률을 80% 이상으로 가격에 반영.<br><br>이것이
+        <span class="jt"><span class="kw">멀티플 압축</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">주가는 "이익 × 배수(P/E 같은 밸류에이션 지표)"로 볼 수 있는데, 이익은 그대로여도 금리가 오르면 투자자들이 같은 이익에 예전만큼 비싼 값을 쳐주지 않아 이 배수가 눌리는 현상.<br><br>이익이 늘어도 주가는 오히려 빠질 수 있는 이유가 여기 있다.</span></span>의
+        핵심 변수. Warsh 의장 "물가 안정에 unambiguous(흔들림 없이 확고)".</div></div>
+    <div class="ind" tabindex="0"><div class="k">WTI 유가</div><div class="v">$71.9</div><div class="sub">−2.2% · 1년 레인지 하단 28%</div><span class="chip w">봉쇄 위협 완화</span>
+      <div class="mrange"><div class="tk"><i style="left:30%"></i></div><div class="lbs"><span>1년 저점 $55.0</span><span>고점 $117.6</span></div></div>
+      <div class="more">미국이 이란을 재폭격하고 해상봉쇄 재부과를 위협, 이란은 호르무즈 봉쇄로 응수 경고.<br><br>3월 고점 $117 대비 크게 되돌린 하단 30% 수준이라, 지정학 리스크가 재점화되면 오를 폭이 내릴 폭보다 훨씬 크다 — 이런 모양을
+        <span class="jt"><span class="kw">콜옵션적 손익비</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">콜옵션은 "정해진 가격에 살 수 있는 권리"를 사는 상품으로, 최악의 경우 낸 돈(보험료)만 잃고 끝나지만 잘 맞으면 이익은 제한이 없다.<br><br>여기서는 실제 옵션이 아니라 "잃을 건 적고 딸 건 큰" 비대칭 구조를 비유적으로 표현한 것 — 에너지 주식을 사두면 이런 모양의 베팅이 된다는 뜻.</span></span>
+        라 부른다.<br><br>$95+ 도달 시 이익 실현(매도) 트리거.</div></div>
+    <div class="ind" tabindex="0"><div class="k">금</div><div class="v">$4,110</div><div class="sub">1년 레인지 하단 34%</div><span class="chip g">저가 매집 구간</span>
+      <div class="mrange"><div class="tk"><i style="left:33%"></i></div><div class="lbs"><span>1년 저점 $3,283</span><span>고점 $5,597</span></div></div>
+      <div class="more">3월 전쟁 피크($5,597) 대비 −28% 되돌림.<br><br>포트 10% 배분을 레인지 하단에서 싸게 채울 수 있는 구간 — 스태그플레이션+지정학+달러 신뢰 훼손의 삼중 헤지를 할인가에 매수. 중동 재격화 시 상방 탄력 큼.</div></div>
+    <div class="ind" tabindex="0"><div class="k">구리</div><div class="v">$6.15<small>/lb</small></div><div class="sub">1년 레인지 상단 76% · 사상 최고권</div><span class="chip w">실수요 견조</span>
+      <div class="mrange"><div class="tk"><i style="left:76%"></i></div><div class="lbs"><span>1년 저점 $4.33</span><span>고점 $6.72</span></div></div>
+      <div class="more">AI 데이터센터·그리드 CAPEX의 실물 확인 지표. 구리가 최고권을 유지하는 한 전력 인프라 롱(전략 A 10% · B 12%)의 수요 근거가 유효. 구리 급락은 글로벌 성장 둔화의 조기 경고로 사용.</div></div>
+    <div class="ind" tabindex="0"><div class="k"><span class="jt"><span class="kw">S&amp;P 500 밸류</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">Forward P/E(주가수익비율): 주가가 "앞으로 1년간 예상 기업이익"의 몇 배인지 나타내는 숫자. 20.4배면 그 이익을 20.4년 모아야 지금 주가만큼 된다는 뜻.<br><br>높을수록 "비싸게 사는 것", 금리가 오르면 이 배수가 눌리는(압축되는) 경향이 있다.</span></span></div><div class="v">20.4<small>배</small></div><div class="sub">Forward P/E · 10년 평균 19.0</div><span class="chip w">인상 시 취약</span>
+      <div class="mrange"><div class="tk"><i style="left:31%"></i></div><div class="lbs"><span>10년 평균 19.0</span><span>5년 피크 23.5</span></div></div>
+      <div class="more">10년 평균(19.0)과 최근 5년 피크(23.5) 사이 하단 1/3 지점. 평시엔 무난한 수준이나 금리 인상 국면 진입 시 멀티플 압축 위험. 지수 베타보다 섹터 선별이 수익을 결정. (정확한 1년 밴드 데이터 공표 시 교체 예정)</div></div>
+  </div>
+
+  <h2>AI · 반도체 사이클 <span class="dlabel verified">검증</span></h2>
+  <div class="grid">
+    <div class="ind" tabindex="0"><div class="k"><span class="jt"><span class="kw">하이퍼스케일러</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">아마존·구글·마이크로소프트·메타처럼 전 세계에 초대형 데이터센터를 운영하는 소수의 빅테크 기업들을 부르는 말. 이들의 설비투자(CAPEX) 규모가 워낙 커서 AI 반도체·전력 수요를 좌우한다.</span></span> <span class="jt"><span class="kw">CAPEX</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">Capital Expenditure(자본적 지출) — 공장·데이터센터·장비처럼 오래 쓰는 자산에 돈을 쓰는 것. 당장 비용 처리되는 일반 지출과 달리, 미래 생산능력에 투자하는 돈이라 "미래 수요를 어떻게 보고 있는지"의 신호로 읽힌다.</span></span></div><div class="v">$725<small>B</small></div><div class="sub">2026년 합계 +77% YoY</div><span class="chip g">수요 견조</span>
+      <div class="more">아마존 ~$200B, 구글 ~$185B, 메타 $125~145B(상향), MS ~$120B. 지출의 60%+가 전력·인프라. 단, 실적 발표 후 주가 일제 하락 = 지속가능성 의심 시작.</div></div>
+    <div class="ind" tabindex="0"><div class="k">삼성전자 2Q</div><div class="v">89.4<small>조</small></div><div class="sub">영업이익 YoY 19배 · 매출 171조</div><span class="chip w">실적↑ 주가↓</span>
+      <div class="more">분기 이익이 2023~25년 3개년 합산 초과, 엔비디아 제치고 글로벌 1위. 그러나 발표 후 -7% — "이보다 더 좋을 수 없다" 심리. 조정 시 분할매수 대상.</div></div>
+    <div class="ind" tabindex="0"><div class="k">SK하이닉스 1Q</div><div class="v">37.6<small>조</small></div><div class="sub">영업이익 +405% · 7/10 나스닥 <span class="jt"><span class="kw">ADR</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">American Depositary Receipt — 외국 회사 주식을 미국 거래소에서 살 수 있도록 만든 대체증서. 한국 상장주와는 별개로, 미국 투자자들이 달러로 사고팔 수 있는 "미국판 SK하이닉스 주식"이 새로 생기는 것이라 보면 된다.</span></span> 상장(SKHY)</div><span class="chip g">HBM 1위</span>
+      <div class="more">HBM 점유율 50~55%, 장기계약 가격상한 제거로 협상력 극대.<br><br>티커 SKHY로 7/10 나스닥 데뷔 예정(회사 측 "잠정, 변경 가능" 단서), 레버리지 ADR인 SKUU·SKDD는 7/13 상장 예정. $28~29B 규모로 알리바바(2014년 $21.8B)를 넘는 사상 최대 ADR 상장.<br><br>수요가 물량보다 훨씬 많아
+        <span class="jt"><span class="kw">수배 초과청약</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">공모주를 사겠다고 신청한 물량이 실제 팔 수 있는 물량보다 몇 배 더 많은 상태. "몇 배(수배)"만큼 인기가 많다는 뜻으로, 흥행 여부를 보여주는 지표.</span></span>
+        (Baillie Gifford·Coatue 등 $7B 청약). UBS는 반도체지수
+        <span class="jt"><span class="kw">편입 패시브 유입</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">개별 펀드매니저가 "이 종목이 좋아 보여서" 사는 게 아니라, 특정 지수(반도체지수·나스닥100 등)에 이 종목이 공식 편입되면 그 지수를 그대로 따라가는 인덱스펀드들이 자동으로, 기계적으로 사들이는 자금.<br><br>사람 판단이 개입하지 않는 "자동 매수 물량"이라 규모가 예측 가능하다.</span></span>
+        $3.5B, 나스닥100 편입 시 최대 $15B 추정.<br><br>외국인이 국내 상장주 대신 이 ADR로 옮겨타는(갈아타기) 수급은 주시 대상.
+        <span class="jt"><span class="kw">베타</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">전체 시장이 1% 움직일 때 이 종목이 평균적으로 몇 % 움직이는지 나타내는 숫자. 베타가 1보다 크면 시장보다 더 크게(위아래로) 출렁인다는 뜻 — "고베타 종목"은 오를 때 더 오르지만 내릴 때도 더 내린다.</span></span>가
+        높아 삼성전자와 동일하게 나눠서 사들이는(분할 매수) 방식으로 접근.</div></div>
+    <div class="ind" tabindex="0"><div class="k">마이크론 가이던스</div><div class="v">
+      <span class="jt"><span class="kw">GM</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">Gross Margin(매출총이익률). 매출에서 원가를 뺀 이익이 매출의 몇 %인지 — 86%면 100원 팔아서 86원이 남는다는 뜻으로, 극도로 높은 수익성을 의미한다.</span></span> 86<small>%</small></div><div class="sub">FQ4 매출 $50B±1B ·
+      <span class="jt"><span class="kw">EPS</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">Earnings Per Share(주당순이익). 회사 전체 이익을 주식 수로 나눈 값 — 주식 1주가 벌어들이는 이익 몫.</span></span> $31</div><span class="chip g">완판</span>
+      <div class="more">2026년 HBM 물량 가격·수량 계약 완료. HBM TAM $35B(25) → $100B(28) 전망. 밸류에이션은 한국 2사가 우위.</div></div>
+    <div class="ind" tabindex="0"><div class="k">KOSPI</div><div class="v">7,247</div><div class="sub">−5.35% 투매 · 고점 대비 −23%</div><span class="chip c">트리거 임박</span>
+      <div class="more">7/8 −409pt 폭락 마감.<br><br>그러나 외국인이 14일 만에 저가매수로 순매수 전환한 것이 핵심 변화 — 매수 트리거(7,000~7,200 + 외국인 전환)의 두 조건에 동시에 근접.<br><br>순매수 지속 1~2일 확인 후 1차 분할 투입. JPM 불케이스 10,000.</div></div>
+    <div class="ind" tabindex="0"><div class="k">코스닥</div><div class="v">785.0</div><div class="sub">−5.56% · 10개월 만에 700선대</div><span class="chip c">동반 투매</span>
+      <div class="more">1/26 장중 1,000선 돌파 후 큰 폭 조정, 7/8 하루 만에 700선대로 재진입(작년 9/4 이후 처음).<br><br>이틀 연속
+        <span class="jt"><span class="kw">매도 사이드카</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">주가지수 선물이 짧은 시간에 너무 빨리 떨어지면, 프로그램(자동) 매도 주문이 5분간 자동으로 멈추도록 만든 거래소의 안전장치. "브레이크를 걸어서" 급락 속도를 늦추는 제도.<br><br>이게 발동됐다는 건 그만큼 짧은 시간에 급하게 팔렸다는 뜻.</span></span>
+        발동.<br><br>외국인만 홀로 +3,371억 매수, 개인·기관은 매도 — 코스피와 같은 수급 패턴(외국인 저가매수, 개인 소진).</div></div>
+    <div class="ind" tabindex="0"><div class="k">공급 측 리스크</div><div class="v">2027~</div><div class="sub">삼성 P5 재개 · 하이닉스 용인 120조</div><span class="chip w">과잉의 씨앗</span>
+      <div class="more">대규모 증설 경쟁은 2027년 이후 공급과잉의 씨앗. 다만 웨이퍼 부족은 2030년까지 지속 전망 — 당장의 병목은 유효.</div></div>
+  </div>
+
+  <h2>KOSPI 위치와 매수 구간</h2>
+  <div class="prose">
+    <div class="range" aria-label="KOSPI 연초 4,300에서 고점 9,385, 현재 7,600. 분할매수 구간 7,000~7,200">
+      <div class="track"></div>
+      <div class="zone" style="left:53.1%; width:3.9%"></div>
+      <div class="mk" style="left:0%"></div>
+      <div class="mk now" style="left:58%"></div>
+      <div class="mk" style="left:100%"></div>
+      <div class="lb top" style="left:3%">연초 <b>4,300</b></div>
+      <div class="lb top" style="left:58%">현재 <b>7,247</b></div>
+      <div class="lb top" style="left:94%">고점 <b>9,385</b></div>
+      <div class="lb bot" style="left:55%">매수구간 7,000–7,200</div>
+    </div>
+    <p>7/8 폭락으로 현재가가 매수구간 상단 바로 위(+47pt)까지 내려왔고, 외국인은 순매수로 전환 — 트리거의 두 조건에 동시 근접. 확인 후 진입 시 손익비는 상방 +38%(불케이스 10,000) / 하방 −10%(손절 6,500).</p>
+  </div>
+
+  <h2>코스피·코스닥 수급 <small>투자자별 · 업종별 · 상위종목 — 동일 구조</small></h2>
+
+  <div class="prose">
+    <div class="secttl"><h3>코스피 · 투자자별 수급</h3><span class="dlabel verified">검증</span></div>
+    <div class="flowmatrix">
+      <div class="fm-head"><span></span><span>연초 누적<br>(1.2~7/3)</span><span>이번달 누적<br>(7/1~7/8)</span><span>전일(7/8)</span></div>
+      <div class="fm-row"><span class="fm-lbl">외국인</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−150.3조</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−12.1조</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:47%"></div></div><span class="v buy">+3,357억</span></div>
+      </div>
+      <div class="fm-row"><span class="fm-lbl">개인</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:31%"></div></div><span class="v buy">+99.2조</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">+11.0조*</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:6%"></div></div><span class="v sell">−451억</span></div>
+      </div>
+      <div class="fm-row"><span class="fm-lbl">기관</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:11%"></div></div><span class="v buy">+35.0조</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">−0.5조**</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:5%"></div></div><span class="v sell">−337억</span></div>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--ink-2)">연초 누적은 반기 기준(1.2~7/3) — 외국인 −150.3조로 반기 사상 최대이고, 개인 +99.2조 · 기관 +35.0조가 이를 받아냈다.</p>
+    <p style="font-size:12px; color:var(--ink-2)">이번달 누적은 7월 개장일 전체(7/1~7/8, 6거래일) 기준이다. 외국인은 6일 전부 확인돼 −12.1조로 완전 집계됐다 — 7/2 −5.13조가 최대 매도일이었고, 7/8 +0.34조로 반등 전환했다.</p>
+    <p style="font-size:12px; color:var(--ink-2)">개인(*)은 7/1·7/2·7/7·7/8 4일만 확인돼 +11.0조 — 7/3·7/6 이틀치가 빠진 부분 집계다. 기관(**)은 7/2·7/8 2일만 확인돼 −0.5조로, 6일 중 4일이 비어 있어 참고용에 그친다. 두 항목 모두 확인되는 대로 채워 완전 집계로 전환한다.</p>
+    <p style="font-size:12px; color:var(--ink-2)">전일은 개인 −451억 · 기관 −337억 · 외국인 +3,357억 — 합산하면 순매도 −430억 수준으로, 지수 급락(−5.35%) 규모에 비해 순매도 자체는 크지 않았다. 급락의 주 원인은 매도 물량이 아니라 대형주 동반 약세.</p>
+  </div>
+
+  <div class="prose">
+    <div class="secttl"><h3>코스닥 · 투자자별 수급</h3><span class="dlabel verified">검증(전일)</span></div>
+    <div class="flowmatrix">
+      <div class="fm-head"><span></span><span>연초 누적</span><span>이번달 누적</span><span>전일(7/8)</span></div>
+      <div class="fm-row"><span class="fm-lbl">외국인</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:47%"></div></div><span class="v buy">+3,371억</span></div>
+      </div>
+      <div class="fm-row"><span class="fm-lbl">개인</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:27%"></div></div><span class="v sell">−1,927억</span></div>
+      </div>
+      <div class="fm-row"><span class="fm-lbl">기관</span>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:20%"></div></div><span class="v sell">−1,452억</span></div>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--ink-2)">코스닥 연초·이번달 누적은 신뢰할 만한 공표 수치를 아직 확보하지 못해 "미확보/집계중"으로 정직하게 표기 — KRX 직접 연동 성공 시 코스피와 동일하게 채워질 예정(각주에 집계 시작일 표기 예정). 전일은 외국인만 홀로 매수(+3,371억), 개인·기관 동반 매도 — 코스피와 같은 패턴.</p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>코스피 업종별 등락률 (7/8)</h3><span class="dlabel verified">검증</span></div>
+    <table class="dtl">
+      <tr><th>업종</th><th>등락률</th></tr>
+      <tr><td>건설</td><td class="num" style="color:var(--bear)">−5.16%</td></tr>
+      <tr><td>기계·장비</td><td class="num" style="color:var(--bear)">−5.13%</td></tr>
+      <tr><td>의료·정밀기기</td><td class="num" style="color:var(--bear)">−4.98%</td></tr>
+      <tr><td>보험</td><td class="num" style="color:var(--bear)">−4.39%</td></tr>
+      <tr><td>유통</td><td class="num" style="color:var(--bear)">−4.31%</td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:8px">KRX 업종지수 기준 낙폭 상위 5개다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">반도체(전기전자)는 삼성전자 −2.70%·삼성전기 −2.49%로 지수 급락을 주도했으나, 업종지수 자체의 등락률은 미확보다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">업종별 외국인·기관 순매수 금액은 아직 확보하지 못했다 — KRX 연동 성공 시 채울 예정.</p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>코스닥 업종별 등락률 (7/8)</h3><span class="dlabel verified">검증(개별종목)</span></div>
+    <p style="font-size:12px; color:var(--ink-2)">업종지수 단위의 정확한 등락률은 미확보다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">개별 종목 기준으로는 에코프로·에코프로비엠·레인보우로보틱스 등 IT·2차전지 관련주가 3~6% 하락, 코오롱티슈진·올릭스·에이비엘바이오 등 바이오주도 동반 약세였다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">코스피와 마찬가지로 업종별 순매수 금액은 미확보 — KRX 연동 성공 시 코스피와 동일하게 채울 예정.</p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>외국인 매수·매도 상위 5 — 코스피 (7/8)</h3><span class="dlabel verified">검증</span></div>
+    <table class="dtl">
+      <tr><th>#</th><th>매수</th><th>금액</th><th>매도</th><th>금액</th></tr>
+      <tr><td>1</td><td>SK하이닉스</td><td class="num" style="color:var(--bull)">+1,683억</td><td>삼성전자</td><td class="num" style="color:var(--bear)">−2,827억</td></tr>
+      <tr><td>2</td><td>삼성전기</td><td class="num" style="color:var(--bull)">+1,575억</td><td>삼성전자우</td><td class="num" style="color:var(--bear)">−552억</td></tr>
+      <tr><td>3</td><td>LG이노텍</td><td class="num" style="color:var(--bull)">+1,092억</td><td>기아</td><td class="num" style="color:var(--bear)">−366억</td></tr>
+      <tr><td>4</td><td>SK스퀘어</td><td class="num" style="color:var(--bull)">+767억</td><td>S-Oil</td><td class="num" style="color:var(--bear)">−357억</td></tr>
+      <tr><td>5</td><td>HD현대중공업</td><td class="num" style="color:var(--bull)">+762억</td><td>KB금융</td><td class="num" style="color:var(--bear)">−322억</td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">삼성전자를 팔고 SK하이닉스·삼성전기·LG이노텍 등 HBM·AI 부품 밸류체인으로 갈아탄 흔적이다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">반도체 안에서도 종목 선별이 뚜렷하다 — 삼성전자 단일 종목 매도(−2,827억)가 코스피 매도 상위 전체의 대부분을 차지한다.</p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>외국인 매수·매도 상위 5 — 코스닥 (7/8)</h3><span class="dlabel verified">검증(매도만)</span></div>
+    <table class="dtl">
+      <tr><th>#</th><th>매수</th><th>금액</th><th>매도</th><th>금액</th></tr>
+      <tr><td>1</td><td style="color:var(--ink-3)">미확보</td><td class="num" style="color:var(--ink-3)">—</td><td>파마리서치</td><td class="num" style="color:var(--bear)">−121억</td></tr>
+      <tr><td>2</td><td style="color:var(--ink-3)">미확보</td><td class="num" style="color:var(--ink-3)">—</td><td>엘앤씨바이오</td><td class="num" style="color:var(--bear)">−63억</td></tr>
+      <tr><td>3</td><td style="color:var(--ink-3)">미확보</td><td class="num" style="color:var(--ink-3)">—</td><td>디앤디파마텍</td><td class="num" style="color:var(--bear)">−60억</td></tr>
+      <tr><td>4</td><td style="color:var(--ink-3)">미확보</td><td class="num" style="color:var(--ink-3)">—</td><td>와이지-원</td><td class="num" style="color:var(--bear)">−48억</td></tr>
+      <tr><td>5</td><td style="color:var(--ink-3)">미확보</td><td class="num" style="color:var(--ink-3)">—</td><td>실리콘투</td><td class="num" style="color:var(--bear)">−40억</td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">매도 상위는 원래 코스피와 한 목록으로 묶여 있던 자료를, 코스닥에 상장되지 않은 대형주(삼성전자·기아·KB금융 등)를 코스피 표로 옮기는 방식으로 재구분한 결과다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">매수 상위는 코스닥 단독 목록을 아직 찾지 못해 미확보로 남겨둔다 — 지어내지 않고 그대로 비워둔다.</p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>연기금(국민연금) 순매수 상위 5 (7/8)</h3><span class="dlabel verified">검증</span></div>
+    <table class="dtl">
+      <tr><th>#</th><th>종목</th><th>시장</th><th>순매수</th></tr>
+      <tr><td>1</td><td>S-Oil</td><td>코스피</td><td class="num" style="color:var(--bull)">+258억</td></tr>
+      <tr><td>2</td><td>LG전자</td><td>코스피</td><td class="num" style="color:var(--bull)">+156억</td></tr>
+      <tr><td>3</td><td>셀트리온</td><td>코스피</td><td class="num" style="color:var(--bull)">+143억</td></tr>
+      <tr><td>4</td><td>SK하이닉스</td><td>코스피</td><td class="num" style="color:var(--bull)">+141억</td></tr>
+      <tr><td>5</td><td>파마리서치</td><td>코스닥</td><td class="num" style="color:var(--bull)">+113억</td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">흥미로운 지점 — 외국인은 S-Oil을 팔았는데 연기금은 오히려 최대 순매수였다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">파마리서치도 외국인 매도·연기금 매수로 엇갈렸다 — 두 큰손의 시각차가 뚜렷한 종목들이다.
+      <span class="jt"><span class="kw">연기금</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">국민연금 등 국가가 운용하는 대규모 공적 기금.<br><br>국내 증시 최대 큰손 중 하나로, 개인·기관 통계 안에서도 별도로 추적될 만큼 매매 규모와 영향력이 크다.</span></span>
+    </p>
+  </div>
+
+  <div class="prose tbl-scroll">
+    <div class="secttl"><h3>연기금 순매도 상위 5 — 참고용</h3><span class="dlabel verified">검증(다른 기간)</span></div>
+    <table class="dtl">
+      <tr><th>#</th><th>종목</th><th>시장</th><th>순매도</th></tr>
+      <tr><td>1</td><td>삼성전자</td><td>코스피</td><td class="num" style="color:var(--bear)">−2,981억</td></tr>
+      <tr><td>2</td><td>SK하이닉스</td><td>코스피</td><td class="num" style="color:var(--bear)">−2,744억</td></tr>
+      <tr><td>3</td><td>현대차</td><td>코스피</td><td class="num" style="color:var(--bear)">−1,259억</td></tr>
+      <tr><td>4</td><td>미래에셋증권</td><td>코스피</td><td class="num" style="color:var(--bear)">−1,179억</td></tr>
+      <tr><td>5</td><td>POSCO홀딩스</td><td>코스피</td><td class="num" style="color:var(--bear)">−852억</td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">이 표는 7/8 당일이 아니라 <strong>6/16~23 최근 1주일 누적</strong> 기준이다 — 7/8 당일 매도 상위는 확보하지 못했다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">위 매수 표(7/8 당일)와 기간이 다르므로 직접 비교하지 말 것 — 매일 갱신 시 당일 매도 상위가 확인되면 이 표를 교체한다.</p>
+  </div>
+
+  <div class="prose">
+    <p style="font-size:12px; color:var(--ink-3)">🔧 KRX 정보데이터시스템 직접 연동 준비 완료 — 연동 성공 시 위의 "집계중·미확보" 항목(개인·기관 MTD, 코스닥 연초·이번달 누적, 업종별 수급액, 코스닥 매수 상위, 연기금 당일 매도 상위)을 원 단위 정확한 수치로 순차 전환. 실패 시 지금처럼 언론 인용을 검증 표시로 사용하고, 없는 데이터는 지어내지 않고 "미확보/집계중"으로 남긴다.</p>
+  </div>
+</section>
+
+<!-- ======================= 2. 진단 ======================= -->
+<section id="tab-diag">
+  <h2>매크로 레짐 판정</h2>
+  <div class="callout blue">
+    <h3>"스태그플레이션 라이트 + AI 슈퍼사이클 후반전"</h3>
+    <p>1978~80년(오일쇼크+긴축)과 2000년(설비투자 붐 정점+긴축)의 혼합형. 지수 베타의 손익비가 급격히 나빠지고, 섹터 선별과 헤지가 수익의 대부분을 결정하는 국면.</p>
+  </div>
+  <div class="prose">
+    <h3>① 인플레 재점화</h3>
+    <p>이란 전쟁발 유가 쇼크($60→$91)와 관세가 헤드라인 물가를 4%대로 밀어올림. 코어 PCE도 3.4%로 <strong>상승 반전</strong> → 연준은 인하가 아니라 인상을 검토.</p>
+  </div>
+  <div class="prose">
+    <h3>② 성장 둔화</h3>
+    <p>NFP +5.7만(예상 대폭 미달), 참가율 61.5%로 급락, 가계조사 고용 -50.7만, 레저·접객 -6.1만. 노동시장은 이미 균열 — <strong>금리 인상은 이 균열을 키움</strong>.</p>
+  </div>
+  <div class="prose">
+    <h3>③ AI 자본지출 붐의 역설</h3>
+    <p>실물 이익은 사상 최대치를 갈아치우는 중(삼성 분기 89.4조)이나, 주가는 기록적 실적에도 하락. <strong>기대치가 실적을 앞질러버린 상태</strong> — 사이클 후반부의 전형적 가격 행동.</p>
+  </div>
+  <div class="callout">
+    <h3>가장 위험한 신호: 가격과 펀더멘털의 괴리</h3>
+    <p>VIX 15.8 + HY 스프레드 274bp — 시장은 "완벽한 세상"을 가격에 반영하고 있다.</p>
+    <p>그러나 현실은 연준 인상 리스크 + 호르무즈 재봉쇄 리스크 + 고용 균열.</p>
+    <p>지금은 공격이 아니라 <strong>저렴한 보험을 사면서 선별적으로 공격하는 구간</strong>이다.</p>
+  </div>
+</section>
+
+<!-- ======================= 3. 시나리오 ======================= -->
+<section id="tab-scn">
+  <h2>시나리오 매트릭스 <small>탭하면 목표치가 열립니다</small></h2>
+
+  <div class="scn base" tabindex="0">
+    <div class="row"><span class="nm">베이스 — 끈적한 인플레 + 1회 인상</span><span class="pc">50%</span></div>
+    <div class="bar"><i data-w="50"></i></div>
+    <div class="desc">유가 $70~90 박스, 10월 연준 인상, 메모리 실적 견조 유지. 박스권 + 변동성 극대.</div>
+    <div class="tgt"><div>S&amp;P 500<b>−5 ~ +5%</b></div><div>KOSPI<b>7,000–9,000</b></div></div>
+  </div>
+
+  <div class="scn bear" tabindex="0">
+    <div class="row"><span class="nm">베어 — 유가 $100+ / 인상 2회 / CAPEX 피크</span><span class="pc">30%</span></div>
+    <div class="bar"><i data-w="30"></i></div>
+    <div class="desc">호르무즈 봉쇄, 하이퍼스케일러 2027 CAPEX 가이던스 하향, 멀티플 압축.</div>
+    <div class="tgt"><div>S&amp;P 500<b>−15 ~ −20%</b></div><div>KOSPI<b>6,000–6,500</b></div></div>
+  </div>
+
+  <div class="scn bull" tabindex="0">
+    <div class="row"><span class="nm">불 — 중동 데탕트 + 인플레 피크아웃</span><span class="pc">20%</span></div>
+    <div class="bar"><i data-w="20"></i></div>
+    <div class="desc">휴전 복원, 유가 $65 이하, 연준 중립 복귀. 위험자산 재평가.</div>
+    <div class="tgt"><div>S&amp;P 500<b>+10 ~ +15%</b></div><div>KOSPI<b>10,000 (+30%)</b></div></div>
+  </div>
+
+  <div class="callout">
+    <h3>비대칭의 핵심</h3>
+    <p>"나쁜 일이 일어날 확률"은 평소보다 훨씬 높은데(베어 시나리오 30%, 평시엔 보통 15% 정도), 정작 "보험료" 역할을 하는
+      <span class="jt"><span class="kw">VIX</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">공포지수라고도 불림. S&amp;P500 옵션 가격을 역산해서 만든 "앞으로 30일간 시장이 얼마나 출렁일 것으로 예상되는지" 지수.<br><br>숫자가 낮으면 시장이 "조용할 것"이라 방심 중이라는 뜻, 높으면 큰 변동을 각오하고 있다는 뜻.<br><br>지금처럼 위험 신호는 많은데 이 숫자가 낮으면 "보험료가 싸다"는 의미.</span></span>는
+      15.8로 낮다.</p>
+    <p>위험은 큰데 위험을 막아줄 보험은 할인가라는 뜻 — 이럴 때
+      <span class="jt"><span class="kw">변동성 매수</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">주가 방향(오를지 내릴지)이 아니라 "얼마나 크게 흔들릴지"에 베팅하는 전략. 지금처럼 위험 신호는 많은데 시장이 방심해서 보험료(변동성)가 싸게 나와 있을 때 유리한 접근.</span></span>가
+      이번 분기 가장 유리한(들인 비용 대비 얻을 수 있는 이익이 큰) 거래로 꼽힌다.</p>
+    <p>실행 방법은
+      <span class="jt"><span class="kw">풋옵션</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"주가가 일정 가격 아래로 떨어지면 그 차액만큼 보상받는" 보험 계약. 실제로 주식을 팔지 않아도 하락에 대비할 수 있어 포트폴리오 전체를 지키는 헤지 수단으로 쓰인다.</span></span> 매수 — 그중에서도
+      <span class="jt"><span class="kw">OTM(외가격)</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">Out-of-the-Money. 지금 당장 행사해도 이득이 없는, 즉 "지금보다 더 떨어져야 돈이 되는" 조건의 옵션. 보험료(프리미엄)가 싼 대신, 진짜 큰 폭락이 나야 보상을 받는 구조.<br><br>평소엔 저렴하게 대재해보험처럼 들고 있다가 위기 때 크게 보상받는 용도.</span></span>인
+      "S&amp;P500이 지금보다 5% 더 떨어져야 이득을 보는" 조건으로, 3~4개월짜리를 사서
+      <span class="jt"><span class="kw">프리미엄 예산</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">보험료로 쓰기로 미리 정해둔 한도. 여기서는 전체 포트폴리오의 3% — 이 이상은 보험료로 쓰지 않는다는 상한선을 정해두는 것.</span></span>
+      3% 안에서만 쓴다. 만기가 다가오면 또 다른 3~4개월짜리로 갈아타는
+      <span class="jt"><span class="kw">롤링</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">만기가 다가온 계약을 정리하고 같은 조건의 새 계약으로 갈아타는 것. 보험을 한 번 사고 끝내는 게 아니라 계속 이어서 들고 가는 방식.</span></span>을
+      반복한다.</p>
+  </div>
+</section>
+
+<!-- ======================= 4. 전략 ======================= -->
+<section id="tab-strat">
+  <div class="seg" role="tablist" aria-label="전략 선택">
+    <button class="on" data-p="stratA">전략 A · 바벨 (기본)<small>순노출 50~60% · 방어+선별공격</small></button>
+    <button data-p="stratB">전략 B · 모멘텀 집중<small>주도주 집중 + 현금·숏 헤지</small></button>
+    <button data-p="stratC">전략 C · 초장기 혁신기술<small>10년+ 정액매수 · 매크로 무시</small></button>
+  </div>
+
+<div id="stratA" class="strat-pane on">
+  <div class="callout blue">
+    <h3>전략 A의 논리: 어떤 시나리오가 와도 살아남는다</h3>
+    <p>베어 시나리오 확률이 평시의 두 배(30%)인데 VIX·HY스프레드는 역사적 저점권 — 시장은 위험을 과소평가하고 있다.</p>
+    <p>그래서 <strong>순노출을 50~60%로 낮추고 남는 자본을 저렴한 보험(풋·금·단기채)에 배분</strong>한다. 베이스·베어 어느 쪽이 와도 무너지지 않는 구조를 먼저 만든 다음, 조정받은 우량 자산(전력 인프라·에너지·메모리)만 선별 공격한다.</p>
+    <p>목표는 최대 수익이 아니라 <strong>손익비</strong> — 잃을 때 적게 잃고, 벌 때 시장만큼 번다.</p>
+  </div>
+
+  <h2>권고 자산배분 <small>세그먼트를 탭해보세요</small></h2>
+  <div class="prose">
+    <div class="alloc-bar" id="alloc" role="img" aria-label="자산배분: 미국 주식 30%, 현금 및 미국 단기채 30%, 한국 주식 20%, 금 10%, 헤지 3%, 미배정 7%">
+      <span style="--sg:var(--s1); flex:30" data-i="0" title="미국 주식 30%"></span>
+      <span style="--sg:var(--s2); flex:30" data-i="1" title="현금/단기채 30%"></span>
+      <span style="--sg:var(--s3); flex:20" data-i="2" title="한국 주식 20%"></span>
+      <span style="--sg:var(--s4); flex:10" data-i="3" title="금 10%"></span>
+      <span style="--sg:var(--s5); flex:3" data-i="4" title="헤지 3%"></span>
+      <span style="--sg:var(--s6); flex:7" data-i="5" title="유동 여유분 7%"></span>
+    </div>
+    <ul class="legend" id="legend">
+      <li data-i="0"><span class="sw" style="--sg:var(--s1)"></span><span class="nm">미국 주식</span><span class="pct">30%</span>
+        <span class="note">전력/그리드 10 · 에너지 8 · 방산 5 · 퀄리티 메가캡 5 · 헬스케어 2. AI 1차 수혜(칩)에서 2차 수혜(전력)와 인플레 수혜로 이동.</span></li>
+      <li data-i="1"><span class="sw" style="--sg:var(--s2)"></span><span class="nm">현금 · 미 단기채 (2년 이하)</span><span class="pct">30%</span>
+        <span class="note">무위험 4%+ 수익 + 조정 시 실탄. 인상 국면에서 단기채가 최적. VIX 30 돌파 시 절반 투입.</span></li>
+      <li data-i="2"><span class="sw" style="--sg:var(--s3)"></span><span class="nm">한국 주식</span><span class="pct">20%</span>
+        <span class="note">삼성전자 8 · SK하이닉스 6 · 전력기기 4 · 방산 2. 추격 매수 금지 — 분할매수 계획 준수. 환노출 유지.</span></li>
+      <li data-i="3"><span class="sw" style="--sg:var(--s4)"></span><span class="nm">금</span><span class="pct">10%</span>
+        <span class="note">스태그플레이션 + 지정학 + 달러 신뢰 훼손의 삼중 헤지.</span></li>
+      <li data-i="4"><span class="sw" style="--sg:var(--s5)"></span><span class="nm">인덱스 풋 · VIX콜</span><span class="pct">3%</span>
+        <span class="note">프리미엄 예산. VIX 15.8은 보험이 가장 쌀 때 — 3~4개월 5% OTM 풋 롤링.</span></li>
+      <li data-i="5"><span class="sw" style="--sg:var(--s6)"></span><span class="nm">유동 여유분</span><span class="pct">7%</span>
+        <span class="note">트리거 발동 시 즉시 배정(한국 증액 +8%p 등). 미 장기채·HY 크레딧은 0% 전면 회피.</span></li>
+    </ul>
+  </div>
+
+  <h2>미국 30% — 상세</h2>
+  <div class="prose tbl-scroll">
+    <table class="dtl">
+      <tr><th>테마</th><th>비중</th><th>논리 · 종목</th></tr>
+      <tr><td>전력·그리드</td><td class="num">10%</td><td>CAPEX $725B의 60%+가 전력. AI 랠리가 꺾여도 발주잔고 3~5년치. GE Vernova, Vertiv, Eaton, Constellation, XLU</td></tr>
+      <tr><td>에너지</td><td class="num">8%</td><td>하방 $60~65 제한 / 상방 봉쇄 시 $100+. 콜옵션적 손익비. Exxon, 셰일 E&amp;P, XLE</td></tr>
+      <tr><td>방산</td><td class="num">5%</td><td>이란 전쟁 + 대만 그레이존 + 유럽 재무장. Lockheed, RTX, ITA</td></tr>
+      <tr><td>퀄리티 메가캡</td><td class="num">5%</td><td>가격전가력 + 순현금. MS·구글은 조정 시에만. <strong>엔비디아 신규 진입 금지</strong>(멀티플 압축 1순위)</td></tr>
+      <tr><td>헬스케어</td><td class="num">2%</td><td>고용 데이터에서 유일하게 증가하는 방어 섹터</td></tr>
+      <tr><td>회피·숏 후보</td><td class="num">—</td><td>소비재(레저 고용 -6.1만 선행), 러셀2000, 리츠, 고밸류 무수익 테크, 미 장기채, HY</td></tr>
+    </table>
+  </div>
+
+  <h2>한국 20% — 상세</h2>
+  <div class="prose tbl-scroll">
+    <table class="dtl">
+      <tr><th>테마</th><th>비중</th><th>실행</th></tr>
+      <tr><td>삼성전자</td><td class="num">8%</td><td>현재가 1/3 · KOSPI 7,000~7,200 1/3 · 6,500 접근 시 1/3. 분기 89.4조 대비 사이클 최저 멀티플</td></tr>
+      <tr><td>SK하이닉스</td><td class="num">6%</td><td>HBM 1위(50~55%) + 가격상한 제거. 베타 높음 — 동일 분할 접근</td></tr>
+      <tr><td>전력기기</td><td class="num">4%</td><td>HD현대일렉트릭, LS ELECTRIC — 미국 그리드 CAPEX 직수혜, 메모리와 낮은 상관</td></tr>
+      <tr><td>방산</td><td class="num">2%</td><td>한화에어로스페이스, 현대로템 — 지정학 헤지의 주식 버전</td></tr>
+    </table>
+  </div>
+</div><!-- /stratA -->
+
+<div id="stratB" class="strat-pane">
+  <div class="callout blue">
+    <h3>전략 B의 논리: 시장이 아니라 주도주를 산다</h3>
+    <p>2026년 수익률은 극소수 주도 테마에 집중되어 있다 — 미국 2분기 대형 기술주 +43%, AI 반도체 장비·광통신 개별주 +300%대. 반면 에너지 대형주 −13%, 한국 조선 ETF −17%·방산 ETF −22%.</p>
+    <p>그래서 <strong>모멘텀이 있는 곳에 집중하고, 없는 곳의 베타는 현금과 숏으로 지워버리는</strong> 롱숏 구조를 쓴다. 순주식노출 ~44%로 전략 A보다 낮지만, 들고 있는 롱의 베타는 훨씬 높다.</p>
+  </div>
+
+  <h2>모멘텀 자산배분 <small>
+    <span class="jt"><span class="kw">순노출</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"오를 것"에 건 돈(롱)에서 "내릴 것"에 건 돈(숏)을 뺀 값. 예를 들어 롱 62%·숏 18%면 순노출은 44% — 시장이 전체적으로 오르내릴 때 포트폴리오가 실제로 받는 충격은 44%어치라는 뜻.<br><br>100%보다 낮을수록 시장 전체 방향에 덜 흔들리는 구조.</span></span>
+    ≈ 44% (
+    <span class="jt"><span class="kw">롱</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"오를 것"이라 보고 주식을 사서 들고 있는 것. 일반적으로 말하는 "주식 매수"와 같은 뜻.</span></span> 62 −
+    <span class="jt"><span class="kw">숏</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"내릴 것"이라 보고 거는 베팅. 주식이 떨어지면 이익, 오르면 손실 — 매수(롱)와 정반대 방향의 베팅.</span></span> 18)
+  </small></h2>
+  <div class="prose">
+    <div class="alloc-bar" id="allocB" role="img" aria-label="전략 B 배분: AI 메모리 32%, AI 인프라 하드웨어 18%, 전력·원전 12%, 현금·단기채 20%, 숏 18%">
+      <span style="--sg:var(--s1); flex:32" data-i="0" title="AI 메모리/HBM 32%"></span>
+      <span style="--sg:var(--s2); flex:18" data-i="1" title="AI 인프라 하드웨어 18%"></span>
+      <span style="--sg:var(--s3); flex:12" data-i="2" title="전력·원전 12%"></span>
+      <span style="--sg:var(--s4); flex:20" data-i="3" title="현금·단기채 20%"></span>
+      <span style="--sg:var(--s6); flex:18" data-i="4" title="숏 헤지 18%"></span>
+    </div>
+    <ul class="legend" id="legendB">
+      <li data-i="0"><span class="sw" style="--sg:var(--s1)"></span><span class="nm">AI 메모리 / HBM (롱)</span><span class="pct">32%</span>
+        <span class="note">삼성전자 12 · SK하이닉스 12 · 마이크론 8. 지구상 가장 강한 이익 모멘텀. 단 현재 조정 중이므로 절반만 선진입, 나머지는 50일선 회복 또는 전고점 돌파 확인 후.</span></li>
+      <li data-i="1"><span class="sw" style="--sg:var(--s2)"></span><span class="nm">AI 인프라 하드웨어 (롱)</span><span class="pct">18%</span>
+        <span class="note">반도체 장비(UCTT·ICHR류) · 광통신(AAOI류) · Vertiv 등 5~6종목 분산 또는 SMH/반도체장비 ETF. 2026년 +300%대 수익률이 나온 진앙지 — 변동성도 그만큼 큼, 종목당 최대 4%.</span></li>
+      <li data-i="2"><span class="sw" style="--sg:var(--s3)"></span><span class="nm">전력 · 원전 (롱)</span><span class="pct">12%</span>
+        <span class="note">GE Vernova, Constellation, Vistra — CAPEX $725B의 60%가 전력. 발주잔고 3~5년치로 모멘텀+실적 가시성 동시 보유.</span></li>
+      <li data-i="3"><span class="sw" style="--sg:var(--s4)"></span><span class="nm">현금 · 미 단기채</span><span class="pct">20%</span>
+        <span class="note">무위험 4%+ · 손절 발생 시 재진입 실탄. 모멘텀 전략의 생명선.</span></li>
+      <li data-i="4"><span class="sw" style="--sg:var(--s6)"></span><span class="nm">숏 헤지</span><span class="pct">18%</span>
+        <span class="note">러셀2000
+          <span class="jt"><span class="kw">인버스</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">지수가 내리면 오히려 오르도록 설계된 상품(ETF 등). "내릴 것"에 베팅하고 싶을 때 개별 공매도 없이 그냥 주식처럼 사기만 하면 되는 편리한 방법.</span></span> 8 · 경기소비재 숏 5 · 나스닥 풋/인버스 5.
+          모멘텀 없는 약한 고리를 숏 — KOSPI 인버스는 금지(코스피 자체가 삼성전자·SK하이닉스 비중이 커서 사실상 반도체 지수라, 이걸 숏하면 내가 들고 있는 반도체 롱을 스스로 상쇄해버리는 셈).</span></li>
+    </ul>
+  </div>
+
+  <h2>모멘텀 규율 <small>이게 없으면 전략이 아니라 도박</small></h2>
+  <div class="prose tbl-scroll">
+    <table class="dtl">
+      <tr><th>규칙</th><th>기준</th></tr>
+      <tr><td>편입 조건</td><td>최근 12개월 중 최근 1개월을 뺀 기간의
+        <span class="jt"><span class="kw">상대강도</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">이 종목이 같은 기간 다른 종목·지수보다 더 잘 올랐는지를 등수로 매긴 것. 상대강도가 높다 = 최근 시장에서 가장 잘 나가는 종목군에 속한다는 뜻.</span></span> 상위 + 주가 &gt;
+        <span class="jt"><span class="kw">50일선</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">최근 50거래일(약 2.5개월) 평균 주가를 이은 선. 주가가 이 선 위에 있으면 "단기 상승 흐름이 살아있다", 아래로 뚫고 내려가면 "흐름이 꺾였다"고 흔히 해석한다.</span></span>
+        + 이익 전망 상향 — 3개 모두 충족 시에만</td></tr>
+      <tr><td>손절</td><td>개별 종목 −15% 또는 50일선 3일 연속 이탈 → 정해둔 대로 예외 없이 파는 기계적 매도</td></tr>
+      <tr><td>집중 한도</td><td>종목당 최대 12% · 테마당 최대 32%</td></tr>
+      <tr><td>
+        <span class="jt"><span class="kw">리밸런스</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">시간이 지나며 원래 정한 비중에서 벗어난 포트폴리오를 다시 목표 비중대로 맞추는 작업. 오른 종목은 일부 팔고, 못 오른 종목은 정리하는 정기 점검.</span></span>
+      </td><td>월 1회 상대강도 재산정 + 트리거 발동 시 수시. 모멘텀 꺼진 종목은 미련 없이 교체</td></tr>
+      <tr><td>
+        <span class="jt"><span class="kw">팩터 크래시</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"최근 잘 오른 종목을 사고 그렇지 않은 종목은 피한다"는 이 전략(모멘텀 팩터) 자체가 갑자기, 한꺼번에 무너지는 상황. 시장 전체가 아니라 "이 스타일의 전략을 쓰는 사람들"만 한꺼번에 크게 손실 보는 특수한 위험.<br><br>보통 금리·연준 정책이 급변할 때 방아쇠가 당겨진다.</span></span> 방어
+      </td><td>VIX 25 돌파 시 롱 코어 20%p 축소. 연준이 예정에 없던 긴급 회의를 열거나 금리 전망(점도표)을 갑자기 바꾸는 "서프라이즈"는 이 전략이 가장 먼저 무너지는 순간</td></tr>
+      <tr><td>지금 제외되는 것</td><td>한국 조선·방산(모멘텀 소멸), 에너지(이벤트 드리븐이지 추세 아님), 중소형 성장주(금리 역풍)</td></tr>
+    </table>
+  </div>
+
+</div><!-- /stratB -->
+
+<div id="stratC" class="strat-pane">
+  <div class="callout blue">
+    <h3>전략 C의 논리: 10년을 보면 오늘의 VIX는 노이즈다</h3>
+    <p>A·B가 촘촘히 대응하는 금리·VIX·환율 트리거를 전략 C는 의도적으로 무시한다. 10년 이상의 시계에서 이 분기 연준이 인상을 하는지, KOSPI가 7,000을 지키는지는 최종 결과에 거의 영향을 주지 않기 때문이다.</p>
+    <p>중요한 건 오직 하나 — <strong>"이 기술이 실제로 세상을 바꾸는가"</strong>.</p>
+    <p>파괴적 혁신 투자의 핵심 규율은 조정을 위험이 아니라 <strong>다음 정액매수의 할인 기회</strong>로 처리하는 것이다. 그래서 손절선이 없다. 대신 "기술 테제가 무너졌는가"만 주기적으로 점검한다.</p>
+  </div>
+
+  <h2>테마 배분 <small>피지컬 AI · 자율주행 · 우주발사체 · 양자컴퓨팅 · AI신약</small></h2>
+  <div class="prose">
+    <div class="alloc-bar" id="allocC" role="img" aria-label="전략 C 배분: 테슬라 25%, SpaceX 20%, 양자컴퓨팅 15%, AI신약 바이오자동화 15%, 정액매수 대기현금 25%">
+      <span style="--sg:var(--s1); flex:25" data-i="0" title="테슬라(피지컬AI·자율주행) 25%"></span>
+      <span style="--sg:var(--s2); flex:20" data-i="1" title="SpaceX(우주발사체) 20%"></span>
+      <span style="--sg:var(--s3); flex:15" data-i="2" title="양자컴퓨팅 15%"></span>
+      <span style="--sg:var(--s5); flex:15" data-i="3" title="AI신약·바이오자동화 15%"></span>
+      <span style="--sg:var(--s4); flex:25" data-i="4" title="정액매수 대기현금 25%"></span>
+    </div>
+    <ul class="legend" id="legendC">
+      <li data-i="0"><span class="sw" style="--sg:var(--s1)"></span><span class="nm">테슬라 (피지컬 AI·자율주행)</span><span class="pct">25%</span>
+        <span class="note">Optimus(피지컬 AI 로봇)와 FSD(자율주행)를 한 종목에서 동시에 노출 — 두 테마가 겹치는 유일한 종목.</span></li>
+      <li data-i="1"><span class="sw" style="--sg:var(--s2)"></span><span class="nm">SpaceX (우주발사체)</span><span class="pct">20%</span>
+        <span class="note">6/12 나스닥 SPCX 상장(사상 최대 IPO, 공모가 $135) 이후 7/9 기준 26% 급락 — 머스크가 트릴리언네어(자산 1조달러) 지위를 잃을 정도의 낙폭이다.<br><br>동시에 테슬라-SpaceX 합병설이 돌면서 RBC가 테슬라 목표주가를 $500로 상향, JPMorgan은 "서류상으로는 전략적으로 말이 된다"면서도 다국가 인허가·중국 리스크를 지적했다.<br><br>전략 C 원칙상 이 급락은 매크로 트리거가 아니라 개별 종목 이벤트이므로 손절하지 않는다 — 오히려 다음 정액매수 단가를 낮추는 계기로 처리한다. 합병 루머의 실현 여부는 "기술 테제 무효화" 조건에 해당하지 않으므로 계속 지켜보되 즉각 대응하지 않는다.</span></li>
+      <li data-i="2"><span class="sw" style="--sg:var(--s3)"></span><span class="nm">양자컴퓨팅</span><span class="pct">15%</span>
+        <span class="note">IonQ(IONQ) — 상용화까지 시간이 걸리는 초기 기술 특유의 변동성 큰 구간, 정액매수로 단가를 분산.</span></li>
+      <li data-i="3"><span class="sw" style="--sg:var(--s5)"></span><span class="nm">AI 신약·바이오 자동화</span><span class="pct">15%</span>
+        <span class="note">AbCellera Biologics(ABCL) — AI로 항체를 설계·발굴하는 바이오 자동화 플랫폼. 신약 파이프라인 특성상 임상 실패 리스크는 개별 종목 리스크로 분리해서 인식.</span></li>
+      <li data-i="4"><span class="sw" style="--sg:var(--s4)"></span><span class="nm">정액매수 대기현금</span><span class="pct">25%</span>
+        <span class="note">매월 또는 매분기 정액 분할매수(DCA) 재원. 조정이 클수록 이 재원의 매수 효율이 올라간다 — A·B의 "실탄"과 달리 트리거를 기다리지 않고 기계적으로 소진.</span></li>
+    </ul>
+  </div>
+
+  <h2>장기 보유 규율 <small>손절선이 없는 대신 훨씬 엄격한 규율이 있다</small></h2>
+  <div class="prose tbl-scroll">
+    <table class="dtl">
+      <tr><th>규칙</th><th>기준</th></tr>
+      <tr><td>매수 방식</td><td>매크로 이벤트·단기 변동성과 무관하게 매월 또는 매분기 정액 분할매수. 급락은 매수 가속의 신호로 취급(역발상)</td></tr>
+      <tr><td>손절</td><td>가격 기준 손절선 없음 — 대신 아래 "테제 무효화" 조건 발생 시에만 비중 축소·매도 검토</td></tr>
+      <tr><td>테제 무효화 조건</td><td>핵심 기술의 상용화가 구조적으로 실패, 경쟁사에 압도적으로 밀림, 회계·지배구조 이슈로 신뢰 근간이 흔들릴 때. 주가 하락 자체는 무효화 조건이 아님</td></tr>
+      <tr><td>리밸런싱</td><td>연 1회만. 승자를 잘라내지 않되, 한 종목 비중이 50%를 넘으면 초과분만 트리밍해 집중 리스크만 관리</td></tr>
+      <tr><td>편입 한도</td><td>신규 종목 비중 상한 15~20%, 상장 종목만 편입(비상장은 위시리스트로 대기)</td></tr>
+      <tr><td>매크로 무반응 원칙</td><td>트리거 탭의 VIX·연준·환율 트리거들에 이 전략은 반응하지 않는다 — 반응하는 순간 전략 C가 아니라 전략 A/B가 된다</td></tr>
+    </table>
+  </div>
+</div><!-- /stratC -->
+
+  <h2>환전략 — SK하이닉스 ADR 이벤트 플레이북 <small>전략 A·B 공통</small></h2>
+  <div class="callout blue">
+    <h3>판정: 리프라이싱이 아닌 일회성 공급 이벤트의 선반영</h3>
+    <p>1,558(7/1) → 1,498.5(7/8), 5거래일 −3.8%. 같은 기간 DXY는 ~101 보합 — 달러 대비 원화의 <strong>독립 강세</strong>이며 원인은 거시가 아닌 수급이다.</p>
+    <p>외환당국도 "하이닉스 물량 선반영 가능성"을 공식 인정했다.</p>
+  </div>
+  <div class="prose">
+    <h3>메커니즘 (검증 완료)</h3>
+    <ul>
+      <li><strong>
+        <span class="jt"><span class="kw">선물환</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"미래의 특정 날짜에, 지금 정한 환율로 달러를 팔겠다"고 미리 맺는 계약. 실제 달러가 아직 손에 없어도, 환율이 떨어질까 봐 미리 가격을 고정해두는 헤지(위험 회피) 수단으로 흔히 쓰인다.</span></span> 선매도</strong>
+        — 하이닉스가 환전 전 환율 하락 위험을 선물환 매도로 헤지 → 이 계약을 받아준 은행 입장에선 나중에 달러를 사줘야 할 의무(달러를 사둔 것과 같은 효과, "달러
+        <span class="jt"><span class="kw">롱</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"가격이 오를 것"에 걸어 자산을 보유한 상태. 여기서는 은행이 선물환 계약을 받아주면서 결과적으로 달러를 사둔 것과 같은 처지가 됐다는 뜻.</span></span>
+        포지션")이 생기니, 이 위험을 지금 없애려고(커버) 실제 시장에서 달러를 미리 내다 파는 것 (KB 등 "선물환 매도 출회 중" 확인)</li>
+      <li><strong>포지션 쏠림의 되먹임</strong> — 두 달간 1,500원대 박스권에 갇혀 있으면서 시장 참가자 대부분이 "환율은 안 떨어진다"에 베팅(달러 롱 쏠림)한 상태였음 → 날짜·규모가 미리 공개된 대규모 공급 이벤트가 뜨자, 그 베팅을 걸었던 쪽들이 손실을 줄이려 앞다퉈 파는(손절 경쟁) 데다, 수출기업들도 "환율이 더 떨어지기 전에 팔자"며 달러 매도(네고 물량)를 앞당김 — 한쪽으로 쏠려 있던 베팅이 스스로를 증폭시키는 효과</li>
+      <li><strong>당국 편승</strong> — 시장이 밀어줄 때 함께 미는 것이 실탄 대비 효과 최대 (한·일 통화당국 공조 보도 병행)</li>
+      <li>규모 감각: $29B는 서울 현물환 하루 평균 거래량을 상회 — 실유입 전 선반영이 구조적으로 불가피</li>
+    </ul>
+    <h3>이벤트 캘린더</h3>
+    <ul>
+      <li><strong>7/6–9</strong> 글로벌 로드쇼 (미국 기관 수배 초과청약 흥행)</li>
+      <li><strong>7/10</strong> 공모가 확정 · 나스닥 거래 개시 (최대 43.1조, 당초 45.45조에서 하향)</li>
+      <li><strong>상장 후</strong> 하루 ~$10억씩 20~30영업일 오전장 <strong>분산 환전</strong> — 정부와 협의 중. "15일 일괄 유입"이 아니므로 당일 현물 충격은 더욱 제한적</li>
+    </ul>
+    <h3>전술 (2~4주) — "소문에 팔고 사실에 사는 구조"</h3>
+    <ul>
+      <li>선반영이 완료된 지금 <strong>1,480~1,510 구간 달러 분할 매수는 손익비 양호</strong> — 이벤트 통과 후
+        <span class="jt"><span class="kw">숏커버</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">"내릴 것"이라 베팅했던(숏) 참가자들이 예상과 다르게 반등하자 서둘러 그 베팅을 되사서 정리하는 것. 되사는 행위 자체가 매수라서, 오히려 가격을 더 밀어올리는 반등을 만든다.</span></span>
+        반등 타깃 1,530~1,550 (상방 +2~3%)</li>
+      <li>단, <strong>3분할 원칙</strong>: 분산 환전 물량이 한 달간 상단을 누르고, 일부 전문가는 1,400원대 진입 전망 — 1,460 하향 이탈 시 추가 매수 중단 (하방 −2.5%)</li>
+      <li>추가 하락 리스크: ADR 흥행 → 외국인 KOSPI 복귀 자금이 겹치면 반등이 지연될 수 있음</li>
+    </ul>
+    <h3>구조 (3~6개월) — 기존 뷰 유지</h3>
+    <p>중기 원화 강세 복원 시나리오는 불변 → <strong>한국 주식 신규 매수분 환노출 유지</strong>.</p>
+    <p>전술적 달러 매수(위)와 방향이 달라 보이지만 시계가 다른 별개 트레이드다 — 전술은 이벤트 되돌림에, 구조는 수급 정상화에 베팅한다. 1,600 재돌파 시에만 절반 헤지로 전환.</p>
+    <h3>파생 리스크</h3>
+    <p>기존 외국인이 국내 상장 하이닉스를 팔고 나스닥 ADR로 갈아타면 국내 증시 수급 악화 + 원화 반락 요인이 된다(신주 ~2.5% 희석과 함께 언론도 제기하는 우려).</p>
+    <p>상장 후 외국인의 국내 하이닉스 순매수/순매도를 트리거로 모니터링.</p>
+  </div>
+</section>
+
+<!-- ======================= 5. 트리거 ======================= -->
+<section id="tab-trg">
+  <h2>트리거 기반 행동 계획 <small>조건 → 즉시 실행</small></h2>
+
+  <div class="trg watch"><div class="st"></div><div>
+    <div class="tag">Watch · 7/14</div>
+    <div class="cond">미국 6월 CPI &gt; 4.5%</div>
+    <div class="act">주식 순노출 10%p 추가 축소, 금 +3%p</div></div></div>
+
+  <div class="trg sell"><div class="st"></div><div>
+    <div class="tag">De-risk</div>
+    <div class="cond">호르무즈 완전 봉쇄 (유가 $95+)</div>
+    <div class="act">에너지 익절 시작, 인덱스 풋 행사/롤, KOSPI 매수 일시 중단</div></div></div>
+
+  <div class="trg buy"><div class="st"></div><div>
+    <div class="tag">Add</div>
+    <div class="cond">KOSPI 7,000~7,200 + 외국인 순매수 전환</div>
+    <div class="act">한국 비중 20% → 28% 증액 (준비된 실탄 투입)</div></div></div>
+
+  <div class="trg sell"><div class="st"></div><div>
+    <div class="tag">De-risk</div>
+    <div class="cond">연준 10월 인상 + 추가 인상 가격 반영</div>
+    <div class="act">방어 모드 — 순노출 40%로, 단기채 확대</div></div></div>
+
+  <div class="trg buy"><div class="st"></div><div>
+    <div class="tag">Confirm</div>
+    <div class="cond">하이퍼스케일러 3Q 실적, 2027 CAPEX 가이던스 상향 유지</div>
+    <div class="act">사이클 연장 확인 → 메모리 비중 유지/확대</div></div></div>
+
+  <div class="trg sell"><div class="st"></div><div>
+    <div class="tag">Exit Signal</div>
+    <div class="cond">하이퍼스케일러 CAPEX 가이던스 하향 (단 1개사라도)</div>
+    <div class="act">메모리 전량 익절 검토 — 사이클 피크의 공식 신호</div></div></div>
+
+  <div class="trg buy"><div class="st"></div><div>
+    <div class="tag">Contrarian</div>
+    <div class="cond">VIX &gt; 30 + 공포탐욕지수 &lt; 20</div>
+    <div class="act">역발상 매수 — 보유 현금 30% 중 절반 투입</div></div></div>
+
+  <div class="trg watch"><div class="st"></div><div>
+    <div class="tag">FX · 7/10</div>
+    <div class="cond">하이닉스 ADR 상장 통과 + 환율 숏커버 반등</div>
+    <div class="act">1,530~1,550 도달 시 전술적 달러 매수분 일부 익절. 1,460 하향 이탈 시 추가 달러 매수 중단</div></div></div>
+
+  <div class="trg sell"><div class="st"></div><div>
+    <div class="tag">Flow Watch</div>
+    <div class="cond">외국인, 국내 하이닉스 순매도 지속 + ADR로 거래 이동</div>
+    <div class="act">한국 비중 증액(→28%) 보류, 원화 반락 대비 — 국내 증시 수급 이탈 신호</div></div></div>
+
+  <div class="callout blue">
+    <h3>3줄 요약</h3>
+    <p>① 순노출 50~60% 바벨 — 최고 손익비는 저렴한 헤지 매수. ② 미국은 AI 2차 수혜(전력·그리드)와 인플레 수혜(에너지·방산)로 이동, 장기채·HY 전면 회피. ③ 한국은 수급이 무너진 시장 — 추격 금지, 7,000~7,200 분할매수 준비.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>매크로·미국 시장: FRED · BLS · BEA · CNBC · CNN Fear &amp; Greed · Bloomberg · Micron IR · FactSet · Trading Economics.</p>
+  <p>한국 시장·수급: KRX 정보데이터시스템(직접 연동) · KB증권 · FASTJUSIK · 국내 언론(이데일리·머니투데이·파이낸셜뉴스·이투데이 등).</p>
+  <p style="font-size:11px; color:var(--ink-3)">최초 발행 2026-07-08 · 06:03·16:03 KST 하루 2회 자동 갱신 — 상단 "최종 업데이트" 표기가 실제 기준 시점.</p>
+  <p>본 페이지는 공개된 시장 데이터 기반 분석이며 투자 권유가 아닙니다. 모든 투자 판단과 책임은 투자자 본인에게 있습니다.</p>
+  <div class="credit">
+    <span class="who">작성자 <b>JM.SEO</b></span>
+    <span>문의 <a href="mailto:niseo@naver.com">niseo@naver.com</a></span>
+  </div>
+</footer>
+</div>
+
+<nav class="tabbar" aria-label="섹션 이동">
+  <button class="on" data-t="tab-dash"><span class="ico">◉</span>대시보드</button>
+  <button data-t="tab-diag"><span class="ico">☲</span>진단</button>
+  <button data-t="tab-scn"><span class="ico">⑂</span>시나리오</button>
+  <button data-t="tab-strat"><span class="ico">◫</span>전략</button>
+  <button data-t="tab-trg"><span class="ico">⚑</span>트리거</button>
+</nav>
+
+<script>
+(function(){
+  // tabs
+  var tabs=document.querySelectorAll('.tabbar button');
+  tabs.forEach(function(b){
+    b.addEventListener('click',function(){
+      tabs.forEach(function(x){x.classList.remove('on')});
+      document.querySelectorAll('main section').forEach(function(s){s.classList.remove('on')});
+      b.classList.add('on');
+      document.getElementById(b.dataset.t).classList.add('on');
+      window.scrollTo({top:0,behavior:'smooth'});
+      fillBars();
+    });
+  });
+  // expandable cards
+  document.querySelectorAll('.ind,.scn').forEach(function(c){
+    function tg(){c.classList.toggle('open')}
+    c.addEventListener('click',tg);
+    c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tg();}});
+  });
+  // tap-to-define jargon terms: the qmark button is the tap target, toggles its parent .jt
+  document.querySelectorAll('.qmark').forEach(function(b){
+    b.addEventListener('click',function(e){ e.stopPropagation(); b.closest('.jt').classList.toggle('open'); });
+  });
+  // scenario bars animate on view
+  function fillBars(){
+    document.querySelectorAll('.scn .bar i').forEach(function(i){
+      i.style.width=i.dataset.w+'%';
+    });
+  }
+  fillBars();
+  // allocation highlight (both strategies)
+  function wireAlloc(barId,legendId){
+    var bar=document.getElementById(barId), legend=document.getElementById(legendId);
+    if(!bar||!legend) return;
+    var cur=null;
+    function hot(i){
+      var any=(i!==null);
+      bar.classList.toggle('dim',any);
+      bar.querySelectorAll('span').forEach(function(s){s.classList.toggle('hot',any&&s.dataset.i===String(i))});
+      legend.querySelectorAll('li').forEach(function(l){l.classList.toggle('hot',any&&l.dataset.i===String(i))});
+    }
+    function pick(i){cur=(cur===i)?null:i;hot(cur);}
+    bar.querySelectorAll('span').forEach(function(s){s.addEventListener('click',function(){pick(s.dataset.i)})});
+    legend.querySelectorAll('li').forEach(function(l){l.addEventListener('click',function(){pick(l.dataset.i)})});
+  }
+  wireAlloc('alloc','legend');
+  wireAlloc('allocB','legendB');
+  wireAlloc('allocC','legendC');
+  // strategy A/B switcher
+  var segBtns=document.querySelectorAll('.seg button');
+  segBtns.forEach(function(b){
+    b.addEventListener('click',function(){
+      segBtns.forEach(function(x){x.classList.remove('on')});
+      document.querySelectorAll('.strat-pane').forEach(function(p){p.classList.remove('on')});
+      b.classList.add('on');
+      document.getElementById(b.dataset.p).classList.add('on');
+    });
+  });
+})();
+</script>
