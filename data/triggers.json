@@ -9,6 +9,6 @@
     {"category": "sell", "tag": "Exit Signal", "cond": "하이퍼스케일러 CAPEX 가이던스 하향 (단 1개사라도)", "act": "메모리 전량 익절 검토 — 사이클 피크의 공식 신호", "status": "dormant", "strategies": ["A", "B"]},
     {"category": "buy", "tag": "Contrarian", "cond": "VIX > 30 + 공포탐욕지수 < 20", "act": "역발상 매수 — 보유 현금 30% 중 절반 투입", "status": "dormant", "strategies": ["A"]},
     {"category": "watch", "tag": "FX · 7/10", "cond": "하이닉스 ADR 상장 통과 + 환율 숏커버 반등", "act": "1,530~1,550 도달 시 전술적 달러 매수분 일부 익절. 1,460 하향 이탈 시 추가 달러 매수 중단", "status": "dormant", "strategies": ["A", "B"]},
-    {"category": "sell", "tag": "Flow Watch", "cond": "외국인, 국내 하이닉스 순매도 지속 + ADR로 거래 이동", "act": "한국 비중 증액(→28%) 보류, 원화 반락 대비 — 국내 증시 수급 이탈 신호", "status": "dormant", "strategies": ["A"]}
+    {"category": "sell", "tag": "Flow Watch", "cond": "외국인, 국내 하이닉스 순매도 지속 + ADR로 거래 이동", "act": "한국 비중 증액(→28%) 보류, 원화 반락 대비 — 국내 증시 수급 이탈 신호", "status": "approaching", "strategies": ["A"]}
   ]
 }
