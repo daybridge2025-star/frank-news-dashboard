@@ -1,13 +1,20 @@
 """
 KRX Open API 클라이언트 (openapi.krx.co.kr — AUTH_KEY 발급 필요)
 
-주의 (2026-07-10 확인):
-- 아래 BASE_URL/PATHS는 공개적으로 알려진 KRX Open API 경로 패턴을 따라 작성했다.
-  실제 사용 전 반드시 마이페이지 > API 서비스 신청내역 > 명세서에서 정확한
-  경로·파라미터명을 대조할 것 — 경로가 틀리면 빈 리스트/404로 바로 드러난다.
-- 투자자별 순매수(외국인/기관/개인/연기금)는 이 Open API 카탈로그에 없다.
-  data.krx.co.kr 정보데이터시스템 회원 로그인 기반 별도 연동(예: pykrx)이 필요 —
-  get_investor_flow()는 그 사실을 '미확보'로 명확히 반환할 뿐, 데이터를 지어내지 않는다.
+실측 확인 (2026-07-10, 유효 키 + 서비스 승인 상태):
+- BASE_URL/PATHS/필드명 전부 실제 200 응답으로 검증됨.
+- 응답은 {"OutBlock_1": [ {행}, ... ]} 구조.
+- 지수 엔드포인트: 해당일 전체 지수(예: KOSPI 51개)를 반환 → 헤드라인은 IDX_NM으로 필터.
+- 종목 엔드포인트: 해당일 전체 종목(KOSPI ~945개)을 반환. isuCd 파라미터는 무시되므로
+  한 번 받아 로컬에서 ISU_CD로 필터하는 게 정석(종목별 호출은 매번 전체를 받아 비효율).
+- 데이터는 T+1: 당일 장마감 직후엔 당일치가 없고 전 영업일이 최신인 경우가 많다.
+- 투자자별 순매수(외국인/기관/개인/연기금)는 이 카탈로그에 없음 → pykrx(utils/krx_scrape) 사용.
+
+주요 필드:
+  지수  : BAS_DD, IDX_CLSS, IDX_NM, CLSPRC_IDX(종가), CMPPREVDD_IDX(전일대비),
+          FLUC_RT(등락률%), OPNPRC_IDX, HGPRC_IDX, LWPRC_IDX, ACC_TRDVOL, ACC_TRDVAL, MKTCAP
+  종목  : BAS_DD, ISU_CD, ISU_NM, MKT_NM, TDD_CLSPRC(종가), CMPPREVDD_PRC(전일대비),
+          FLUC_RT(등락률%), TDD_OPNPRC, TDD_HGPRC, TDD_LWPRC, ACC_TRDVOL, ACC_TRDVAL, MKTCAP
 """
 
 import os
@@ -18,8 +25,8 @@ BASE_URL = 'http://data-dbg.krx.co.kr/svc/apis'
 PATHS = {
     'kospi_index':  '/idx/kospi_dd_trd',   # KOSPI 시리즈 일별시세
     'kosdaq_index': '/idx/kosdaq_dd_trd',  # 코스닥 시리즈 일별시세
-    'stock_kospi':  '/sto/stk_bydd_trd',   # 유가증권 개별종목 일별매매정보
-    'stock_kosdaq': '/sto/ksq_bydd_trd',   # 코스닥 개별종목 일별매매정보
+    'stock_kospi':  '/sto/stk_bydd_trd',   # 유가증권 개별종목 일별매매정보 (전종목)
+    'stock_kosdaq': '/sto/ksq_bydd_trd',   # 코스닥 개별종목 일별매매정보 (전종목)
 }
 
 
@@ -30,7 +37,7 @@ def _get_auth_key():
     return key
 
 
-def _call(path, params, auth_key=None):
+def _call(path, params, auth_key=None, timeout=30):
     """공통 호출 헬퍼. 실패해도 빈 리스트 반환 — 한 항목 실패가 전체 수집을 막지 않게 한다."""
     auth_key = auth_key or _get_auth_key()
     if not auth_key:
@@ -40,13 +47,13 @@ def _call(path, params, auth_key=None):
             BASE_URL + path,
             params=params,
             headers={'AUTH_KEY': auth_key},
-            timeout=10,
+            timeout=timeout,
         )
         if resp.status_code != 200:
             print(f'[KRX] {path} 오류: HTTP {resp.status_code} — {resp.text[:200]}')
             return []
         data = resp.json()
-        # 응답 최상위 키 이름은 서비스마다 다를 수 있어(예: OutBlock_1) 리스트인 첫 값을 그대로 반환
+        # 최상위 키는 OutBlock_1 — 리스트인 첫 값을 그대로 반환(키명 변경에도 견고)
         for v in data.values():
             if isinstance(v, list):
                 return v
@@ -57,38 +64,33 @@ def _call(path, params, auth_key=None):
 
 
 def get_kospi_index(bas_dd, auth_key=None):
-    """KOSPI 지수 일별시세. bas_dd: 'YYYYMMDD'"""
+    """KOSPI 지수 일별시세(전 지수). bas_dd: 'YYYYMMDD'"""
     return _call(PATHS['kospi_index'], {'basDd': bas_dd}, auth_key)
 
 
 def get_kosdaq_index(bas_dd, auth_key=None):
-    """코스닥 지수 일별시세."""
+    """코스닥 지수 일별시세(전 지수)."""
     return _call(PATHS['kosdaq_index'], {'basDd': bas_dd}, auth_key)
 
 
-def get_kospi_stock(bas_dd, isu_cd=None, auth_key=None):
-    """유가증권시장 개별종목 일별매매정보. isu_cd 없으면 전체 종목(응답이 큼)."""
-    params = {'basDd': bas_dd}
-    if isu_cd:
-        params['isuCd'] = isu_cd
-    return _call(PATHS['stock_kospi'], params, auth_key)
+def get_kospi_stocks(bas_dd, auth_key=None):
+    """유가증권 전 종목 일별매매정보(1회 호출, 로컬 필터용). 응답이 커서 timeout 넉넉히."""
+    return _call(PATHS['stock_kospi'], {'basDd': bas_dd}, auth_key, timeout=60)
 
 
-def get_kosdaq_stock(bas_dd, isu_cd=None, auth_key=None):
-    """코스닥 개별종목 일별매매정보."""
-    params = {'basDd': bas_dd}
-    if isu_cd:
-        params['isuCd'] = isu_cd
-    return _call(PATHS['stock_kosdaq'], params, auth_key)
+def get_kosdaq_stocks(bas_dd, auth_key=None):
+    """코스닥 전 종목 일별매매정보(1회 호출)."""
+    return _call(PATHS['stock_kosdaq'], {'basDd': bas_dd}, auth_key, timeout=60)
 
 
-def get_investor_flow(*_args, **_kwargs):
-    """
-    투자자별(외국인/기관/개인/연기금) 순매수 — Open API 카탈로그에 없음(2026-07 확인).
-    data.krx.co.kr 회원 로그인 기반 별도 연동(pykrx 등) 필요.
-    지어내지 않고 '미확보' 상태를 명시적으로 반환한다.
-    """
-    return {
-        'status': 'unavailable',
-        'reason': 'openapi.krx.co.kr 카탈로그에 투자자별 거래실적 없음 — pykrx/회원 로그인 연동 필요',
-    }
+def headline_index(rows, name):
+    """지수 전체 리스트에서 헤드라인 한 줄 추출(예: '코스피', '코스닥')."""
+    for r in rows or []:
+        if str(r.get('IDX_NM', '')).strip() == name:
+            return r
+    return None
+
+
+def stocks_by_code(rows):
+    """종목 전체 리스트를 ISU_CD → 행 dict로 변환(로컬 필터용)."""
+    return {str(r.get('ISU_CD', '')).strip(): r for r in (rows or [])}
