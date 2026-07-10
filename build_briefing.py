@@ -1,0 +1,253 @@
+"""
+브리핑 HTML 데이터 주입기 — GitHub Actions에서 fetch_krx_snapshot.py 직후 실행.
+
+data/krx_snapshot_latest.json 을 읽어, reports/macro-strategy-briefing.html 의
+<!--KRX-START:key--> ... <!--KRX-END:key--> 로 감싼 구간만 실제 수치로 교체한다.
+
+원칙:
+- 자리표시(마커)가 있는 구간만 건드린다 — 마커 밖의 손으로 쓴 분석 산문은 절대 손대지 않는다.
+- 데이터가 없으면(status != ok, 값 None) 해당 구간을 건드리지 않고 기존 "미확보" 표기를 그대로 둔다.
+  즉 숫자를 지어내지도, 있던 걸 지우지도 않는다.
+- 마커를 못 찾으면 경고만 남기고 계속(마켓 브리프 세션이 마커를 지웠을 가능성 대비).
+
+단일 스냅샷은 '전일(해당 영업일)' 값만 제공하므로 투자자 수급의 연초·이번달 누적 컬럼은
+채우지 않는다(시계열 누적이 필요 — 별도 작업).
+"""
+
+import sys
+import os
+import re
+import json
+
+sys.path.insert(0, os.path.dirname(__file__))
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
+SNAP_PATH = 'data/krx_snapshot_latest.json'
+HTML_PATH = 'reports/macro-strategy-briefing.html'
+
+MINUS = '−'  # 기존 HTML이 쓰는 유니코드 마이너스(−)와 맞춤
+
+# 업종별 등락률 표에서 제외할 '지수(사이즈/스타일)' 이름 — 진짜 업종만 남긴다
+_NON_SECTOR = ('코스피', '코스닥', '200', '150', '100', '50', 'TOP',
+               '대형주', '중형주', '소형주', '비중상한', '외국주포함')
+
+
+# ── 포매터 ────────────────────────────────────────────────
+def fmt_won(v):
+    """원 단위 정수 → '+1,428억' / '−1.3조' (기존 표기 규칙)."""
+    if v is None:
+        return None
+    sign = '+' if v >= 0 else MINUS
+    a = abs(v)
+    if a >= 1e12:
+        return f'{sign}{a / 1e12:,.1f}조'
+    return f'{sign}{a / 1e8:,.0f}억'
+
+
+def fmt_pct(p):
+    if p is None:
+        return None
+    sign = '+' if p >= 0 else MINUS
+    return f'{sign}{abs(p):.2f}%'
+
+
+def fmt_idx(v):
+    if v is None:
+        return None
+    return f'{v:,.0f}'
+
+
+def color_of(v):
+    return 'var(--bull)' if (v or 0) >= 0 else 'var(--bear)'
+
+
+def date_label(bas_dd):
+    return f'{int(bas_dd[4:6])}/{int(bas_dd[6:8])}'
+
+
+# ── 데이터 helper ─────────────────────────────────────────
+def _net(iv, name):
+    for r in iv or []:
+        if r.get('투자자구분') == name:
+            return r.get('순매수')
+    return None
+
+
+def _industry(sectors):
+    out = []
+    for s in sectors or []:
+        nm = s.get('name') or ''
+        if any(x in nm for x in _NON_SECTOR):
+            continue
+        if s.get('change_pct') is None:
+            continue
+        out.append(s)
+    return out
+
+
+# ── 구간 생성기 ───────────────────────────────────────────
+def _fm_cell(value, maxabs):
+    """투자자별 수급 '전일' 셀 하나(막대+값). value None이면 None(=건드리지 않음)."""
+    if value is None:
+        return None
+    side = 'buy' if value >= 0 else 'sell'
+    width = round(abs(value) / maxabs * 47) if maxabs else 0
+    return (f'<div class="fm-cell"><div class="track"><div class="zero"></div>'
+            f'<div class="fill {side}" style="width:{width}%"></div></div>'
+            f'<span class="v {side}">{fmt_won(value)}</span></div>')
+
+
+def _flow_cells(flow, market):
+    """market의 외국인/개인/기관 전일 셀 3개를 key별로 반환."""
+    iv = (flow.get(market) or {}).get('investor_value')
+    if not iv:
+        return {}
+    vals = {
+        'foreign': _net(iv, '외국인'),
+        'individual': _net(iv, '개인'),
+        'institution': _net(iv, '기관합계'),
+    }
+    present = [abs(v) for v in vals.values() if v is not None]
+    maxabs = max(present) if present else 0
+    prefix = 'flow_' + ('kospi' if market == 'KOSPI' else 'kosdaq') + '_'
+    return {prefix + k: _fm_cell(v, maxabs) for k, v in vals.items()}
+
+
+def _sector_rows(sectors, n=5):
+    ind = _industry(sectors)
+    if not ind:
+        return None
+    ind.sort(key=lambda s: s['change_pct'])  # 낙폭 큰 순
+    rows = ''
+    for s in ind[:n]:
+        rows += (f'<tr><td>{s["name"]}</td>'
+                 f'<td class="num" style="color:{color_of(s["change_pct"])}">'
+                 f'{fmt_pct(s["change_pct"])}</td></tr>')
+    return rows
+
+
+def _foreign_top_rows(flow, market, n=5):
+    ft = (flow.get(market) or {}).get('foreign_net_top')
+    if not ft:
+        return None
+    buy, sell = ft.get('buy', []), ft.get('sell', [])
+    rows = ''
+    for i in range(n):
+        b = buy[i] if i < len(buy) else None
+        s = sell[i] if i < len(sell) else None
+        bn = b['종목'] if b else '미확보'
+        ba = (f'<span style="color:var(--bull)">{fmt_won(b["순매수"])}</span>'
+              if b else '<span style="color:var(--ink-3)">—</span>')
+        sn = s['종목'] if s else '미확보'
+        sa = (f'<span style="color:var(--bear)">{fmt_won(s["순매수"])}</span>'
+              if s else '<span style="color:var(--ink-3)">—</span>')
+        rows += (f'<tr><td>{i + 1}</td><td>{bn}</td><td class="num">{ba}</td>'
+                 f'<td>{sn}</td><td class="num">{sa}</td></tr>')
+    return rows
+
+
+def _pension_rows(flow, n=5):
+    combined = []
+    for market, kr in (('KOSPI', '코스피'), ('KOSDAQ', '코스닥')):
+        pt = (flow.get(market) or {}).get('pension_net_top')
+        if pt:
+            for x in pt.get('buy', []):
+                combined.append((x['종목'], kr, x['순매수']))
+    if not combined:
+        return None
+    combined.sort(key=lambda t: -t[2])
+    rows = ''
+    for i, (nm, kr, net) in enumerate(combined[:n], 1):
+        rows += (f'<tr><td>{i}</td><td>{nm}</td><td>{kr}</td>'
+                 f'<td class="num" style="color:var(--bull)">{fmt_won(net)}</td></tr>')
+    return rows
+
+
+def build_generators(snap):
+    """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
+    g = {}
+    dd = snap.get('bas_dd', '')
+    idx = snap.get('index', {})
+    flow = snap.get('investor_flow', {})
+    flow_ok = isinstance(flow, dict) and flow.get('status') == 'ok'
+
+    # 날짜 라벨(여러 헤더에 동일 key로 반복 사용)
+    if dd:
+        g['asof'] = date_label(dd)
+
+    # (지수 카드/매수구간 범위는 편집성 분석과 섞여 있어 자동 주입 대상에서 제외 —
+    #  마켓 브리프 세션이 산문과 함께 관리)
+    k = idx.get('KOSPI') or {}
+
+    # 업종별 등락률(지수 데이터는 로그인 불필요 — 키만 있으면 채워짐)
+    g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'))
+    g['sectors_kosdaq'] = _sector_rows((snap.get('sectors') or {}).get('KOSDAQ'))
+
+    # 투자자 수급 전일 + 상위 종목(로그인 필요 — flow_ok일 때만)
+    if flow_ok:
+        g.update(_flow_cells(flow, 'KOSPI'))
+        g.update(_flow_cells(flow, 'KOSDAQ'))
+        g['foreign_top_kospi'] = _foreign_top_rows(flow, 'KOSPI')
+        g['foreign_top_kosdaq'] = _foreign_top_rows(flow, 'KOSDAQ')
+        g['pension_top'] = _pension_rows(flow)
+
+    # 연동 상태 노트
+    sources = []
+    if k.get('close') is not None:
+        sources.append('지수·업종·종목 시세(Open API)')
+    if flow_ok:
+        sources.append('투자자별 수급·순매수 상위(정보데이터시스템)')
+    if sources:
+        g['integration_note'] = (
+            f'✅ KRX 직접 연동 가동 중 — {" · ".join(sources)}를 매 영업일 자동 수집·주입. '
+            f'기준일 {date_label(dd)}. 연초·이번달 누적은 시계열 누적분이라 순차 반영 예정이며, '
+            f'확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.')
+    return g
+
+
+def render(html, snap):
+    gens = build_generators(snap)
+    filled, skipped, missing = [], [], []
+    for key, content in gens.items():
+        if content is None:
+            skipped.append(key)
+            continue
+        pat = re.compile(
+            r'(<!--KRX-START:' + re.escape(key) + r'-->).*?(<!--KRX-END:' + re.escape(key) + r'-->)',
+            re.DOTALL)
+        html, n = pat.subn(lambda m: m.group(1) + content + m.group(2), html)
+        if n == 0:
+            missing.append(key)
+        else:
+            filled.append(f'{key}×{n}')
+    print('채움:', ', '.join(filled) or '(없음)')
+    if skipped:
+        print('건너뜀(데이터 없음, 기존 유지):', ', '.join(skipped))
+    if missing:
+        print('경고 — 마커 없음(HTML에서 자리표시를 못 찾음):', ', '.join(missing))
+    return html
+
+
+def main():
+    if not os.path.exists(SNAP_PATH):
+        print(f'스냅샷 없음: {SNAP_PATH} — 주입 생략')
+        return
+    if not os.path.exists(HTML_PATH):
+        print(f'HTML 없음: {HTML_PATH} — 주입 생략')
+        return
+    with open(SNAP_PATH, encoding='utf-8') as f:
+        snap = json.load(f)
+    with open(HTML_PATH, encoding='utf-8') as f:
+        html = f.read()
+    out = render(html, snap)
+    if out != html:
+        with open(HTML_PATH, 'w', encoding='utf-8') as f:
+            f.write(out)
+        print(f'저장 완료: {HTML_PATH}')
+    else:
+        print('변경 없음.')
+
+
+if __name__ == '__main__':
+    main()
