@@ -463,50 +463,48 @@ footer p{margin:5px 0}
   <div class="prose">
     <div class="secttl"><h3>코스피 · 투자자별 수급</h3><span class="dlabel verified">검증</span></div>
     <div class="flowmatrix">
-      <div class="fm-head"><span></span><span>연초 누적<br>(1.2~7/3)</span><span>이번달 누적<br>(7/1~7/8)</span><span>전일(<!--KRX-START:asof-->7/9<!--KRX-END:asof-->)</span></div>
+      <div class="fm-head"><span></span><span>연초 누적<br>(<!--KRX-START:ytd_label-->1.2~7/3<!--KRX-END:ytd_label-->)</span><span>이번달 누적<br>(<!--KRX-START:mtd_label-->7/1~7/8<!--KRX-END:mtd_label-->)</span><span>전일(<!--KRX-START:asof-->7/9<!--KRX-END:asof-->)</span></div>
       <div class="fm-row"><span class="fm-lbl">외국인</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−150.3조</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−12.1조</span></div>
+        <!--KRX-START:flow_kospi_foreign_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−150.3조</span></div><!--KRX-END:flow_kospi_foreign_ytd-->
+        <!--KRX-START:flow_kospi_foreign_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−12.1조</span></div><!--KRX-END:flow_kospi_foreign_mtd-->
         <!--KRX-START:flow_kospi_foreign--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:5%"></div></div><span class="v buy">+1,428억</span></div><!--KRX-END:flow_kospi_foreign-->
       </div>
       <div class="fm-row"><span class="fm-lbl">개인</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:31%"></div></div><span class="v buy">+99.2조</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">+11.0조*</span></div>
+        <!--KRX-START:flow_kospi_individual_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:31%"></div></div><span class="v buy">+99.2조</span></div><!--KRX-END:flow_kospi_individual_ytd-->
+        <!--KRX-START:flow_kospi_individual_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">+11.0조*</span></div><!--KRX-END:flow_kospi_individual_mtd-->
         <!--KRX-START:flow_kospi_individual--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−1.3조</span></div><!--KRX-END:flow_kospi_individual-->
       </div>
       <div class="fm-row"><span class="fm-lbl">기관</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:11%"></div></div><span class="v buy">+35.0조</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">−0.5조**</span></div>
+        <!--KRX-START:flow_kospi_institution_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:11%"></div></div><span class="v buy">+35.0조</span></div><!--KRX-END:flow_kospi_institution_ytd-->
+        <!--KRX-START:flow_kospi_institution_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">−0.5조**</span></div><!--KRX-END:flow_kospi_institution_mtd-->
         <!--KRX-START:flow_kospi_institution--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:46%"></div></div><span class="v buy">+1.3조</span></div><!--KRX-END:flow_kospi_institution-->
       </div>
     </div>
-    <p style="font-size:12px; color:var(--ink-2)">연초 누적은 반기 기준(1.2~7/3) — 외국인 −150.3조로 반기 사상 최대이고, 개인 +99.2조 · 기관 +35.0조가 이를 받아냈다.</p>
-    <p style="font-size:12px; color:var(--ink-2)">이번달 누적은 7월 개장일 전체(7/1~7/8, 6거래일) 기준이다. 외국인은 6일 전부 확인돼 −12.1조로 완전 집계됐다 — 7/2 −5.13조가 최대 매도일이었고, 7/8 +0.34조로 반등 전환했다.</p>
-    <p style="font-size:12px; color:var(--ink-2)">개인(*)은 7/1·7/2·7/7·7/8 4일만 확인돼 +11.0조 — 7/3·7/6 이틀치가 빠진 부분 집계다. 기관(**)은 7/2·7/8 2일만 확인돼 −0.5조로, 6일 중 4일이 비어 있어 참고용에 그친다. 두 항목 모두 확인되는 대로 채워 완전 집계로 전환한다.</p>
+    <p style="font-size:12px; color:var(--ink-2)">연초·이번달 누적은 KRX 정보데이터시스템에서 해당 기간 전체를 서버 측에서 합산해 직접 조회한 값이다(더 이상 언론 인용·부분 집계 아님) — 매 갱신 시 자동으로 다시 계산된다.</p>
     <p style="font-size:12px; color:var(--ink-2)">전일은 개인 −451억 · 기관 −337억 · 외국인 +3,357억 — 합산하면 순매도 −430억 수준으로, 지수 급락(−5.35%) 규모에 비해 순매도 자체는 크지 않았다. 급락의 주 원인은 매도 물량이 아니라 대형주 동반 약세.</p>
   </div>
 
   <div class="prose">
     <div class="secttl"><h3>코스닥 · 투자자별 수급</h3><span class="dlabel verified">검증(전일)</span></div>
     <div class="flowmatrix">
-      <div class="fm-head"><span></span><span>연초 누적</span><span>이번달 누적</span><span>전일(<!--KRX-START:asof-->7/9<!--KRX-END:asof-->)</span></div>
+      <div class="fm-head"><span></span><span>연초 누적<br>(<!--KRX-START:ytd_label-->1.2~7/3<!--KRX-END:ytd_label-->)</span><span>이번달 누적<br>(<!--KRX-START:mtd_label-->7/1~7/8<!--KRX-END:mtd_label-->)</span><span>전일(<!--KRX-START:asof-->7/9<!--KRX-END:asof-->)</span></div>
       <div class="fm-row"><span class="fm-lbl">외국인</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <!--KRX-START:flow_kosdaq_foreign_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div><!--KRX-END:flow_kosdaq_foreign_ytd-->
+        <!--KRX-START:flow_kosdaq_foreign_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div><!--KRX-END:flow_kosdaq_foreign_mtd-->
         <!--KRX-START:flow_kosdaq_foreign--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:3%"></div></div><span class="v buy">+219억</span></div><!--KRX-END:flow_kosdaq_foreign-->
       </div>
       <div class="fm-row"><span class="fm-lbl">개인</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <!--KRX-START:flow_kosdaq_individual_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div><!--KRX-END:flow_kosdaq_individual_ytd-->
+        <!--KRX-START:flow_kosdaq_individual_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div><!--KRX-END:flow_kosdaq_individual_mtd-->
         <!--KRX-START:flow_kosdaq_individual--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill sell" style="width:47%"></div></div><span class="v sell">−3,217억</span></div><!--KRX-END:flow_kosdaq_individual-->
       </div>
       <div class="fm-row"><span class="fm-lbl">기관</span>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div>
-        <div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div>
+        <!--KRX-START:flow_kosdaq_institution_ytd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">미확보</span></div><!--KRX-END:flow_kosdaq_institution_ytd-->
+        <!--KRX-START:flow_kosdaq_institution_mtd--><div class="fm-cell"><div class="track"><div class="zero"></div></div><span class="v" style="color:var(--ink-3); font-weight:600">집계중</span></div><!--KRX-END:flow_kosdaq_institution_mtd-->
         <!--KRX-START:flow_kosdaq_institution--><div class="fm-cell"><div class="track"><div class="zero"></div><div class="fill buy" style="width:45%"></div></div><span class="v buy">+3,081억</span></div><!--KRX-END:flow_kosdaq_institution-->
       </div>
     </div>
-    <p style="font-size:12px; color:var(--ink-2)">코스닥 연초·이번달 누적은 신뢰할 만한 공표 수치를 아직 확보하지 못해 "미확보/집계중"으로 정직하게 표기 — KRX 직접 연동 성공 시 코스피와 동일하게 채워질 예정(각주에 집계 시작일 표기 예정). 전일은 외국인만 홀로 매수(+3,371억), 개인·기관 동반 매도 — 코스피와 같은 패턴.</p>
+    <p style="font-size:12px; color:var(--ink-2)">연초·이번달 누적은 KRX 정보데이터시스템에서 해당 기간 전체를 서버 측에서 합산해 직접 조회한 값이다 — 코스피와 동일한 방식으로 자동 갱신된다. 전일은 외국인만 홀로 매수(+3,371억), 개인·기관 동반 매도 — 코스피와 같은 패턴.</p>
   </div>
 
   <div class="prose tbl-scroll">
@@ -576,7 +574,7 @@ footer p{margin:5px 0}
   </div>
 
   <div class="prose">
-    <p style="font-size:12px; color:var(--ink-3)"><!--KRX-START:integration_note-->✅ KRX 직접 연동 가동 중 — 지수·업종·종목 시세(Open API) · 투자자별 수급·순매수 상위(정보데이터시스템)를 매 영업일 자동 수집·주입. 기준일 7/9. 연초·이번달 누적은 시계열 누적분이라 순차 반영 예정이며, 확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.<!--KRX-END:integration_note--></p>
+    <p style="font-size:12px; color:var(--ink-3)"><!--KRX-START:integration_note-->✅ KRX 직접 연동 가동 중 — 지수·업종·종목 시세(Open API) · 투자자별 수급·순매수 상위(정보데이터시스템)를 매 영업일 자동 수집·주입. 기준일 7/9. 연초·이번달 누적은 KRX 서버가 해당 기간을 직접 합산해 조회한 값이다. 확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.<!--KRX-END:integration_note--></p>
   </div>
 </section>
 

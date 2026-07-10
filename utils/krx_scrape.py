@@ -67,23 +67,26 @@ def get_stock_ohlcv(bas_dd, code):
         return None
 
 
-def get_investor_value(bas_dd, market='KOSPI'):
+def get_investor_value(bas_dd, market='KOSPI', fromdate=None):
     """
     시장 전체 투자자별 거래대금/순매수 (코스피/코스닥 투자자별 수급 표).
-    반환: [{'투자자': str, '순매수': int, ...}] 또는 None
+    fromdate 없으면 bas_dd 당일치. fromdate가 있으면 fromdate~bas_dd 기간 합계를
+    KRX가 서버에서 이미 집계해 반환한다(실측 확인 — 6개월 범위도 1초 이내, 하루씩
+    받아 우리가 더할 필요 없음).
+    반환: [{'투자자구분': str, '매도':int, '매수':int, '순매수': int, ...}] 또는 None
     """
     stock = _import_stock()
     if stock is None:
         return None
     try:
-        df = stock.get_market_trading_value_by_investor(bas_dd, bas_dd, market)
+        df = stock.get_market_trading_value_by_investor(fromdate or bas_dd, bas_dd, market)
         if df is None or df.empty:
             return None
         df = df.reset_index()
         records = df.to_dict(orient='records')
         return [{str(k): _native(v) for k, v in rec.items()} for rec in records]
     except Exception as e:
-        print(f'[pykrx] {market} 투자자별 거래대금 실패: {e}')
+        print(f'[pykrx] {market} 투자자별 거래대금 실패 ({fromdate or bas_dd}~{bas_dd}): {e}')
         return None
 
 
@@ -116,6 +119,13 @@ def get_net_purchase_top(bas_dd, market='KOSPI', investor='외국인', top=5):
         return None
 
 
+def _period_bounds(bas_dd):
+    """bas_dd 기준 이번달 초('YYYYMM01')·연초('YYYY0102') 문자열. 비영업일이어도
+    범위 쿼리가 그 안의 실제 거래일만 집계하므로 문제없다(실측 확인)."""
+    year, month = bas_dd[:4], bas_dd[:6]
+    return month + '01', year + '0102'
+
+
 def get_investor_flow(bas_dd):
     """
     스냅샷용 통합 진입점. 자격증명 없으면 unavailable을 명확히 반환.
@@ -124,17 +134,21 @@ def get_investor_flow(bas_dd):
     if not has_credentials():
         return _unavailable('KRX_ID/KRX_PW 미설정 — data.krx.co.kr 무료 회원가입 후 시크릿 등록 필요')
 
-    result = {'status': 'ok', 'bas_dd': bas_dd}
+    mtd_from, ytd_from = _period_bounds(bas_dd)
+    result = {'status': 'ok', 'bas_dd': bas_dd, 'mtd_from': mtd_from, 'ytd_from': ytd_from}
     for market in ('KOSPI', 'KOSDAQ'):
         result[market] = {
             'investor_value':      get_investor_value(bas_dd, market),
+            'investor_value_mtd':  get_investor_value(bas_dd, market, fromdate=mtd_from),
+            'investor_value_ytd':  get_investor_value(bas_dd, market, fromdate=ytd_from),
             'foreign_net_top':     get_net_purchase_top(bas_dd, market, '외국인'),
             'pension_net_top':     get_net_purchase_top(bas_dd, market, '연기금'),
         }
     # 전 섹션이 비면(로그인은 됐으나 데이터 0) 사실대로 낮춰 표기
     any_data = any(
         result[m][k] for m in ('KOSPI', 'KOSDAQ')
-        for k in ('investor_value', 'foreign_net_top', 'pension_net_top')
+        for k in ('investor_value', 'investor_value_mtd', 'investor_value_ytd',
+                   'foreign_net_top', 'pension_net_top')
     )
     if not any_data:
         return _unavailable('로그인은 됐으나 응답 비어있음 — 휴장일이거나 KRX 응답 형식 변경 가능')

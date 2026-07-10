@@ -109,9 +109,9 @@ def _fm_cell(value, maxabs):
             f'<span class="v {side}">{fmt_won(value)}</span></div>')
 
 
-def _flow_cells(flow, market):
-    """market의 외국인/개인/기관 전일 셀 3개를 key별로 반환."""
-    iv = (flow.get(market) or {}).get('investor_value')
+def _flow_cells(flow, market, period_field='investor_value', suffix=''):
+    """market의 외국인/개인/기관 셀 3개(전일/이번달/연초 공용, period_field로 선택)."""
+    iv = (flow.get(market) or {}).get(period_field)
     if not iv:
         return {}
     vals = {
@@ -122,7 +122,7 @@ def _flow_cells(flow, market):
     present = [abs(v) for v in vals.values() if v is not None]
     maxabs = max(present) if present else 0
     prefix = 'flow_' + ('kospi' if market == 'KOSPI' else 'kosdaq') + '_'
-    return {prefix + k: _fm_cell(v, maxabs) for k, v in vals.items()}
+    return {prefix + k + suffix: _fm_cell(v, maxabs) for k, v in vals.items()}
 
 
 def _sector_rows(sectors, n=5):
@@ -229,13 +229,21 @@ def build_generators(snap, us, kr, stance):
     g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'))
     g['sectors_kosdaq'] = _sector_rows((snap.get('sectors') or {}).get('KOSDAQ'))
 
-    # 투자자 수급 전일 + 상위 종목(로그인 필요 — flow_ok일 때만)
+    # 투자자 수급 전일·이번달·연초 + 상위 종목(로그인 필요 — flow_ok일 때만)
     if flow_ok:
-        g.update(_flow_cells(flow, 'KOSPI'))
-        g.update(_flow_cells(flow, 'KOSDAQ'))
+        for market in ('KOSPI', 'KOSDAQ'):
+            g.update(_flow_cells(flow, market))
+            g.update(_flow_cells(flow, market, 'investor_value_mtd', '_mtd'))
+            g.update(_flow_cells(flow, market, 'investor_value_ytd', '_ytd'))
         g['foreign_top_kospi'] = _foreign_top_rows(flow, 'KOSPI')
         g['foreign_top_kosdaq'] = _foreign_top_rows(flow, 'KOSDAQ')
         g['pension_top'] = _pension_rows(flow)
+        # 기간 라벨(코스피·코스닥 공용 — 같은 기준일/월초/연초를 쓰므로 마커 1쌍만 필요)
+        mtd_from, ytd_from = flow.get('mtd_from'), flow.get('ytd_from')
+        if mtd_from and dd:
+            g['mtd_label'] = f'{date_label(mtd_from)}~{date_label(dd)}'
+        if ytd_from and dd:
+            g['ytd_label'] = f'{date_label(ytd_from)}~{date_label(dd)}'
 
     # 연동 상태 노트
     sources = []
@@ -244,9 +252,11 @@ def build_generators(snap, us, kr, stance):
     if flow_ok:
         sources.append('투자자별 수급·순매수 상위(정보데이터시스템)')
     if sources:
+        cum_note = ('연초·이번달 누적은 KRX 서버가 해당 기간을 직접 합산해 조회한 값이다.'
+                    if flow_ok else '연초·이번달 누적은 투자자 수급 로그인 연동 전까지 미확보로 남는다.')
         g['integration_note'] = (
             f'✅ KRX 직접 연동 가동 중 — {" · ".join(sources)}를 매 영업일 자동 수집·주입. '
-            f'기준일 {date_label(dd)}. 연초·이번달 누적은 시계열 누적분이라 순차 반영 예정이며, '
+            f'기준일 {date_label(dd)}. {cum_note} '
             f'확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.')
 
     # ── 미국 이슈(별도 소스 data/us_issues.json — 마켓 브리프 세션이 갱신) ──
