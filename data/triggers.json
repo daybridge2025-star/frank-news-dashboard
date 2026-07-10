@@ -1,0 +1,14 @@
+{
+  "_readme": "트리거 기반 행동 계획 원본. 마켓 브리프 세션이 이 파일만 갱신하면 build_briefing.py가 트리거 탭에 주입한다. HTML을 직접 편집하지 말 것. category: buy(추가매수성)·sell(축소/손절성)·watch(관망/모니터링) — 카드 좌측 색상바를 정한다. status: dormant(평시)·approaching(임박)·hit(발동) — 카드 정렬 순서(hit가 맨 위)와 강조 배지를 정한다. 조건(cond)·액션(act) 자체가 바뀌면(예: 만료된 이벤트 트리거 교체) 이 배열을 수정. 상태 판단은 편집성 판단이라 자동 계산하지 않는다 — 다만 KOSPI 트리거처럼 KRX 자동수집 데이터로 검증 가능한 조건은 fetch_krx_snapshot.py 실행 시 콘솔에 참고 힌트가 출력되니 그걸 보고 status를 갱신할 것.",
+  "triggers": [
+    {"category": "watch", "tag": "Watch · 7/14", "cond": "미국 6월 CPI > 4.5%", "act": "주식 순노출 10%p 추가 축소, 금 +3%p", "status": "dormant"},
+    {"category": "sell", "tag": "De-risk", "cond": "호르무즈 완전 봉쇄 (유가 $95+)", "act": "에너지 익절 시작, 인덱스 풋 행사/롤, KOSPI 매수 일시 중단", "status": "dormant"},
+    {"category": "buy", "tag": "Add", "cond": "KOSPI 7,000~7,200 + 외국인 순매수 전환", "act": "한국 비중 20% → 28% 증액 (준비된 실탄 투입)", "status": "approaching"},
+    {"category": "sell", "tag": "De-risk", "cond": "연준 10월 인상 + 추가 인상 가격 반영", "act": "방어 모드 — 순노출 40%로, 단기채 확대", "status": "dormant"},
+    {"category": "buy", "tag": "Confirm", "cond": "하이퍼스케일러 3Q 실적, 2027 CAPEX 가이던스 상향 유지", "act": "사이클 연장 확인 → 메모리 비중 유지/확대", "status": "dormant"},
+    {"category": "sell", "tag": "Exit Signal", "cond": "하이퍼스케일러 CAPEX 가이던스 하향 (단 1개사라도)", "act": "메모리 전량 익절 검토 — 사이클 피크의 공식 신호", "status": "dormant"},
+    {"category": "buy", "tag": "Contrarian", "cond": "VIX > 30 + 공포탐욕지수 < 20", "act": "역발상 매수 — 보유 현금 30% 중 절반 투입", "status": "dormant"},
+    {"category": "watch", "tag": "FX · 7/10", "cond": "하이닉스 ADR 상장 통과 + 환율 숏커버 반등", "act": "1,530~1,550 도달 시 전술적 달러 매수분 일부 익절. 1,460 하향 이탈 시 추가 달러 매수 중단", "status": "dormant"},
+    {"category": "sell", "tag": "Flow Watch", "cond": "외국인, 국내 하이닉스 순매도 지속 + ADR로 거래 이동", "act": "한국 비중 증액(→28%) 보류, 원화 반락 대비 — 국내 증시 수급 이탈 신호", "status": "dormant"}
+  ]
+}

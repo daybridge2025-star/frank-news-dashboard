@@ -135,6 +135,30 @@ def _latest_business_day(auth_key):
     return None, []
 
 
+def _print_kospi_buy_trigger_hint(kospi_row, flow):
+    """
+    data/triggers.json의 'Add — KOSPI 7,000~7,200 + 외국인 순매수 전환' 트리거는
+    이 파이프라인이 이미 수집하는 두 수치만으로 판정 가능한 유일한 조건이라
+    참고용 콘솔 힌트를 남긴다. status는 여전히 triggers.json에서 사람이 갱신 —
+    여기서는 절대 자동으로 바꾸지 않는다(1~2일 지속 확인 등 판단이 더 필요하므로).
+    """
+    close = _num(kospi_row.get('CLSPRC_IDX')) if kospi_row else None
+    iv = (flow.get('KOSPI') or {}).get('investor_value') if isinstance(flow, dict) else None
+    foreign_net = None
+    for r in iv or []:
+        if r.get('투자자구분') == '외국인':
+            foreign_net = r.get('순매수')
+            break
+    if close is None or foreign_net is None:
+        return
+    in_range = 7000 <= close <= 7200
+    buying = foreign_net > 0
+    verdict = '조건 충족' if (in_range and buying) else ('조건 일부 근접' if (in_range or buying) else '조건 미충족')
+    print(f'🔔 KOSPI 매수 트리거 힌트: {verdict} — 코스피 {close:,.0f}'
+          f'({"구간 내" if in_range else "구간 밖"}) · 외국인 전일 {foreign_net / 1e8:+,.0f}억'
+          f'({"순매수" if buying else "순매도"}). data/triggers.json의 status는 참고 후 직접 갱신.')
+
+
 def main():
     now_str = datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')
     print(f'[{now_str}] KRX 데이터 스냅샷 수집 시작')
@@ -174,6 +198,8 @@ def main():
     flow = get_investor_flow(bas_dd)  # pykrx (KRX_ID/PW 있을 때만 채워짐)
     print(f"투자자 수급: {flow.get('status')}"
           + (f" — {flow.get('reason')}" if flow.get('status') != 'ok' else ''))
+
+    _print_kospi_buy_trigger_hint(headline_index(kospi_idx, '코스피'), flow)
 
     snapshot = {
         'bas_dd': bas_dd,

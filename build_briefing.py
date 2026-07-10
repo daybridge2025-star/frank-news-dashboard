@@ -5,7 +5,8 @@
   data/krx_snapshot_latest.json  <!--KRX-START/END:key-->  Action(숫자, 하루 1회 자동)
   data/us_issues.json            <!--US-START/END:key-->   마켓 브리프 세션(미국 이슈 분석)
   data/kr_issues.json,           <!--KR-START/END:key-->   마켓 브리프 세션(한국 이슈 분석 ·
-  data/stance.json                                          오늘의 스탠스 A/B/C — 둘 다 KR 접두사)
+  data/stance.json,                                         오늘의 스탠스 A/B/C ·
+  data/triggers.json                                        트리거 발동/임박 판단 — 셋 다 KR 접두사)
 
 원칙:
 - 자리표시(마커)가 있는 구간만 건드린다 — 마커 밖의 손으로 쓴 분석 산문은 절대 손대지 않는다.
@@ -31,6 +32,7 @@ SNAP_PATH = 'data/krx_snapshot_latest.json'   # 한국 숫자 (Action 생성)
 US_PATH = 'data/us_issues.json'               # 미국 이슈 분석 (마켓 브리프 세션 생성)
 KR_PATH = 'data/kr_issues.json'               # 한국 이슈 분석 (마켓 브리프 세션 생성)
 STANCE_PATH = 'data/stance.json'              # 오늘의 스탠스 A/B/C (마켓 브리프 세션 생성)
+TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓 브리프 세션 생성)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -221,7 +223,40 @@ def _render_stance(stance):
     return '\n    ' + '\n    '.join(out) + '\n    '
 
 
-def build_generators(snap, us, kr, stance):
+_STATUS_ORDER = {'hit': 0, 'approaching': 1, 'dormant': 2}
+_STATUS_BADGE = {
+    'hit':         ('발동', 'var(--crit)'),
+    'approaching': ('임박', 'var(--warn)'),
+}
+
+
+def _render_triggers(triggers):
+    """triggers.json({triggers:[{category,tag,cond,act,status}]}) → .trg 카드 HTML.
+    상태 우선순위(발동>임박>평시)로 정렬하고, 평시가 아니면 tag에 배지를 붙인다.
+    카드 좌측 색상바(category: buy/sell/watch)는 액션 종류를 뜻하며 status와는 별개다."""
+    rows = (triggers or {}).get('triggers') or []
+    if not rows:
+        return None
+    ordered = sorted(rows, key=lambda t: _STATUS_ORDER.get(t.get('status'), 2))
+    cards = []
+    for t in ordered:
+        cat = t.get('category', 'watch')
+        if cat not in ('buy', 'sell', 'watch'):
+            cat = 'watch'
+        tag = esc(t.get('tag', ''))
+        badge = _STATUS_BADGE.get(t.get('status'))
+        if badge:
+            label, color = badge
+            tag += f' <span style="color:{color}; font-weight:800;">· {label}</span>'
+        cards.append(
+            f'<div class="trg {cat}"><div class="st"></div><div>\n'
+            f'    <div class="tag">{tag}</div>\n'
+            f'    <div class="cond">{esc(t.get("cond", ""))}</div>\n'
+            f'    <div class="act">{esc(t.get("act", ""))}</div></div></div>')
+    return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
+
+
+def build_generators(snap, us, kr, stance, triggers):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -283,11 +318,14 @@ def build_generators(snap, us, kr, stance):
 
     # ── 오늘의 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
     g['stance'] = _render_stance(stance)
+
+    # ── 트리거 발동/임박 판단(data/triggers.json — 마켓 브리프 세션이 갱신) ──
+    g['triggers'] = _render_triggers(triggers)
     return g
 
 
-def render(html, snap, us, kr, stance):
-    gens = build_generators(snap, us, kr, stance)
+def render(html, snap, us, kr, stance, triggers):
+    gens = build_generators(snap, us, kr, stance, triggers)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -330,12 +368,13 @@ def main():
     us = _load(US_PATH, '미국 이슈')
     kr = _load(KR_PATH, '한국 이슈')
     stance = _load(STANCE_PATH, '오늘의 스탠스')
-    if not any((snap, us, kr, stance)):
+    triggers = _load(TRIGGERS_PATH, '트리거')
+    if not any((snap, us, kr, stance, triggers)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance)
+    out = render(html, snap, us, kr, stance, triggers)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)
