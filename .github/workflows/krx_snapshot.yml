@@ -25,7 +25,9 @@ jobs:
 
       - name: KRX 스냅샷 수집 실행
         env:
-          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
+          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}   # openapi.krx.co.kr 인증키 (지수·종목 시세)
+          KRX_ID:       ${{ secrets.KRX_ID }}          # data.krx.co.kr 무료 회원 ID (투자자 수급 — pykrx)
+          KRX_PW:       ${{ secrets.KRX_PW }}          # data.krx.co.kr 무료 회원 PW
         run: python fetch_krx_snapshot.py
 
       - name: 결과 커밋
