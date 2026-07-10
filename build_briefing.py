@@ -158,21 +158,33 @@ def _foreign_top_rows(flow, market, n=5):
     return rows
 
 
-def _pension_rows(flow, n=5):
+def _pension_side_rows(flow, side, n=5):
+    """side: 'buy'(순매수 상위) 또는 'sell'(순매도 상위). KOSPI+KOSDAQ 합산 상위 n개.
+    get_net_purchase_top()이 이미 매수·매도 양쪽을 다 반환하므로 추가 수집 없이
+    렌더링만 하면 된다 — buy는 순매수 큰 순, sell은 순매도(가장 음수) 큰 순."""
     combined = []
     for market, kr in (('KOSPI', '코스피'), ('KOSDAQ', '코스닥')):
         pt = (flow.get(market) or {}).get('pension_net_top')
         if pt:
-            for x in pt.get('buy', []):
+            for x in pt.get(side, []):
                 combined.append((x['종목'], kr, x['순매수']))
     if not combined:
         return None
-    combined.sort(key=lambda t: -t[2])
+    combined.sort(key=lambda t: t[2], reverse=(side == 'buy'))
+    color = 'var(--bull)' if side == 'buy' else 'var(--bear)'
     rows = ''
     for i, (nm, kr, net) in enumerate(combined[:n], 1):
         rows += (f'<tr><td>{i}</td><td>{nm}</td><td>{kr}</td>'
-                 f'<td class="num" style="color:var(--bull)">{fmt_won(net)}</td></tr>')
+                 f'<td class="num" style="color:{color}">{fmt_won(net)}</td></tr>')
     return rows
+
+
+def _pension_rows(flow, n=5):
+    return _pension_side_rows(flow, 'buy', n)
+
+
+def _pension_sell_rows(flow, n=5):
+    return _pension_side_rows(flow, 'sell', n)
 
 
 def _render_issue_cards(src):
@@ -238,6 +250,7 @@ def build_generators(snap, us, kr, stance):
         g['foreign_top_kospi'] = _foreign_top_rows(flow, 'KOSPI')
         g['foreign_top_kosdaq'] = _foreign_top_rows(flow, 'KOSDAQ')
         g['pension_top'] = _pension_rows(flow)
+        g['pension_sell_top'] = _pension_sell_rows(flow)
         # 기간 라벨(코스피·코스닥 공용 — 같은 기준일/월초/연초를 쓰므로 마커 1쌍만 필요)
         mtd_from, ytd_from = flow.get('mtd_from'), flow.get('ytd_from')
         if mtd_from and dd:
