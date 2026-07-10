@@ -1,0 +1,4 @@
+{
+  "_readme": "한국 시장 이슈(KRX 수급 데이터 해석) 원본. 마켓 브리프 세션이 이 파일만 갱신하면 build_briefing.py가 '한국 시장 이슈' 섹션에 주입한다. HTML을 직접 편집하지 말 것. 스키마는 data/us_issues.json과 동일 — title/desc[]/impacts[{strategy,level,text}]. level: g(우호)·w(중립)·c(경고)·s(심각). 날짜 라벨은 별도 필드 없이 KRX 스냅샷의 기준일(asof)을 그대로 재사용한다(같은 데이터를 해석하므로).",
+  "issues": []
+}

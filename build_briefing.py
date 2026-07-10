@@ -1,8 +1,11 @@
 """
-브리핑 HTML 데이터 주입기 — GitHub Actions에서 fetch_krx_snapshot.py 직후 실행.
+브리핑 HTML 조립기 — 여러 소스를 각자 담당 구간에만 주입한다.
 
-data/krx_snapshot_latest.json 을 읽어, reports/macro-strategy-briefing.html 의
-<!--KRX-START:key--> ... <!--KRX-END:key--> 로 감싼 구간만 실제 수치로 교체한다.
+소스별 소유자와 마커 접두사 (자세한 설명은 BRIEFING_PIPELINE.md 참고):
+  data/krx_snapshot_latest.json  <!--KRX-START/END:key-->  Action(숫자, 하루 2회 자동)
+  data/us_issues.json            <!--US-START/END:key-->   마켓 브리프 세션(미국 이슈 분석)
+  data/kr_issues.json,           <!--KR-START/END:key-->   마켓 브리프 세션(한국 이슈 분석 ·
+  data/stance.json                                          오늘의 스탠스 A/B/C — 둘 다 KR 접두사)
 
 원칙:
 - 자리표시(마커)가 있는 구간만 건드린다 — 마커 밖의 손으로 쓴 분석 산문은 절대 손대지 않는다.
@@ -24,8 +27,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-SNAP_PATH = 'data/krx_snapshot_latest.json'   # 한국 데이터 (Action 생성)
-US_PATH = 'data/us_issues.json'               # 미국 이슈 (마켓 브리프 세션 생성)
+SNAP_PATH = 'data/krx_snapshot_latest.json'   # 한국 숫자 (Action 생성)
+US_PATH = 'data/us_issues.json'               # 미국 이슈 분석 (마켓 브리프 세션 생성)
+KR_PATH = 'data/kr_issues.json'               # 한국 이슈 분석 (마켓 브리프 세션 생성)
+STANCE_PATH = 'data/stance.json'              # 오늘의 스탠스 A/B/C (마켓 브리프 세션 생성)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -170,9 +175,9 @@ def _pension_rows(flow, n=5):
     return rows
 
 
-def _render_us_issues(us):
-    """us_issues.json → .iss 카드 HTML. 없으면 None(기존 유지)."""
-    issues = (us or {}).get('issues') or []
+def _render_issue_cards(src):
+    """{issues:[...]} 형태(us_issues.json / kr_issues.json 공용) → .iss 카드 HTML. 없으면 None(기존 유지)."""
+    issues = (src or {}).get('issues') or []
     if not issues:
         return None
     cards = []
@@ -190,7 +195,21 @@ def _render_us_issues(us):
     return '\n  ' + '\n  '.join(cards) + '\n  '
 
 
-def build_generators(snap, us):
+def _render_stance(stance):
+    """stance.json({strategies:[{label,headline,detail}]}) → .srow 블록 HTML. 없으면 None(기존 유지)."""
+    rows = (stance or {}).get('strategies') or []
+    if not rows:
+        return None
+    out = []
+    for r in rows:
+        out.append(
+            f'<div class="srow"><span class="bg">{esc(r.get("label", ""))}</span>\n'
+            f'      <div><div class="sv">{esc(r.get("headline", ""))}</div>\n'
+            f'      <p>{esc(r.get("detail", ""))}</p></div>\n    </div>')
+    return '\n    ' + '\n    '.join(out) + '\n    '
+
+
+def build_generators(snap, us, kr, stance):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -231,22 +250,29 @@ def build_generators(snap, us):
             f'확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.')
 
     # ── 미국 이슈(별도 소스 data/us_issues.json — 마켓 브리프 세션이 갱신) ──
-    g['us_issues'] = _render_us_issues(us)
+    g['us_issues'] = _render_issue_cards(us)
     if us and us.get('asof'):
         g['us_issues_asof'] = esc(us['asof'])
+
+    # ── 한국 이슈 분석(data/kr_issues.json — 마켓 브리프 세션이 갱신) ──
+    # 날짜는 별도 필드 없이 위 KRX 'asof' 마커를 그대로 재사용(같은 기준일 데이터를 해석하므로)
+    g['kr_issues'] = _render_issue_cards(kr)
+
+    # ── 오늘의 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
+    g['stance'] = _render_stance(stance)
     return g
 
 
-def render(html, snap, us):
-    gens = build_generators(snap, us)
+def render(html, snap, us, kr, stance):
+    gens = build_generators(snap, us, kr, stance)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
             skipped.append(key)
             continue
-        # 마커 접두사는 KRX(한국)·US(미국) 모두 허용 — 같은 교체 로직
+        # 마커 접두사는 KRX(한국 숫자)·US(미국 이슈)·KR(한국 이슈·스탠스) 모두 허용 — 같은 교체 로직
         pat = re.compile(
-            r'(<!--(?:KRX|US)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US)-END:'
+            r'(<!--(?:KRX|US|KR)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US|KR)-END:'
             + re.escape(key) + r'-->)', re.DOTALL)
         html, n = pat.subn(lambda m: m.group(1) + content + m.group(2), html)
         if n == 0:
@@ -279,12 +305,14 @@ def main():
         return
     snap = _load(SNAP_PATH, '한국 스냅샷')
     us = _load(US_PATH, '미국 이슈')
-    if not snap and not us:
+    kr = _load(KR_PATH, '한국 이슈')
+    stance = _load(STANCE_PATH, '오늘의 스탠스')
+    if not any((snap, us, kr, stance)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us)
+    out = render(html, snap, us, kr, stance)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)
