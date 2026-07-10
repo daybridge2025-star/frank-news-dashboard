@@ -18,13 +18,19 @@ import sys
 import os
 import re
 import json
+import html as _html
 
 sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-SNAP_PATH = 'data/krx_snapshot_latest.json'
+SNAP_PATH = 'data/krx_snapshot_latest.json'   # 한국 데이터 (Action 생성)
+US_PATH = 'data/us_issues.json'               # 미국 이슈 (마켓 브리프 세션 생성)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
+
+
+def esc(s):
+    return _html.escape(str(s), quote=False)
 
 MINUS = '−'  # 기존 HTML이 쓰는 유니코드 마이너스(−)와 맞춤
 
@@ -164,7 +170,27 @@ def _pension_rows(flow, n=5):
     return rows
 
 
-def build_generators(snap):
+def _render_us_issues(us):
+    """us_issues.json → .iss 카드 HTML. 없으면 None(기존 유지)."""
+    issues = (us or {}).get('issues') or []
+    if not issues:
+        return None
+    cards = []
+    for it in issues:
+        title = esc(it.get('title', ''))
+        ds = ''.join(f'<div class="ds">{esc(d)}</div>' for d in it.get('desc', []))
+        imps = ''
+        for imp in it.get('impacts', []):
+            lvl = imp.get('level', 'w')
+            if lvl not in ('g', 'w', 'c', 's'):
+                lvl = 'w'
+            imps += (f'<div class="imp {lvl}"><span class="bg">{esc(imp.get("strategy", ""))}</span>'
+                     f'<span>{esc(imp.get("text", ""))}</span></div>')
+        cards.append(f'<div class="iss"><div class="hd">{title}</div>{ds}{imps}</div>')
+    return '\n  ' + '\n  '.join(cards) + '\n  '
+
+
+def build_generators(snap, us):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -203,19 +229,25 @@ def build_generators(snap):
             f'✅ KRX 직접 연동 가동 중 — {" · ".join(sources)}를 매 영업일 자동 수집·주입. '
             f'기준일 {date_label(dd)}. 연초·이번달 누적은 시계열 누적분이라 순차 반영 예정이며, '
             f'확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.')
+
+    # ── 미국 이슈(별도 소스 data/us_issues.json — 마켓 브리프 세션이 갱신) ──
+    g['us_issues'] = _render_us_issues(us)
+    if us and us.get('asof'):
+        g['us_issues_asof'] = esc(us['asof'])
     return g
 
 
-def render(html, snap):
-    gens = build_generators(snap)
+def render(html, snap, us):
+    gens = build_generators(snap, us)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
             skipped.append(key)
             continue
+        # 마커 접두사는 KRX(한국)·US(미국) 모두 허용 — 같은 교체 로직
         pat = re.compile(
-            r'(<!--KRX-START:' + re.escape(key) + r'-->).*?(<!--KRX-END:' + re.escape(key) + r'-->)',
-            re.DOTALL)
+            r'(<!--(?:KRX|US)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US)-END:'
+            + re.escape(key) + r'-->)', re.DOTALL)
         html, n = pat.subn(lambda m: m.group(1) + content + m.group(2), html)
         if n == 0:
             missing.append(key)
@@ -229,18 +261,30 @@ def render(html, snap):
     return html
 
 
+def _load(path, label):
+    if not os.path.exists(path):
+        print(f'{label} 없음: {path} — 해당 영역 주입 생략')
+        return {}
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f'{label} 로드 실패({path}): {e} — 해당 영역 주입 생략')
+        return {}
+
+
 def main():
-    if not os.path.exists(SNAP_PATH):
-        print(f'스냅샷 없음: {SNAP_PATH} — 주입 생략')
-        return
     if not os.path.exists(HTML_PATH):
         print(f'HTML 없음: {HTML_PATH} — 주입 생략')
         return
-    with open(SNAP_PATH, encoding='utf-8') as f:
-        snap = json.load(f)
+    snap = _load(SNAP_PATH, '한국 스냅샷')
+    us = _load(US_PATH, '미국 이슈')
+    if not snap and not us:
+        print('주입할 소스가 하나도 없음 — 종료')
+        return
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap)
+    out = render(html, snap, us)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)
