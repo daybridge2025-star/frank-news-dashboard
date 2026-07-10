@@ -231,9 +231,12 @@ _STATUS_BADGE = {
 
 
 def _render_triggers(triggers):
-    """triggers.json({triggers:[{category,tag,cond,act,status}]}) → .trg 카드 HTML.
+    """triggers.json({triggers:[{category,tag,cond,act,status,strategies}]}) → .trg 카드 HTML.
     상태 우선순위(발동>임박>평시)로 정렬하고, 평시가 아니면 tag에 배지를 붙인다.
-    카드 좌측 색상바(category: buy/sell/watch)는 액션 종류를 뜻하며 status와는 별개다."""
+    카드 좌측 색상바(category: buy/sell/watch)는 액션 종류를 뜻하며 status와는 별개다.
+    strategies(예: ["A","B"])는 .bg와 같은 모양의 배지로 cond 앞에 표시 — 단 .bg 클래스 자체는
+    CSS에서 .stance .srow .bg / .iss .imp .bg 로만 스코프돼 있어 .trg 안에선 안 먹으므로,
+    <style> 블록을 건드리지 않고 인라인 스타일로 같은 모양을 재현한다."""
     rows = (triggers or {}).get('triggers') or []
     if not rows:
         return None
@@ -248,10 +251,15 @@ def _render_triggers(triggers):
         if badge:
             label, color = badge
             tag += f' <span style="color:{color}; font-weight:800;">· {label}</span>'
+        badge_style = ('display:inline-block; font-size:10px; font-weight:800; letter-spacing:.04em; '
+                       'border-radius:6px; padding:1px 6px; margin-right:4px; '
+                       'border:1px solid var(--ring); color:var(--ink);')
+        strat_badges = ''.join(
+            f'<span style="{badge_style}">{esc(s)}</span> ' for s in t.get('strategies', []))
         cards.append(
             f'<div class="trg {cat}"><div class="st"></div><div>\n'
             f'    <div class="tag">{tag}</div>\n'
-            f'    <div class="cond">{esc(t.get("cond", ""))}</div>\n'
+            f'    <div class="cond">{strat_badges}{esc(t.get("cond", ""))}</div>\n'
             f'    <div class="act">{esc(t.get("act", ""))}</div></div></div>')
     return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
 
