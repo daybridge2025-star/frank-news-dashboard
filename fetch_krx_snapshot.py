@@ -1,5 +1,5 @@
 """
-KRX 데이터 스냅샷 수집 — GitHub Actions에서 하루 2회 실행 (KST 05:50 / 15:50)
+KRX 데이터 스냅샷 수집 — GitHub Actions에서 하루 1회 실행 (KST 06:20, 미국장 마감 후)
 GitHub Actions: .github/workflows/krx_snapshot.yml
 
 매크로 전략 브리핑(reports/macro-strategy-briefing.html) 작성 시 참고 자료로 쓴다.

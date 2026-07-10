@@ -2,7 +2,7 @@
 브리핑 HTML 조립기 — 여러 소스를 각자 담당 구간에만 주입한다.
 
 소스별 소유자와 마커 접두사 (자세한 설명은 BRIEFING_PIPELINE.md 참고):
-  data/krx_snapshot_latest.json  <!--KRX-START/END:key-->  Action(숫자, 하루 2회 자동)
+  data/krx_snapshot_latest.json  <!--KRX-START/END:key-->  Action(숫자, 하루 1회 자동)
   data/us_issues.json            <!--US-START/END:key-->   마켓 브리프 세션(미국 이슈 분석)
   data/kr_issues.json,           <!--KR-START/END:key-->   마켓 브리프 세션(한국 이슈 분석 ·
   data/stance.json                                          오늘의 스탠스 A/B/C — 둘 다 KR 접두사)

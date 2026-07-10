@@ -1,5 +1,5 @@
 {
-  "_readme": "미국·글로벌 '전일 주요 이슈' 원본. 마켓 브리프 세션이 이 파일만 갱신하면 build_briefing.py가 브리핑 HTML의 US 이슈 영역에 주입한다. HTML을 직접 편집하지 말 것. level: g(우호/긍정)·w(중립/주의)·c(부정/경고)·s(심각). desc는 문단 배열, impacts는 전략별 영향(strategy 예: 'A 바벨','B 모멘텀','C 초장기').",
+  "_readme": "미국·글로벌 '직전 영업일 주요 이슈' 원본. 마켓 브리프 세션이 이 파일만 갱신하면 build_briefing.py가 브리핑 HTML의 US 이슈 영역에 주입한다. HTML을 직접 편집하지 말 것. level: g(우호/긍정)·w(중립/주의)·c(부정/경고)·s(심각). desc는 문단 배열, impacts는 전략별 영향(strategy 예: 'A 바벨','B 모멘텀','C 초장기').",
   "asof": "미국 7/9 마감 기준",
   "issues": [
     {
