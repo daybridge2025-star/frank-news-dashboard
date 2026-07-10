@@ -6,6 +6,9 @@ on:
     - cron: '50 6 * * *'   # UTC 06:50 = KST 15:50 (오후 브리핑 전)
   workflow_dispatch:         # 수동 실행 가능
 
+permissions:
+  contents: write            # 결과 JSON을 저장소에 커밋·푸시하려면 쓰기 권한 필요
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
