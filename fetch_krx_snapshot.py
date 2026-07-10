@@ -115,7 +115,11 @@ def _latest_business_day(auth_key):
     최근 영업일 판별 — 오늘부터 최대 7일 역산.
     Open API 키가 있으면 지수 응답이 나오는 최신일(=공식 T+1 기준일)을 우선 채택,
     없으면 pykrx 개별종목 시세(무로그인)로 판별한다.
-    반환: (기준일자 'YYYYMMDD', kospi_index_rows) — pykrx 경로면 index rows는 빈 리스트.
+    반환: (기준일자 'YYYYMMDD' 또는 None, kospi_index_rows).
+    None은 "최근 7일 중 거래일이 없다"는 뜻이 아니라(그럴 확률은 매우 낮음),
+    Open API·pykrx 양쪽 다 응답이 없었다는 뜻 — 소스 차단·장애로 간주한다.
+    이 경우 호출자는 절대 '오늘 날짜'로 임의 대체하면 안 된다 — 실제로는 이전
+    영업일 데이터인 필드들에 오늘 날짜 라벨을 붙이는 날짜 불일치가 생기기 때문이다.
     """
     now = datetime.now(KST)
     if auth_key:
@@ -128,7 +132,7 @@ def _latest_business_day(auth_key):
         d = (now - timedelta(days=i)).strftime('%Y%m%d')
         if get_stock_ohlcv(d, '005930'):  # pykrx, 로그인 없이 동작
             return d, []
-    return now.strftime('%Y%m%d'), []
+    return None, []
 
 
 def main():
@@ -141,6 +145,10 @@ def main():
         print('KRX_AUTH_KEY 없음 — Open API는 건너뛰고 pykrx로만 수집(종목 시세만)')
 
     bas_dd, kospi_idx = _latest_business_day(auth_key)
+    if bas_dd is None:
+        print('오류: Open API·pykrx 모두 최근 7일 데이터를 하나도 못 찾음 — 소스 차단/장애로 판단.')
+        print('기존 스냅샷을 잘못된 날짜로 덮어쓰지 않기 위해 아무것도 저장하지 않고 종료한다.')
+        sys.exit(1)
     kosdaq_idx = get_kosdaq_index(bas_dd, auth_key) if auth_key else []
     print(f'기준일자: {bas_dd} | KOSPI 지수 {len(kospi_idx)}행 / KOSDAQ 지수 {len(kosdaq_idx)}행')
 
