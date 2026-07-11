@@ -412,6 +412,18 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal):
     if dd:
         g['asof'] = date_label(dd)
 
+    # 헤더 날짜 라인 — 수기 갱신이 누락되며 화석화되던 라벨을 자동화.
+    # 렌더 시각(시계)이 아니라 스냅샷 수집 시각(fetched_at) 기준이라 언제 다시 렌더해도 같은 결과.
+    m_fa = re.match(r'(\d{4})-(\d{2})-(\d{2}) (\d{2}):\d{2}', snap.get('fetched_at') or '')
+    if m_fa:
+        y, mo, d_ = int(m_fa.group(1)), int(m_fa.group(2)), int(m_fa.group(3))
+        wd = '월화수목금토일'[datetime(y, mo, d_).weekday()]
+        g['hdr_date'] = f'{y}년 {mo}월 {d_}일 ({wd})'
+        upd = f'최종 업데이트 {m_fa.group(2)}-{m_fa.group(3)} {m_fa.group(4)}시'
+        if us and us.get('asof'):
+            upd += f' · {esc(us["asof"])}'
+        g['hdr_updated'] = upd
+
     # 지수 카드 — 숫자(종가·등락률·기준일)만 자동, 해석 꼬리는 편집 소유(마커 밖)
     k = idx.get('KOSPI') or {}
     for mkey, mdata in (('kospi', idx.get('KOSPI')), ('kosdaq', idx.get('KOSDAQ'))):

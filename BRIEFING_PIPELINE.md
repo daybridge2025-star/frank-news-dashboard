@@ -33,6 +33,7 @@ FRED(`FRED_API_KEY` 시크릿, 없으면 해당 카드 기존 표기 유지)가 
 | 한국 시장 이슈(KRX 수급 해석) | `data/kr_issues.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
 | 오늘의 스탠스 A/B/C | `data/stance.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
 | 트리거 발동/임박 판단 | `data/triggers.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
+| 헤더 날짜 라인(발행일 · "최종 업데이트" 칩) | `krx_snapshot`의 `fetched_at` + `us_issues`의 `asof` | `KRX` | GitHub Action | 자동 — **세션이 수기로 갱신할 필요 없음(2026-07-12부터)** |
 | 코스피·코스닥 수급(직전 영업일·MTD·YTD) | `data/krx_snapshot_latest.json` | `KRX` | GitHub Action | 자동(하루 1회) |
 | 업종별 등락률 · KOSPI/코스닥 지수 카드 값 | 〃 | `KRX` | 〃 | 자동 |
 | 외국인·연기금 순매수 상위 | 〃 | `KRX` | 〃 | 자동 |
