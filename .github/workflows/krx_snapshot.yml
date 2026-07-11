@@ -1,13 +1,13 @@
 name: KRX 데이터 스냅샷 수집 (하루 1회 · 미국장 마감 후)
 
-# 하루 1회, 미국장 마감 직후로 통일(오후 회차 폐지) — 이 시점엔 "직전 영업일"인
-# 한국 어제자 데이터가 마감 후 14시간+ 지나 있어 Open API(T+1)·pykrx 둘 다
-# 이미 따라잡은 상태라 소스 간 날짜 불일치가 생기지 않는다.
-# 06:20 KST 고정 — 미국장 마감이 서머타임에 따라 05:00(하절기)~06:00(동절기) KST로
-# 움직이므로, 두 경우 모두에 여유 있게 걸리도록 늦춰 잡았다.
+# 하루 1회, 미국장 마감 직후. 기준일 판정이 pykrx 우선(2026-07-11 재설계)이라
+# 한국 직전 영업일 데이터는 전날 저녁부터 확보돼 있고, 미국 지표(Yahoo/FRED)도
+# 마감 직후 즉시 조회 가능 — 05:30 KST면 충분하다.
+# GitHub cron은 예약보다 수십 분 늦게 도는 게 정상(+30~70분 관측)이므로,
+# 지연돼도 마켓 브리프 세션 에디션(~06시대)과 자연스럽게 맞물린다.
 on:
   schedule:
-    - cron: '20 21 * * *'  # UTC 21:20 = KST 06:20 (익일)
+    - cron: '30 20 * * *'  # UTC 20:30 = KST 05:30 (익일)
   workflow_dispatch:         # 수동 실행 가능
 
 permissions:
@@ -32,10 +32,15 @@ jobs:
 
       - name: KRX 스냅샷 수집 실행
         env:
-          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}   # openapi.krx.co.kr 인증키 (지수·종목 시세)
-          KRX_ID:       ${{ secrets.KRX_ID }}          # data.krx.co.kr 무료 회원 ID (투자자 수급 — pykrx)
+          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}   # openapi.krx.co.kr 인증키 (폴백용 시세)
+          KRX_ID:       ${{ secrets.KRX_ID }}          # data.krx.co.kr 무료 회원 ID (pykrx — 주 소스)
           KRX_PW:       ${{ secrets.KRX_PW }}          # data.krx.co.kr 무료 회원 PW
         run: python fetch_krx_snapshot.py
+
+      - name: 미국 지표 스냅샷 수집 실행
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 금리·HY스프레드·연준타깃 (없으면 해당 값 미확보 유지)
+        run: python fetch_us_snapshot.py
 
       - name: 브리핑 HTML에 데이터 주입
         run: python build_briefing.py
@@ -44,6 +49,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/krx_snapshot_*.json reports/macro-strategy-briefing.html
-          git diff --cached --quiet || git commit -m "KRX 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git add data/krx_snapshot_*.json data/us_snapshot_latest.json reports/macro-strategy-briefing.html
+          git diff --cached --quiet || git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push

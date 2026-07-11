@@ -4,12 +4,15 @@ GitHub Actions: .github/workflows/krx_snapshot.yml
 
 매크로 전략 브리핑(reports/macro-strategy-briefing.html) 작성 시 참고 자료로 쓴다.
 
-데이터 소스 2개 병행 (2026-07-10 실측 검증):
-  1. Open API(utils.krx, AUTH_KEY) — 헤드라인 지수 + 업종별 지수 + 종목 시세.
-     서비스 이용신청 승인 후 동작. T+1이라 보통 전 영업일이 최신.
-  2. pykrx(utils.krx_scrape, data.krx.co.kr):
-     - 투자자별 수급(외국인/기관/개인/연기금) — 로그인(KRX_ID/KRX_PW) 필요.
-     - 개별종목 시세 — 로그인 없이 동작 → Open API 미승인/미설정 시 폴백.
+데이터 소스 우선순위 (2026-07-11 재설계 — pykrx 우선):
+  1. pykrx(utils.krx_scrape, data.krx.co.kr) — **주 소스**.
+     - 기준일 판정: 개별종목 시세(무로그인)가 장 마감 후 몇 시간 내 당일치를 제공 —
+       가장 신선하므로 bas_dd는 항상 pykrx 기준으로 정한다.
+     - 지수(코스피/코스닥)·업종 등락률·투자자 수급·순매수 상위: 로그인(KRX_ID/KRX_PW) 필요.
+  2. Open API(utils.krx, AUTH_KEY) — **폴백 전용**. T+1 발행 시각이 새벽 브리핑보다
+     늦다는 것이 실측 확인됨(7/11 07:28 미발행 → 19:12 발행). 따라서 기준일 판정에
+     쓰지 않으며, pykrx가 실패한 필드를 같은 bas_dd 데이터가 있을 때만 메운다 —
+     **bas_dd보다 오래된 날짜로 후퇴시키지 않는다.**
 
 원칙: 자격증명/승인이 없으면 데이터를 지어내지 않고 '미확보'로 남긴다.
 출력: data/krx_snapshot_{YYYYMMDD}.json + data/krx_snapshot_latest.json
@@ -32,7 +35,9 @@ from utils.krx import (
     get_kospi_index, get_kosdaq_index, get_kospi_stocks,
     headline_index, stocks_by_code,
 )
-from utils.krx_scrape import get_investor_flow, get_stock_ohlcv
+from utils.krx_scrape import (
+    get_investor_flow, get_stock_ohlcv, get_index_summary, has_credentials,
+)
 
 KST = pytz.timezone('Asia/Seoul')
 
@@ -110,39 +115,32 @@ def _sectors(rows):
     return out
 
 
-def _latest_business_day(auth_key):
+def _latest_business_day():
     """
-    최근 영업일 판별 — 오늘부터 최대 7일 역산.
-    Open API 키가 있으면 지수 응답이 나오는 최신일(=공식 T+1 기준일)을 우선 채택,
-    없으면 pykrx 개별종목 시세(무로그인)로 판별한다.
-    반환: (기준일자 'YYYYMMDD' 또는 None, kospi_index_rows).
-    None은 "최근 7일 중 거래일이 없다"는 뜻이 아니라(그럴 확률은 매우 낮음),
-    Open API·pykrx 양쪽 다 응답이 없었다는 뜻 — 소스 차단·장애로 간주한다.
+    최근 영업일 판별 — 오늘부터 최대 7일 역산, **pykrx 개별종목 시세(무로그인) 기준**.
+    pykrx는 장 마감 후 몇 시간 내 당일치를 제공하므로 가장 신선하다. Open API는 T+1
+    발행이 새벽 브리핑보다 늦어 기준일 판정에 쓰면 하루 이상 후퇴한다(7/11 실측).
+    반환: 'YYYYMMDD' 또는 None.
+    None은 pykrx가 최근 7일 내내 무응답이라는 뜻 — 소스 차단·장애로 간주한다.
     이 경우 호출자는 절대 '오늘 날짜'로 임의 대체하면 안 된다 — 실제로는 이전
     영업일 데이터인 필드들에 오늘 날짜 라벨을 붙이는 날짜 불일치가 생기기 때문이다.
     """
     now = datetime.now(KST)
-    if auth_key:
-        for i in range(7):
-            d = (now - timedelta(days=i)).strftime('%Y%m%d')
-            rows = get_kospi_index(d, auth_key)
-            if rows:
-                return d, rows
     for i in range(7):
         d = (now - timedelta(days=i)).strftime('%Y%m%d')
-        if get_stock_ohlcv(d, '005930'):  # pykrx, 로그인 없이 동작
-            return d, []
-    return None, []
+        if get_stock_ohlcv(d, '005930'):
+            return d
+    return None
 
 
-def _print_kospi_buy_trigger_hint(kospi_row, flow):
+def _print_kospi_buy_trigger_hint(close, flow):
     """
     data/triggers.json의 'Add — KOSPI 7,000~7,200 + 외국인 순매수 전환' 트리거는
     이 파이프라인이 이미 수집하는 두 수치만으로 판정 가능한 유일한 조건이라
     참고용 콘솔 힌트를 남긴다. status는 여전히 triggers.json에서 사람이 갱신 —
     여기서는 절대 자동으로 바꾸지 않는다(1~2일 지속 확인 등 판단이 더 필요하므로).
+    close: 정규화된 코스피 종가(float) 또는 None.
     """
-    close = _num(kospi_row.get('CLSPRC_IDX')) if kospi_row else None
     iv = (flow.get('KOSPI') or {}).get('investor_value') if isinstance(flow, dict) else None
     foreign_net = None
     for r in iv or []:
@@ -166,17 +164,34 @@ def main():
 
     auth_key = os.environ.get('KRX_AUTH_KEY', '')
     if not auth_key:
-        print('KRX_AUTH_KEY 없음 — Open API는 건너뛰고 pykrx로만 수집(종목 시세만)')
+        print('KRX_AUTH_KEY 없음 — Open API 폴백 없이 pykrx로만 수집')
 
-    bas_dd, kospi_idx = _latest_business_day(auth_key)
+    bas_dd = _latest_business_day()
     if bas_dd is None:
-        print('오류: Open API·pykrx 모두 최근 7일 데이터를 하나도 못 찾음 — 소스 차단/장애로 판단.')
+        print('오류: pykrx가 최근 7일 데이터를 하나도 못 찾음 — 소스 차단/장애로 판단.')
         print('기존 스냅샷을 잘못된 날짜로 덮어쓰지 않기 위해 아무것도 저장하지 않고 종료한다.')
         sys.exit(1)
-    kosdaq_idx = get_kosdaq_index(bas_dd, auth_key) if auth_key else []
-    print(f'기준일자: {bas_dd} | KOSPI 지수 {len(kospi_idx)}행 / KOSDAQ 지수 {len(kosdaq_idx)}행')
+    print(f'기준일자: {bas_dd} (pykrx 판정)')
 
-    # 종목: Open API 벌크 1회 호출 → 로컬 필터, 없으면 pykrx 폴백
+    # ── 지수·업종: pykrx 우선(로그인 필요) → 같은 bas_dd의 Open API로만 폴백 ──
+    index, sectors, idx_src = {}, {}, {}
+    for market in ('KOSPI', 'KOSDAQ'):
+        headline, secs = (get_index_summary(bas_dd, market)
+                          if has_credentials() else (None, None))
+        if headline:
+            index[market], sectors[market], idx_src[market] = headline, secs, 'pykrx'
+        else:
+            rows = ((get_kospi_index if market == 'KOSPI' else get_kosdaq_index)
+                    (bas_dd, auth_key) if auth_key else [])
+            if rows:  # Open API가 bas_dd 당일치를 이미 발행한 경우에만 채워짐
+                index[market] = _norm_index(headline_index(rows, '코스피' if market == 'KOSPI' else '코스닥'))
+                sectors[market], idx_src[market] = _sectors(rows), 'openapi'
+            else:
+                index[market], sectors[market], idx_src[market] = None, None, 'none'
+        n = len(sectors[market] or [])
+        print(f'  {market} 지수·업종: {n}행 [{idx_src[market]}]')
+
+    # ── 종목: Open API 벌크(있으면) → pykrx 폴백(무로그인) ──
     by_code = stocks_by_code(get_kospi_stocks(bas_dd, auth_key)) if auth_key else {}
     stocks = {}
     for code, name in WATCHLIST.items():
@@ -199,19 +214,13 @@ def main():
     print(f"투자자 수급: {flow.get('status')}"
           + (f" — {flow.get('reason')}" if flow.get('status') != 'ok' else ''))
 
-    _print_kospi_buy_trigger_hint(headline_index(kospi_idx, '코스피'), flow)
+    _print_kospi_buy_trigger_hint((index.get('KOSPI') or {}).get('close'), flow)
 
     snapshot = {
         'bas_dd': bas_dd,
         'fetched_at': now_str,
-        'index': {
-            'KOSPI':  _norm_index(headline_index(kospi_idx, '코스피')),
-            'KOSDAQ': _norm_index(headline_index(kosdaq_idx, '코스닥')),
-        },
-        'sectors': {
-            'KOSPI':  _sectors(kospi_idx),
-            'KOSDAQ': _sectors(kosdaq_idx),
-        },
+        'index': index,
+        'sectors': sectors,
         'stocks': stocks,
         'investor_flow': flow,
     }

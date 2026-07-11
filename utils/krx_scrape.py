@@ -67,6 +67,85 @@ def get_stock_ohlcv(bas_dd, code):
         return None
 
 
+_HEADLINE_NAME = {'KOSPI': '코스피', 'KOSDAQ': '코스닥'}
+_INDEX_TICKER = {'KOSPI': '1001', 'KOSDAQ': '2001'}
+
+
+def _find_col(df, *keywords):
+    """컬럼명을 방어적으로 탐색 — pykrx 버전에 따라 이름이 다를 수 있다."""
+    for c in df.columns:
+        s = str(c)
+        if all(k in s for k in keywords):
+            return c
+    return None
+
+
+def get_index_summary(bas_dd, market='KOSPI'):
+    """
+    해당 시장의 전체 지수 등락 요약 — pykrx get_index_price_change(로그인 필요).
+    한 번의 호출로 헤드라인(코스피/코스닥)과 업종지수 전체의 종가·등락률을 얻는다.
+    반환: (headline_dict|None, sectors_list|None)
+      headline = {'name','close','change_pct','open','high','low'} (high/low는 별도 보강)
+      sectors  = [{'name','change_pct','close'}, ...]  (헤드라인 포함 전체 — 필터는 렌더러 몫)
+    """
+    stock = _import_stock()
+    if stock is None:
+        return None, None
+    try:
+        df = stock.get_index_price_change(bas_dd, bas_dd, market)
+        if df is None or df.empty:
+            return None, None
+        df = df.reset_index()
+        name_col = df.columns[0]
+        close_col = _find_col(df, '종가')
+        chg_col = _find_col(df, '등락률')
+        open_col = _find_col(df, '시가')
+        if close_col is None or chg_col is None:
+            print(f'[pykrx] {market} 지수요약: 컬럼 인식 실패 — {list(df.columns)}')
+            return None, None
+        sectors, headline = [], None
+        for _, r in df.iterrows():
+            item = {'name': str(r[name_col]).strip(),
+                    'close': _native(r[close_col]),
+                    'change_pct': _native(r[chg_col])}
+            sectors.append(item)
+            if item['name'] == _HEADLINE_NAME[market]:
+                headline = dict(item)
+                if open_col is not None:
+                    headline['open'] = _native(r[open_col])
+        if headline:
+            hl = get_index_ohlcv_day(bas_dd, _INDEX_TICKER[market])
+            if hl:
+                headline.setdefault('open', hl.get('open'))
+                headline['high'] = hl.get('high')
+                headline['low'] = hl.get('low')
+        return headline, sectors
+    except Exception as e:
+        print(f'[pykrx] {market} 지수요약 실패: {e}')
+        return None, None
+
+
+def get_index_ohlcv_day(bas_dd, ticker):
+    """지수 일봉 1일치(고가/저가 보강용) — 로그인 필요. 실패 시 None."""
+    stock = _import_stock()
+    if stock is None:
+        return None
+    try:
+        df = stock.get_index_ohlcv(bas_dd, bas_dd, ticker)
+        if df is None or df.empty:
+            return None
+        flat = df.reset_index()
+        r = flat.iloc[0]
+        out = {}
+        for key, kw in (('open', '시가'), ('high', '고가'), ('low', '저가')):
+            col = _find_col(flat, kw)
+            out[key] = _native(r[col]) if col is not None else None
+        return out
+    except Exception as e:
+        print(f'[pykrx] 지수 {ticker} 일봉 실패: {e}')
+        return None
+
+
 def get_investor_value(bas_dd, market='KOSPI', fromdate=None):
     """
     시장 전체 투자자별 거래대금/순매수 (코스피/코스닥 투자자별 수급 표).

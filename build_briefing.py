@@ -33,6 +33,7 @@ US_PATH = 'data/us_issues.json'               # 미국 이슈 분석 (마켓 브
 KR_PATH = 'data/kr_issues.json'               # 한국 이슈 분석 (마켓 브리프 세션 생성)
 STANCE_PATH = 'data/stance.json'              # 오늘의 스탠스 A/B/C (마켓 브리프 세션 생성)
 TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓 브리프 세션 생성)
+US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -223,6 +224,54 @@ def _render_stance(stance):
     return '\n    ' + '\n    '.join(out) + '\n    '
 
 
+def _mkt_generators(usm):
+    """data/us_snapshot_latest.json → 핵심 지표 카드의 '값' 마커(MKT 접두사).
+    수집 실패 항목은 키 자체를 만들지 않아 렌더러가 건너뛴다(기존 표기 유지)."""
+    g = {}
+    y = (usm or {}).get('yahoo') or {}
+    f = (usm or {}).get('fred') or {}
+
+    def price(k):
+        return (y.get(k) or {}).get('price')
+
+    p = price('vix')
+    if p is not None:
+        g['mkt_vix_v'] = f'{p:.1f}'
+    kr = y.get('usdkrw') or {}
+    if kr.get('price') is not None:
+        g['mkt_usdkrw_v'] = f'{kr["price"]:,.1f}'
+        if kr.get('prev') is not None:
+            dchg = kr['price'] - kr['prev']
+            g['mkt_usdkrw_chg'] = ('+' if dchg >= 0 else MINUS) + f'{abs(dchg):,.1f}원'
+    p = price('wti')
+    if p is not None:
+        g['mkt_wti_v'] = f'${p:,.1f}'
+    p = price('gold')
+    if p is not None:
+        g['mkt_gold_v'] = f'${p:,.0f}'
+    p = price('copper')
+    if p is not None:
+        g['mkt_copper_v'] = f'${p:,.2f}'
+
+    t10 = (f.get('t10y') or {}).get('value')
+    t2 = (f.get('t2y') or {}).get('value')
+    if t10 is not None:
+        g['mkt_t10y_v'] = f'{t10:.2f}'
+    if t2 is not None:
+        g['mkt_t2y_v'] = f'{t2:.2f}'
+    if t10 is not None and t2 is not None:
+        bp = round((t10 - t2) * 100)
+        g['mkt_spread_v'] = ('+' if bp >= 0 else MINUS) + str(abs(bp))
+    hy = (f.get('hy_oas') or {}).get('value')
+    if hy is not None:
+        g['mkt_hy_v'] = str(round(hy * 100))
+    fl = (f.get('fed_lower') or {}).get('value')
+    fu = (f.get('fed_upper') or {}).get('value')
+    if fl is not None and fu is not None:
+        g['mkt_fed_v'] = f'{fl:.2f}–{fu:.2f}'
+    return g
+
+
 _STATUS_ORDER = {'hit': 0, 'approaching': 1, 'dormant': 2}
 _STATUS_BADGE = {
     'hit':         ('발동', 'var(--crit)'),
@@ -264,7 +313,7 @@ def _render_triggers(triggers):
     return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
 
 
-def build_generators(snap, us, kr, stance, triggers):
+def build_generators(snap, us, kr, stance, triggers, usm):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -276,9 +325,15 @@ def build_generators(snap, us, kr, stance, triggers):
     if dd:
         g['asof'] = date_label(dd)
 
-    # (지수 카드/매수구간 범위는 편집성 분석과 섞여 있어 자동 주입 대상에서 제외 —
-    #  마켓 브리프 세션이 산문과 함께 관리)
+    # 지수 카드 — 숫자(종가·등락률·기준일)만 자동, 해석 꼬리는 편집 소유(마커 밖)
     k = idx.get('KOSPI') or {}
+    for mkey, mdata in (('kospi', idx.get('KOSPI')), ('kosdaq', idx.get('KOSDAQ'))):
+        if mdata and mdata.get('close') is not None:
+            close = mdata['close']
+            # 기존 카드 표기 관례: 코스피 '7,247'(정수), 코스닥 '785.0'(소수 1자리)
+            g[f'idx_{mkey}_v'] = f'{close:,.0f}' if close >= 1000 else f'{close:,.1f}'
+            if mdata.get('change_pct') is not None and dd:
+                g[f'idx_{mkey}_chg'] = f'{fmt_pct(mdata["change_pct"])} ({date_label(dd)})'
 
     # 업종별 등락률(지수 데이터는 로그인 불필요 — 키만 있으면 채워짐)
     g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'))
@@ -329,19 +384,22 @@ def build_generators(snap, us, kr, stance, triggers):
 
     # ── 트리거 발동/임박 판단(data/triggers.json — 마켓 브리프 세션이 갱신) ──
     g['triggers'] = _render_triggers(triggers)
+
+    # ── 미국·글로벌 시세(data/us_snapshot_latest.json — Action 자동) ──
+    g.update(_mkt_generators(usm))
     return g
 
 
-def render(html, snap, us, kr, stance, triggers):
-    gens = build_generators(snap, us, kr, stance, triggers)
+def render(html, snap, us, kr, stance, triggers, usm):
+    gens = build_generators(snap, us, kr, stance, triggers, usm)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
             skipped.append(key)
             continue
-        # 마커 접두사는 KRX(한국 숫자)·US(미국 이슈)·KR(한국 이슈·스탠스) 모두 허용 — 같은 교체 로직
+        # 마커 접두사: KRX(한국 숫자)·MKT(미국 시세)·US(미국 이슈)·KR(한국 이슈·스탠스) — 같은 교체 로직
         pat = re.compile(
-            r'(<!--(?:KRX|US|KR)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US|KR)-END:'
+            r'(<!--(?:KRX|US|KR|MKT)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US|KR|MKT)-END:'
             + re.escape(key) + r'-->)', re.DOTALL)
         html, n = pat.subn(lambda m: m.group(1) + content + m.group(2), html)
         if n == 0:
@@ -354,6 +412,20 @@ def render(html, snap, us, kr, stance, triggers):
     if missing:
         print('경고 — 마커 없음(HTML에서 자리표시를 못 찾음):', ', '.join(missing))
     return html
+
+
+def _warn_if_editorial_stale(us, snap):
+    """미국 이슈의 asof 날짜가 KRX 기준일과 어긋나면 경고(로그만, 강제 없음).
+    보통 두 날짜는 같은 m/d다(미국 전일 세션과 한국 직전 영업일이 같은 달력 날짜) —
+    다르면 대개 us_issues.json 갱신 누락이며, 드물게 한쪽 휴장으로 정상 어긋남일 수 있다."""
+    asof = (us or {}).get('asof') or ''
+    dd = (snap or {}).get('bas_dd') or ''
+    m = re.search(r'(\d{1,2})\s*/\s*(\d{1,2})', asof)
+    if m and len(dd) == 8:
+        if (int(m.group(1)), int(m.group(2))) != (int(dd[4:6]), int(dd[6:8])):
+            print(f'⚠️ 신선도 경고: 미국 이슈 asof "{asof}" ≠ KRX 기준일 '
+                  f'{int(dd[4:6])}/{int(dd[6:8])} — us_issues.json 갱신 누락 가능성 '
+                  f'(한쪽 휴장이면 정상). 마켓 브리프 세션 확인 필요.')
 
 
 def _load(path, label):
@@ -377,12 +449,14 @@ def main():
     kr = _load(KR_PATH, '한국 이슈')
     stance = _load(STANCE_PATH, '오늘의 스탠스')
     triggers = _load(TRIGGERS_PATH, '트리거')
-    if not any((snap, us, kr, stance, triggers)):
+    usm = _load(US_SNAP_PATH, '미국 시세')
+    if not any((snap, us, kr, stance, triggers, usm)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
+    _warn_if_editorial_stale(us, snap)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers)
+    out = render(html, snap, us, kr, stance, triggers, usm)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)
