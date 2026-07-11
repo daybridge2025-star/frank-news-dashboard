@@ -95,6 +95,45 @@ def fetch_yahoo(symbols=None):
     return out
 
 
+# 연초 대비 바를 그리는 카드(미국 3대 지수) — range=ytd 추가 조회 대상
+YTD_KEYS = ('sp500', 'nasdaq', 'dow')
+
+
+def enrich_ytd(yahoo):
+    """3대 지수에 연초 종가·연중(장중) 고점·연초 대비 등락률을 보강한다.
+    실패해도 기존 price/change_pct는 유지(해당 카드의 바만 미표시)."""
+    for key in YTD_KEYS:
+        item = yahoo.get(key)
+        if not item:
+            continue
+        sym = YAHOO_SYMBOLS[key]
+        try:
+            r = requests.get(
+                f'https://query1.finance.yahoo.com/v8/finance/chart/{sym}',
+                params={'range': 'ytd', 'interval': '1d'},
+                headers=_UA, timeout=10)
+            if not r.ok:
+                print(f'[Yahoo/YTD] {key} HTTP {r.status_code}')
+                continue
+            res = (r.json().get('chart', {}).get('result') or [None])[0]
+            if not res:
+                continue
+            q = (res.get('indicators', {}).get('quote', [{}])[0])
+            closes = [c for c in (q.get('close') or []) if c is not None]
+            highs = [x for x in (q.get('high') or []) if x is not None]
+            if not closes:
+                continue
+            start = closes[0]
+            high = max(highs) if highs else max(closes)
+            item['ytd_start'] = round(float(start), 2)
+            item['ytd_high'] = round(float(high), 2)
+            item['ytd_change_pct'] = round((item['price'] / start - 1) * 100, 1)
+        except Exception as e:
+            print(f'[Yahoo/YTD] {key} 실패: {e}')
+        time.sleep(0.3)
+    return yahoo
+
+
 def fetch_fred(series=None):
     """
     FRED 최신 관측치 수집 (app.py fetch_fred_data 패턴).
@@ -129,6 +168,7 @@ def fetch_fred(series=None):
 def collect():
     """전체 수집 — {'yahoo': {...}, 'fred': {...}}. 부분 실패 허용."""
     yahoo = fetch_yahoo()
+    yahoo = enrich_ytd(yahoo)
     fred = fetch_fred()
     print(f'[US] Yahoo {len(yahoo)}/{len(YAHOO_SYMBOLS)}개 · FRED {len(fred)}/{len(FRED_SERIES)}개 수집')
     return {'yahoo': yahoo, 'fred': fred}

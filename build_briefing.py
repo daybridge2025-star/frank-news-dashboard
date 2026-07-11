@@ -269,7 +269,40 @@ def _mkt_generators(usm):
     fu = (f.get('fed_upper') or {}).get('value')
     if fl is not None and fu is not None:
         g['mkt_fed_v'] = f'{fl:.2f}–{fu:.2f}'
+
+    for key, label in (('sp500', 'S&P 500'), ('nasdaq', '나스닥'), ('dow', '다우')):
+        item = y.get(key)
+        if not item or item.get('price') is None:
+            continue
+        g[f'mkt_{key}_v'] = f'{item["price"]:,.0f}'
+        if item.get('change_pct') is not None:
+            g[f'mkt_{key}_chg'] = fmt_pct(item['change_pct'])
+        if item.get('ytd_start') is not None and item.get('ytd_high') is not None:
+            g[f'mkt_{key}_range'] = _render_range_bar(
+                item['ytd_start'], item['price'], item['ytd_high'], label)
     return g
+
+
+def _render_range_bar(start, now, high, label):
+    """KOSPI 위치 바(.range)와 동일한 컴포넌트 — 연초/현재/고점 3점을 트랙에 표시.
+    KOSPI 버전과 달리 '매수구간'(.zone) 개념이 없는 일반 지수용이라 그 부분만 뺐다."""
+    lo, hi = min(start, now, high), max(start, now, high)
+    span = (hi - lo) or 1  # 셋이 모두 같은 극단값(무변동)인 방어
+    def pos(x):
+        return (x - lo) / span * 100
+    def lbl_pos(p):
+        return max(3, min(94, p))  # 라벨이 카드 밖으로 안 밀리게 3~94%로 여유
+    p_start, p_now, p_high = pos(start), pos(now), pos(high)
+    return (
+        f'<div class="range" aria-label="{esc(label)} 연초 {start:,.0f}, 고점 {high:,.0f}, 현재 {now:,.0f}">'
+        f'<div class="track"></div>'
+        f'<div class="mk" style="left:{p_start:.1f}%"></div>'
+        f'<div class="mk now" style="left:{p_now:.1f}%"></div>'
+        f'<div class="mk" style="left:{p_high:.1f}%"></div>'
+        f'<div class="lb top" style="left:{lbl_pos(p_start):.1f}%">연초 <b>{start:,.0f}</b></div>'
+        f'<div class="lb top" style="left:{lbl_pos(p_now):.1f}%">현재 <b>{now:,.0f}</b></div>'
+        f'<div class="lb top" style="left:{lbl_pos(p_high):.1f}%">고점 <b>{high:,.0f}</b></div>'
+        f'</div>')
 
 
 _STATUS_ORDER = {'hit': 0, 'approaching': 1, 'dormant': 2}
