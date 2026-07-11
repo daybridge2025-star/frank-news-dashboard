@@ -7,27 +7,27 @@
       "asof": "2026-07-10"
     },
     "usdkrw": {
-      "price": 1498.7,
+      "price": 1498.87,
       "prev": 1505.9100341796875,
-      "change_pct": -0.48,
+      "change_pct": -0.47,
       "asof": "2026-07-10"
     },
     "wti": {
-      "price": 71.51,
+      "price": 71.41,
       "prev": 72.08000183105469,
-      "change_pct": -0.79,
+      "change_pct": -0.93,
       "asof": "2026-07-10"
     },
     "gold": {
-      "price": 4128.9,
+      "price": 4113.7,
       "prev": 4130.60009765625,
-      "change_pct": -0.04,
+      "change_pct": -0.41,
       "asof": "2026-07-10"
     },
     "copper": {
-      "price": 6.285,
+      "price": 6.282,
       "prev": 6.215000152587891,
-      "change_pct": 1.13,
+      "change_pct": 1.08,
       "asof": "2026-07-10"
     },
     "dxy": {
@@ -40,21 +40,51 @@
       "price": 7575.39,
       "prev": 7543.64013671875,
       "change_pct": 0.42,
-      "asof": "2026-07-10"
+      "asof": "2026-07-10",
+      "ytd_start": 6858.47,
+      "ytd_high": 7620.9,
+      "ytd_change_pct": 10.5
     },
     "nasdaq": {
       "price": 26281.607,
       "prev": 26206.890625,
       "change_pct": 0.29,
-      "asof": "2026-07-10"
+      "asof": "2026-07-10",
+      "ytd_start": 23235.63,
+      "ytd_high": 27190.21,
+      "ytd_change_pct": 13.1
     },
     "dow": {
       "price": 52637.01,
       "prev": 52487.41015625,
       "change_pct": 0.29,
-      "asof": "2026-07-10"
+      "asof": "2026-07-10",
+      "ytd_start": 48382.39,
+      "ytd_high": 53289.3,
+      "ytd_change_pct": 8.8
     }
   },
-  "fred": {},
-  "fetched_at": "2026-07-11 19:40 KST"
+  "fred": {
+    "t10y": {
+      "value": 4.54,
+      "date": "2026-07-09"
+    },
+    "t2y": {
+      "value": 4.16,
+      "date": "2026-07-09"
+    },
+    "hy_oas": {
+      "value": 2.7,
+      "date": "2026-07-09"
+    },
+    "fed_upper": {
+      "value": 3.75,
+      "date": "2026-07-11"
+    },
+    "fed_lower": {
+      "value": 3.5,
+      "date": "2026-07-11"
+    }
+  },
+  "fetched_at": "2026-07-12 06:14 KST"
 }
