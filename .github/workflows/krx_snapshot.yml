@@ -44,7 +44,7 @@ jobs:
 
       - name: 경제 캘린더 수집 실행
         env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}   # collect_news.yml과 동일 시크릿 재사용
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 미국 지표 단계와 동일 시크릿 (Finnhub 무료플랜 403 확정으로 교체)
         run: python fetch_econ_calendar.py
 
       - name: 브리핑 HTML에 데이터 주입

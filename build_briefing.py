@@ -192,55 +192,47 @@ def _pension_sell_rows(flow, n=5):
     return _pension_side_rows(flow, 'sell', n)
 
 
-_CAL_FLAG = {'US': '🇺🇸', 'KR': '🇰🇷'}
 _KST = timezone(timedelta(hours=9))
 
-
-def _cal_value(v, unit):
-    """Finnhub actual/estimate/prev 값 포맷 — 없으면 '—', 있으면 unit(%,K 등)을 붙인다."""
-    if v is None or v == '':
-        return '—'
-    if isinstance(v, float):
-        s = f'{v:,.0f}' if v.is_integer() else f'{v:,.1f}'
-    else:
-        s = str(v)
-    unit = (unit or '').strip()
-    if unit == '%':
-        return f'{s}%'
-    return f'{s}{unit}' if unit else s
+_CAL_KIND = {'fomc': '연준', 'indicator': '지표'}
+_CAL_IMP = {'high': ('높음', 'var(--crit)'), 'medium': ('중간', 'var(--warn)')}
 
 
 def _econ_calendar_rows(cal):
-    """data/econ_calendar_latest.json → 이번 주 경제 캘린더 표 행. 이벤트 없으면 None(기존 유지).
-    같은 날짜가 이어지면 날짜 셀은 첫 행에만 표시(연기금 상위 표와 달리 시계열 나열이라 그룹핑)."""
-    events = (cal or {}).get('events') or []
-    if not events:
+    """data/econ_calendar_latest.json(FRED 릴리스+FOMC) → 캘린더 표 행(날짜|구분|일정|중요도).
+    소스가 전무하면 None(기존 표기 유지). FRED만 실패한 경우엔 FOMC 행 + 미확보 안내 행을 넣어
+    '조용히 비어 보이는' 것과 '지표 일정을 못 가져온 것'을 구분한다."""
+    if not cal:
         return None
-    today = datetime.now(_KST).strftime('%Y-%m-%d')
+    events = cal.get('events') or []
+    # fred_ok가 없는 구버전 파일(Finnhub 시절)은 status로 판정 — 403 파일이 "일정 없음"으로 둔갑하지 않게
+    fred_ok = cal.get('fred_ok', cal.get('status') == 'ok')
+    if not events and not fred_ok:
+        return None
     rows, last_date = [], None
-    for ev in events:
-        t = ev.get('time', '') or ''
-        dpart, tpart = t[:10], t[11:16]
-        show_date = dpart != last_date
-        last_date = dpart
+    for ev in sorted(events, key=lambda x: (x.get('date', ''), x.get('kind', ''))):
+        d = ev.get('date', '')
         try:
-            mmdd = f'{int(dpart[5:7])}/{int(dpart[8:10])}'
-        except (ValueError, IndexError):
-            mmdd = dpart
-        if not show_date:
-            date_cell = ''
-        elif dpart == today:
-            date_cell = f'<b style="color:var(--accent)">{mmdd}</b>'
-        else:
-            date_cell = mmdd
-        flag = _CAL_FLAG.get(ev.get('country', ''), '')
-        unit = ev.get('unit')
+            dt = datetime.strptime(d, '%Y-%m-%d')
+            mmdd = f'{dt.month}/{dt.day} ({"월화수목금토일"[dt.weekday()]})'
+        except ValueError:
+            mmdd = d
+        show_date = d != last_date
+        last_date = d
+        is_fomc = ev.get('kind') == 'fomc'
+        kind = _CAL_KIND.get(ev.get('kind'), '지표')
+        kind_cell = f'<b style="color:var(--accent)">{kind}</b>' if is_fomc else kind
+        imp_label, imp_color = _CAL_IMP.get(ev.get('impact'), ('중간', 'var(--warn)'))
         rows.append(
-            f'<tr><td>{date_cell}</td><td>{esc(tpart)}</td><td>{flag}</td>'
-            f'<td>{esc(ev.get("event", ""))}</td>'
-            f'<td class="num">{_cal_value(ev.get("actual"), unit)}</td>'
-            f'<td class="num">{_cal_value(ev.get("estimate"), unit)}</td>'
-            f'<td class="num">{_cal_value(ev.get("prev"), unit)}</td></tr>')
+            f'<tr><td>{mmdd if show_date else ""}</td><td>{kind_cell}</td>'
+            f'<td>{esc(ev.get("name", ""))}</td>'
+            f'<td><b style="color:{imp_color}">{imp_label}</b></td></tr>')
+    if not rows:
+        rows.append('<tr><td colspan="4" style="text-align:center;color:var(--ink-3);'
+                    'padding:10px 0">이번 주에는 표시할 주요 일정이 없습니다</td></tr>')
+    if not fred_ok:
+        rows.append('<tr><td colspan="4" style="text-align:center;color:var(--ink-3);'
+                    'padding:8px 0">미국 지표 발표 일정 미확보(FRED 응답 없음) — 연준 일정만 표시</td></tr>')
     return ''.join(rows)
 
 

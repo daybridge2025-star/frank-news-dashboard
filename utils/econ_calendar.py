@@ -1,13 +1,18 @@
 """
-이번 주(월~일) 주요 경제 캘린더 수집 — Finnhub /calendar/economic.
+이번 주(월~일) 주요 경제 캘린더 수집 — FRED 릴리스 캘린더 + 연준 공식 FOMC 일정.
 
-app.py의 fetch_economic_calendar()와 같은 엔드포인트·같은 주간(월~일 KST) 로직을
-재사용한다. 이 엔드포인트는 Finnhub 문서상 "Premium" 표시가 있고, app.py에도
-이미 403 처리가 존재한다(과거에 실제로 막힌 이력이 있다는 뜻) — 그래서 상태를
-'ok'/'403'/'401'/기타로 명확히 구분해 반환한다. 어느 쪽이든 여기서 지어내는
-값은 없다: 막히면 빈 리스트 + 상태 코드만 돌려주고, 호출부가 로그로 판단하게 한다.
+소스 이력: 원래 Finnhub /calendar/economic이었으나 무료 플랜 403이 실측 확정돼
+(2026-07-12 cron, BRIEFING_PIPELINE.md 운영 노트 5번) 사용자 결정으로 교체.
+  1. FRED /fred/releases/dates (FRED_API_KEY — us_snapshot과 같은 시크릿):
+     미국 주요 지표의 발표 예정일. 예상치·발표치는 없고 "언제 나오는지"만 제공.
+  2. data/fomc_schedule.json (연준 공식 발표, 연 1회 수동 갱신):
+     FOMC 금리 결정일 + 의사록 공개일(결정일 +21일, 연준 관례) — 키 불필요.
+
+원칙 동일: 실패해도 지어내지 않는다. FRED가 막히면 FOMC 일정만 반환하고
+fred_ok=False로 표시해 렌더러가 "지표 일정 미확보"를 명시하게 한다.
 """
 
+import json
 import os
 import requests
 from datetime import datetime, timedelta, timezone
@@ -17,9 +22,24 @@ _UA = {'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                       'Chrome/120.0.0.0 Safari/537.36')}
 _KST = timezone(timedelta(hours=9))
 
-# "주요" 일정만 남긴다 — 미국·한국 고영향(high) 이벤트로 한정(app.py 사이드바 기본값과 동일).
-COUNTRIES = ('US', 'KR')
-IMPACT = ('high',)
+FOMC_PATH = 'data/fomc_schedule.json'
+
+# FRED 릴리스 큐레이션 — release_name 부분일치(소문자) → (한글 표기, 중요도).
+# 여기 없는 릴리스는 표시하지 않는다(수백 개 중 시장 영향 큰 것만).
+FRED_RELEASE_MAP = (
+    ('consumer price index',                ('CPI(소비자물가지수)', 'high')),
+    ('employment situation',                ('고용보고서(비농업 고용·실업률)', 'high')),
+    ('gross domestic product',              ('GDP(국내총생산)', 'high')),
+    ('personal income and outlays',         ('PCE 물가·개인소득/지출', 'high')),
+    ('advance monthly sales',               ('소매판매', 'high')),
+    ('producer price index',                ('PPI(생산자물가지수)', 'medium')),
+    ('unemployment insurance weekly claims', ('주간 신규 실업수당 청구', 'medium')),
+    ('industrial production',               ('산업생산·설비가동률', 'medium')),
+    ('new residential construction',        ('주택착공·건축허가', 'medium')),
+    ('job openings and labor turnover',     ('JOLTS 구인·이직', 'medium')),
+    ('university of michigan',              ('미시간대 소비자심리', 'medium')),
+    ('surveys of consumers',                ('미시간대 소비자심리', 'medium')),
+)
 
 
 def week_range(today=None):
@@ -35,40 +55,93 @@ def week_range(today=None):
     return monday, sunday
 
 
-def fetch_week():
-    """
-    이번 주 주요(미국·한국 고영향) 경제 일정.
-    반환: (events: list[dict], status: 'ok'|'no_key'|'401'|'403'|str(예외))
-    events는 status가 'ok'일 때만 채워진다 — 그 외엔 항상 빈 리스트(기존 표기 유지용).
-    """
-    api_key = os.environ.get('FINNHUB_API_KEY', '')
-    if not api_key:
-        print('[EconCal] FINNHUB_API_KEY 없음 — 경제 캘린더 섹션은 기존 표기 유지')
-        return [], 'no_key'
+def _match_release(name):
+    low = (name or '').lower()
+    for key, val in FRED_RELEASE_MAP:
+        if key in low:
+            return val
+    return None
 
-    monday, sunday = week_range()
+
+def fetch_fred_releases(monday, sunday):
+    """
+    FRED 릴리스 캘린더에서 해당 주의 큐레이션된 발표 일정을 가져온다.
+    반환: (events, status) — status 'ok'가 아니면 events는 빈 리스트.
+    include_release_dates_with_no_data=true 여야 아직 발표 전인 미래 날짜가 나온다.
+    """
+    api_key = os.environ.get('FRED_API_KEY', '')
+    if not api_key:
+        print('[EconCal] FRED_API_KEY 없음 — 지표 발표 일정 미확보(FOMC 일정만 표시)')
+        return [], 'fred_no_key'
     try:
         r = requests.get(
-            'https://finnhub.io/api/v1/calendar/economic',
-            params={'from': monday.isoformat(), 'to': sunday.isoformat(), 'token': api_key},
-            headers=_UA, timeout=10)
-        if r.status_code == 401:
-            print('[EconCal] HTTP 401 — API 키 오류(무효 키)')
-            return [], '401'
-        if r.status_code == 403:
-            print('[EconCal] HTTP 403 — Finnhub 현재 플랜에서 경제캘린더 API 접근 제한'
-                  '(Premium 플랜 필요로 확인됨)')
-            return [], '403'
-        r.raise_for_status()
-        raw = r.json().get('economicCalendar') or []
+            'https://api.stlouisfed.org/fred/releases/dates',
+            params={'api_key': api_key, 'file_type': 'json',
+                    'realtime_start': monday.isoformat(),
+                    'realtime_end': sunday.isoformat(),
+                    'include_release_dates_with_no_data': 'true',
+                    'limit': 1000, 'sort_order': 'asc'},
+            headers=_UA, timeout=15)
+        if not r.ok:
+            print(f'[EconCal] FRED HTTP {r.status_code}: {r.text[:200]}')
+            return [], f'fred_http_{r.status_code}'
+        raw = r.json().get('release_dates') or []
     except Exception as e:
-        print(f'[EconCal] 수집 실패: {e}')
-        return [], str(e)
+        print(f'[EconCal] FRED 수집 실패: {e}')
+        return [], f'fred_error: {e}'
 
-    events = [e for e in raw
-              if e.get('country') in COUNTRIES
-              and (e.get('impact') or '').lower() in IMPACT]
-    events.sort(key=lambda x: x.get('time', ''))
-    print(f'[EconCal] {monday}~{sunday} 주요 일정 {len(events)}건 '
-          f'(전체 {len(raw)}건 중 미국·한국 고영향 필터링) 수집 — HTTP 200')
+    lo, hi = monday.isoformat(), sunday.isoformat()
+    events, seen = [], set()
+    for it in raw:
+        d = it.get('date') or ''
+        if not (lo <= d <= hi):          # 파라미터와 무관하게 방어적으로 주간 필터
+            continue
+        matched = _match_release(it.get('release_name'))
+        if not matched:
+            continue
+        name_ko, impact = matched
+        if (d, name_ko) in seen:          # 동일 릴리스 중복 제거
+            continue
+        seen.add((d, name_ko))
+        events.append({'date': d, 'name': name_ko, 'kind': 'indicator', 'impact': impact})
+    print(f'[EconCal] FRED {monday}~{sunday}: 원본 {len(raw)}건 중 주요 지표 {len(events)}건 매칭 — HTTP 200')
     return events, 'ok'
+
+
+def fomc_events(monday, sunday, path=FOMC_PATH):
+    """고정 일정 JSON에서 해당 주의 FOMC 이벤트(금리 결정·의사록 공개)를 계산. 키 불필요."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            meetings = json.load(f).get('meetings') or []
+    except (OSError, ValueError) as e:
+        print(f'[EconCal] FOMC 일정 파일 로드 실패({path}): {e}')
+        return []
+    lo, hi = monday.isoformat(), sunday.isoformat()
+    out = []
+    for m in meetings:
+        start, end = m.get('start') or '', m.get('end') or ''
+        if not end:
+            continue
+        label = f'{int(start[5:7])}/{int(start[8:10])}~{int(end[8:10])}' if start else end
+        if lo <= end <= hi:
+            out.append({'date': end, 'name': f'FOMC 금리 결정({label} 회의)',
+                        'kind': 'fomc', 'impact': 'high'})
+        minutes = (datetime.strptime(end, '%Y-%m-%d') + timedelta(days=21)).strftime('%Y-%m-%d')
+        if lo <= minutes <= hi:
+            out.append({'date': minutes, 'name': f'FOMC 의사록 공개({label} 회의분)',
+                        'kind': 'fomc', 'impact': 'medium'})
+    if out:
+        print(f'[EconCal] FOMC {monday}~{sunday}: {len(out)}건')
+    return out
+
+
+def collect_week():
+    """
+    이번 주 주요 일정 전체.
+    반환: (events(날짜순), status, fred_ok) — FRED 실패여도 FOMC 일정은 항상 포함.
+    """
+    monday, sunday = week_range()
+    fred, status = fetch_fred_releases(monday, sunday)
+    fomc = fomc_events(monday, sunday)
+    events = sorted(fred + fomc, key=lambda x: (x['date'], x['kind']))
+    return events, status, status == 'ok'
