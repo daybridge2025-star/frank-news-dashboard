@@ -23,9 +23,14 @@ IMPACT = ('high',)
 
 
 def week_range(today=None):
-    """이번 주 월요일·일요일(KST 기준) 반환."""
+    """브리핑이 다룰 주(월~일, KST) 반환.
+    주말(토·일)에 실행되면 끝나가는 이번 주가 아니라 다가오는 주를 다룬다 —
+    일요일 아침 브리핑의 '이번 주 주요 일정'은 독자에게 다음 주를 뜻하기 때문."""
     d = today or datetime.now(_KST).date()
-    monday = d - timedelta(days=d.weekday())
+    if d.weekday() >= 5:  # 토(5)·일(6) → 다음 월요일 기준
+        monday = d + timedelta(days=7 - d.weekday())
+    else:
+        monday = d - timedelta(days=d.weekday())
     sunday = monday + timedelta(days=6)
     return monday, sunday
 
