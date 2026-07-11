@@ -23,6 +23,7 @@ import os
 import re
 import json
 import html as _html
+from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
@@ -34,6 +35,7 @@ KR_PATH = 'data/kr_issues.json'               # 한국 이슈 분석 (마켓 브
 STANCE_PATH = 'data/stance.json'              # 오늘의 스탠스 A/B/C (마켓 브리프 세션 생성)
 TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓 브리프 세션 생성)
 US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
+ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 (Action 생성 — fetch_econ_calendar.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -188,6 +190,58 @@ def _pension_rows(flow, n=5):
 
 def _pension_sell_rows(flow, n=5):
     return _pension_side_rows(flow, 'sell', n)
+
+
+_CAL_FLAG = {'US': '🇺🇸', 'KR': '🇰🇷'}
+_KST = timezone(timedelta(hours=9))
+
+
+def _cal_value(v, unit):
+    """Finnhub actual/estimate/prev 값 포맷 — 없으면 '—', 있으면 unit(%,K 등)을 붙인다."""
+    if v is None or v == '':
+        return '—'
+    if isinstance(v, float):
+        s = f'{v:,.0f}' if v.is_integer() else f'{v:,.1f}'
+    else:
+        s = str(v)
+    unit = (unit or '').strip()
+    if unit == '%':
+        return f'{s}%'
+    return f'{s}{unit}' if unit else s
+
+
+def _econ_calendar_rows(cal):
+    """data/econ_calendar_latest.json → 이번 주 경제 캘린더 표 행. 이벤트 없으면 None(기존 유지).
+    같은 날짜가 이어지면 날짜 셀은 첫 행에만 표시(연기금 상위 표와 달리 시계열 나열이라 그룹핑)."""
+    events = (cal or {}).get('events') or []
+    if not events:
+        return None
+    today = datetime.now(_KST).strftime('%Y-%m-%d')
+    rows, last_date = [], None
+    for ev in events:
+        t = ev.get('time', '') or ''
+        dpart, tpart = t[:10], t[11:16]
+        show_date = dpart != last_date
+        last_date = dpart
+        try:
+            mmdd = f'{int(dpart[5:7])}/{int(dpart[8:10])}'
+        except (ValueError, IndexError):
+            mmdd = dpart
+        if not show_date:
+            date_cell = ''
+        elif dpart == today:
+            date_cell = f'<b style="color:var(--accent)">{mmdd}</b>'
+        else:
+            date_cell = mmdd
+        flag = _CAL_FLAG.get(ev.get('country', ''), '')
+        unit = ev.get('unit')
+        rows.append(
+            f'<tr><td>{date_cell}</td><td>{esc(tpart)}</td><td>{flag}</td>'
+            f'<td>{esc(ev.get("event", ""))}</td>'
+            f'<td class="num">{_cal_value(ev.get("actual"), unit)}</td>'
+            f'<td class="num">{_cal_value(ev.get("estimate"), unit)}</td>'
+            f'<td class="num">{_cal_value(ev.get("prev"), unit)}</td></tr>')
+    return ''.join(rows)
 
 
 def _render_issue_cards(src):
@@ -346,7 +400,7 @@ def _render_triggers(triggers):
     return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
 
 
-def build_generators(snap, us, kr, stance, triggers, usm):
+def build_generators(snap, us, kr, stance, triggers, usm, cal):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -420,11 +474,17 @@ def build_generators(snap, us, kr, stance, triggers, usm):
 
     # ── 미국·글로벌 시세(data/us_snapshot_latest.json — Action 자동) ──
     g.update(_mkt_generators(usm))
+
+    # ── 이번 주 경제 캘린더(data/econ_calendar_latest.json — Action 자동, Finnhub) ──
+    g['econ_calendar'] = _econ_calendar_rows(cal)
+    if cal and cal.get('week_start') and cal.get('week_end'):
+        ws, we = cal['week_start'], cal['week_end']
+        g['econ_cal_week'] = f'{int(ws[5:7])}/{int(ws[8:10])}~{int(we[5:7])}/{int(we[8:10])}'
     return g
 
 
-def render(html, snap, us, kr, stance, triggers, usm):
-    gens = build_generators(snap, us, kr, stance, triggers, usm)
+def render(html, snap, us, kr, stance, triggers, usm, cal):
+    gens = build_generators(snap, us, kr, stance, triggers, usm, cal)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -483,13 +543,14 @@ def main():
     stance = _load(STANCE_PATH, '오늘의 스탠스')
     triggers = _load(TRIGGERS_PATH, '트리거')
     usm = _load(US_SNAP_PATH, '미국 시세')
-    if not any((snap, us, kr, stance, triggers, usm)):
+    cal = _load(ECON_CAL_PATH, '경제 캘린더')
+    if not any((snap, us, kr, stance, triggers, usm, cal)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers, usm)
+    out = render(html, snap, us, kr, stance, triggers, usm, cal)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)

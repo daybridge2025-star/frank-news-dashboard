@@ -42,6 +42,11 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 금리·HY스프레드·연준타깃 (없으면 해당 값 미확보 유지)
         run: python fetch_us_snapshot.py
 
+      - name: 경제 캘린더 수집 실행
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}   # collect_news.yml과 동일 시크릿 재사용
+        run: python fetch_econ_calendar.py
+
       - name: 브리핑 HTML에 데이터 주입
         run: python build_briefing.py
 
@@ -49,6 +54,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/krx_snapshot_*.json data/us_snapshot_latest.json reports/macro-strategy-briefing.html
+          git add data/krx_snapshot_*.json data/us_snapshot_latest.json data/econ_calendar_latest.json reports/macro-strategy-briefing.html
           git diff --cached --quiet || git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
