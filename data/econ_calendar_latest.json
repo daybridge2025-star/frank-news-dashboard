@@ -39,13 +39,7 @@
       "name": "주택착공·건축허가",
       "kind": "indicator",
       "impact": "medium"
-    },
-    {
-      "date": "2026-07-17",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
     }
   ],
-  "fetched_at": "2026-07-12T02:07:00.908125+00:00"
+  "fetched_at": "2026-07-12T21:17:30.072117+00:00"
 }
