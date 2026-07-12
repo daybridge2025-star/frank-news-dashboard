@@ -91,8 +91,10 @@ def fetch_fred_releases(monday, sunday):
         return [], f'fred_error: {e}'
 
     lo, hi = monday.isoformat(), sunday.isoformat()
-    events, seen = [], set()
-    for it in raw:
+    # raw를 날짜 오름차순으로 본 뒤 지표명 기준 첫(=가장 이른) 발표일만 남긴다 —
+    # 주간 실업수당처럼 한 주에 발표일이 둘로 잡히는 릴리스가 중복 행으로 보이던 것 방지.
+    events, seen_names = [], set()
+    for it in sorted(raw, key=lambda x: x.get('date') or ''):
         d = it.get('date') or ''
         if not (lo <= d <= hi):          # 파라미터와 무관하게 방어적으로 주간 필터
             continue
@@ -100,9 +102,9 @@ def fetch_fred_releases(monday, sunday):
         if not matched:
             continue
         name_ko, impact = matched
-        if (d, name_ko) in seen:          # 동일 릴리스 중복 제거
+        if name_ko in seen_names:         # 같은 지표는 이번 주 첫 발표일만
             continue
-        seen.add((d, name_ko))
+        seen_names.add(name_ko)
         events.append({'date': d, 'name': name_ko, 'kind': 'indicator', 'impact': impact})
     print(f'[EconCal] FRED {monday}~{sunday}: 원본 {len(raw)}건 중 주요 지표 {len(events)}건 매칭 — HTTP 200')
     return events, 'ok'
