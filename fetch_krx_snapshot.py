@@ -37,7 +37,11 @@ from utils.krx import (
 )
 from utils.krx_scrape import (
     get_investor_flow, get_stock_ohlcv, get_index_summary, has_credentials,
+    get_index_ytd, get_index_change_range, get_sector_leaders,
+    probe_sector_investor_value,
 )
+
+_IDX_TICKER = {'KOSPI': '1001', 'KOSDAQ': '2001'}
 
 KST = pytz.timezone('Asia/Seoul')
 
@@ -191,6 +195,30 @@ def main():
         n = len(sectors[market] or [])
         print(f'  {market} 지수·업종: {n}행 [{idx_src[market]}]')
 
+    # ── pykrx 확장 수집(로그인 필요): 헤드라인 YTD·업종 연초대비·업종 대표종목 ──
+    # 실패해도 해당 필드만 빠질 뿐 스냅샷 저장은 진행 — 렌더러가 없는 필드를 건너뛴다.
+    if has_credentials():
+        jan_start = f'{bas_dd[:4]}0102'
+        for market in ('KOSPI', 'KOSDAQ'):
+            if idx_src.get(market) != 'pykrx':
+                continue
+            hl = index.get(market)
+            if hl:
+                ytd = get_index_ytd(bas_dd, _IDX_TICKER[market])
+                if ytd:
+                    hl.update(ytd)
+            secs = sectors.get(market) or []
+            ytd_map = get_index_change_range(jan_start, bas_dd, market)
+            pure = [s['name'] for s in secs
+                    if not s['name'].startswith(('코스피', '코스닥'))]
+            leaders = get_sector_leaders(bas_dd, market, sector_names=pure)
+            for s in secs:
+                if s['name'] in ytd_map:
+                    s['ytd_pct'] = ytd_map[s['name']]
+                if s['name'] in leaders:
+                    s['leaders'] = leaders[s['name']]
+            print(f'  {market} 확장: YTD맵 {len(ytd_map)}행 · 대표종목 {len(leaders)}개 업종')
+
     # ── 종목: Open API 벌크(있으면) → pykrx 폴백(무로그인) ──
     by_code = stocks_by_code(get_kospi_stocks(bas_dd, auth_key)) if auth_key else {}
     stocks = {}
@@ -216,6 +244,11 @@ def main():
 
     _print_kospi_buy_trigger_hint((index.get('KOSPI') or {}).get('close'), flow)
 
+    # 업종별 투자자 수급 지원 여부 1회 실측 프로브 — 결과는 스냅샷에 실려 커밋됨.
+    # 'ok' 확인되면 정식 기능(업종별 외국인·기관 순매수 컬럼)으로 승격하고 프로브 제거 예정.
+    probe = probe_sector_investor_value(bas_dd) if has_credentials() else {'status': 'no_credentials'}
+    print(f'업종수급 프로브: { {k: (v.get("status") if isinstance(v, dict) else v) for k, v in probe.items()} if isinstance(probe, dict) else probe }')
+
     snapshot = {
         'bas_dd': bas_dd,
         'fetched_at': now_str,
@@ -223,6 +256,7 @@ def main():
         'sectors': sectors,
         'stocks': stocks,
         'investor_flow': flow,
+        '_probe_sector_flow': probe,
     }
 
     os.makedirs('data', exist_ok=True)

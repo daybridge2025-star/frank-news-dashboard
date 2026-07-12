@@ -130,16 +130,36 @@ def _flow_cells(flow, market, period_field='investor_value', suffix=''):
     return {prefix + k + suffix: _fm_cell(v, maxabs) for k, v in vals.items()}
 
 
-def _sector_rows(sectors, n=5):
+def _sector_rows(sectors):
+    """전체 업종지수 표(당일 내림차순) — 당일 | 연초 대비 | 대표종목(시총 상위, 당일 등락).
+    ytd_pct·leaders는 pykrx 확장 수집이 실패하면 없을 수 있다 — 그 칸만 '—'로 둔다."""
     ind = _industry(sectors)
     if not ind:
         return None
-    ind.sort(key=lambda s: s['change_pct'])  # 낙폭 큰 순
+    ind.sort(key=lambda s: s['change_pct'], reverse=True)  # 당일 상승 순
     rows = ''
-    for s in ind[:n]:
+    for s in ind:
+        ytd = s.get('ytd_pct')
+        ytd_cell = (f'<span style="color:{color_of(ytd)}">{fmt_pct(ytd)}</span>'
+                    if ytd is not None else '—')
+        leaders = s.get('leaders') or []
+        if leaders:
+            parts = []
+            for l in leaders:
+                nm = esc(l.get('name', ''))
+                c = l.get('chg_pct')
+                if c is not None:
+                    parts.append(f'{nm} <span style="color:{color_of(c)}">{fmt_pct(c)}</span>')
+                else:
+                    parts.append(nm)
+            leader_cell = ' · '.join(parts)
+        else:
+            leader_cell = '—'
         rows += (f'<tr><td>{s["name"]}</td>'
                  f'<td class="num" style="color:{color_of(s["change_pct"])}">'
-                 f'{fmt_pct(s["change_pct"])}</td></tr>')
+                 f'{fmt_pct(s["change_pct"])}</td>'
+                 f'<td class="num">{ytd_cell}</td>'
+                 f'<td style="font-size:12px">{leader_cell}</td></tr>')
     return rows
 
 
@@ -329,9 +349,10 @@ def _mkt_generators(usm):
     return g
 
 
-def _render_range_bar(start, now, high, label):
-    """KOSPI 위치 바(.range)와 동일한 컴포넌트 — 연초/현재/고점 3점을 트랙에 표시.
-    KOSPI 버전과 달리 '매수구간'(.zone) 개념이 없는 일반 지수용이라 그 부분만 뺐다."""
+def _render_range_bar(start, now, high, label, zone=None):
+    """위치 바(.range) 공통 컴포넌트 — 연초/현재/고점 3점을 트랙에 표시.
+    zone=(lo, hi)를 주면 KOSPI처럼 '매수구간' 하이라이트(.zone)와 하단 라벨을 함께 그린다
+    (구간 값 자체는 편집 판단이라 stance.json의 kospi_buy_zone에서 온다)."""
     lo, hi = min(start, now, high), max(start, now, high)
     span = (hi - lo) or 1  # 셋이 모두 같은 극단값(무변동)인 방어
     def pos(x):
@@ -339,15 +360,29 @@ def _render_range_bar(start, now, high, label):
     def lbl_pos(p):
         return max(3, min(94, p))  # 라벨이 카드 밖으로 안 밀리게 3~94%로 여유
     p_start, p_now, p_high = pos(start), pos(now), pos(high)
+    aria = f'{label} 연초 {start:,.0f}, 고점 {high:,.0f}, 현재 {now:,.0f}'
+    zone_html = ''
+    zone_lbl = ''
+    if zone and zone[0] is not None and zone[1] is not None:
+        z_lo, z_hi = sorted((float(zone[0]), float(zone[1])))
+        p_zlo = max(0.0, min(100.0, pos(z_lo)))
+        p_zhi = max(0.0, min(100.0, pos(z_hi)))
+        if p_zhi > p_zlo:
+            zone_html = f'<div class="zone" style="left:{p_zlo:.1f}%; width:{p_zhi - p_zlo:.1f}%"></div>'
+            zone_lbl = (f'<div class="lb bot" style="left:{lbl_pos((p_zlo + p_zhi) / 2):.1f}%">'
+                        f'매수구간 {z_lo:,.0f}–{z_hi:,.0f}</div>')
+            aria += f'. 분할매수 구간 {z_lo:,.0f}~{z_hi:,.0f}'
     return (
-        f'<div class="range" aria-label="{esc(label)} 연초 {start:,.0f}, 고점 {high:,.0f}, 현재 {now:,.0f}">'
+        f'<div class="range" aria-label="{esc(aria)}">'
         f'<div class="track"></div>'
+        f'{zone_html}'
         f'<div class="mk" style="left:{p_start:.1f}%"></div>'
         f'<div class="mk now" style="left:{p_now:.1f}%"></div>'
         f'<div class="mk" style="left:{p_high:.1f}%"></div>'
         f'<div class="lb top" style="left:{lbl_pos(p_start):.1f}%">연초 <b>{start:,.0f}</b></div>'
         f'<div class="lb top" style="left:{lbl_pos(p_now):.1f}%">현재 <b>{now:,.0f}</b></div>'
         f'<div class="lb top" style="left:{lbl_pos(p_high):.1f}%">고점 <b>{high:,.0f}</b></div>'
+        f'{zone_lbl}'
         f'</div>')
 
 
@@ -425,6 +460,13 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal):
             g[f'idx_{mkey}_v'] = f'{close:,.0f}' if close >= 1000 else f'{close:,.1f}'
             if mdata.get('change_pct') is not None and dd:
                 g[f'idx_{mkey}_chg'] = f'{fmt_pct(mdata["change_pct"])} ({date_label(dd)})'
+
+    # KOSPI 위치 바 — 연초/고점/현재는 데이터(pykrx YTD), 매수구간은 편집 값(stance.json)
+    if all(k.get(f) is not None for f in ('ytd_start', 'ytd_high', 'close')):
+        bz = (stance or {}).get('kospi_buy_zone')
+        zone = tuple(bz) if isinstance(bz, (list, tuple)) and len(bz) == 2 else None
+        g['kospi_range'] = _render_range_bar(
+            k['ytd_start'], k['close'], k['ytd_high'], 'KOSPI', zone=zone)
 
     # 업종별 등락률(지수 데이터는 로그인 불필요 — 키만 있으면 채워짐)
     g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'))

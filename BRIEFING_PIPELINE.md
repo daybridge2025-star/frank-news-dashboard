@@ -35,7 +35,8 @@ FRED(`FRED_API_KEY` 시크릿, 없으면 해당 카드 기존 표기 유지)가 
 | 트리거 발동/임박 판단 | `data/triggers.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
 | 헤더 날짜 라인(발행일 · "최종 업데이트" 칩) | `krx_snapshot`의 `fetched_at` + `us_issues`의 `asof` | `KRX` | GitHub Action | 자동 — **세션이 수기로 갱신할 필요 없음(2026-07-12부터)** |
 | 코스피·코스닥 수급(직전 영업일·MTD·YTD) | `data/krx_snapshot_latest.json` | `KRX` | GitHub Action | 자동(하루 1회) |
-| 업종별 등락률 · KOSPI/코스닥 지수 카드 값 | 〃 | `KRX` | 〃 | 자동 |
+| 업종별 등락률(전체 업종 · 당일+연초대비+대표종목) · KOSPI/코스닥 지수 카드 값 | 〃 | `KRX` | 〃 | 자동 |
+| KOSPI 위치 바(연초·현재·고점 3점) | 〃 (`index.KOSPI.ytd_*`) | `KRX` | GitHub Action | 자동 — 단 **"매수구간" 값은 `stance.json`의 `kospi_buy_zone: [하한, 상한]`**(마켓 브리프 세션 소유, 전략 A 구간 변경 시 그 필드만 갱신) |
 | 외국인·연기금 순매수 상위 | 〃 | `KRX` | 〃 | 자동 |
 | 미국 지표 카드 값(VIX·환율·금리·WTI·금·구리 등) | `data/us_snapshot_latest.json` | `MKT` | GitHub Action | 자동(Yahoo+FRED) |
 | 미국 3대 지수 카드(S&P500·나스닥·다우, 연초 대비 바) | 〃 | `MKT` | 〃 | 자동(Yahoo, range=ytd) |

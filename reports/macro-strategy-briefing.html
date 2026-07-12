@@ -470,7 +470,7 @@ footer p{margin:5px 0}
 
   <h2>KOSPI 위치와 매수 구간</h2>
   <div class="prose">
-    <div class="range" aria-label="KOSPI 연초 4,300에서 고점 9,385, 현재 7,600. 분할매수 구간 7,000~7,200">
+    <!--KRX-START:kospi_range--><div class="range" aria-label="KOSPI 연초 4,300에서 고점 9,385, 현재 7,600. 분할매수 구간 7,000~7,200">
       <div class="track"></div>
       <div class="zone" style="left:53.1%; width:3.9%"></div>
       <div class="mk" style="left:0%"></div>
@@ -480,7 +480,7 @@ footer p{margin:5px 0}
       <div class="lb top" style="left:58%">현재 <b>7,247</b></div>
       <div class="lb top" style="left:94%">고점 <b>9,385</b></div>
       <div class="lb bot" style="left:55%">매수구간 7,000–7,200</div>
-    </div>
+    </div><!--KRX-END:kospi_range-->
     <p>7/8 폭락으로 현재가가 매수구간 상단 바로 위(+47pt)까지 내려왔고, 외국인은 순매수로 전환 — 트리거의 두 조건에 동시 근접. 확인 후 진입 시 손익비는 상방 +38%(불케이스 10,000) / 하방 −10%(손절 6,500).</p>
   </div>
 
@@ -536,20 +536,20 @@ footer p{margin:5px 0}
   <div class="prose tbl-scroll">
     <div class="secttl"><h3>코스피 업종별 등락률 (<!--KRX-START:asof-->7/10<!--KRX-END:asof-->)</h3><span class="dlabel verified">검증</span></div>
     <table class="dtl">
-      <tr><th>업종</th><th>등락률</th></tr>
-      <!--KRX-START:sectors_kospi--><tr><td>통신</td><td class="num" style="color:var(--bear)">−1.55%</td></tr><tr><td>음식료·담배</td><td class="num" style="color:var(--bull)">+0.26%</td></tr><tr><td>섬유·의류</td><td class="num" style="color:var(--bull)">+0.74%</td></tr><tr><td>부동산</td><td class="num" style="color:var(--bull)">+1.12%</td></tr><tr><td>오락·문화</td><td class="num" style="color:var(--bull)">+1.43%</td></tr><!--KRX-END:sectors_kospi-->
+      <tr><th>업종</th><th>당일</th><th>연초 대비</th><th>대표종목 (시총 상위 3 · 당일)</th></tr>
+      <!--KRX-START:sectors_kospi--><tr><td>통신</td><td class="num" style="color:var(--bear)">−1.55%</td><td class="num">—</td><td>—</td></tr><tr><td>음식료·담배</td><td class="num" style="color:var(--bull)">+0.26%</td><td class="num">—</td><td>—</td></tr><tr><td>섬유·의류</td><td class="num" style="color:var(--bull)">+0.74%</td><td class="num">—</td><td>—</td></tr><tr><td>부동산</td><td class="num" style="color:var(--bull)">+1.12%</td><td class="num">—</td><td>—</td></tr><tr><td>오락·문화</td><td class="num" style="color:var(--bull)">+1.43%</td><td class="num">—</td><td>—</td></tr><!--KRX-END:sectors_kospi-->
     </table>
-    <p style="font-size:12px; color:var(--ink-2); margin-top:8px">KRX 업종지수 기준 낙폭 상위 5개다.</p>
-    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">업종별 외국인·기관 순매수 금액은 아직 확보하지 못했다 — KRX 연동 성공 시 채울 예정.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:8px">KRX 업종지수 전체(당일 등락률 내림차순). 연초 대비는 1/2 종가 기준, 대표종목은 각 업종지수 구성종목 중 시가총액 상위 3개와 당일 등락이다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:6px">업종별 외국인·기관 순매수 금액은 아직 확보하지 못했다 — 데이터 소스 지원 여부 실측 중(가능 확인 시 컬럼 추가 예정).</p>
   </div>
 
   <div class="prose tbl-scroll">
     <div class="secttl"><h3>코스닥 업종별 등락률 (<!--KRX-START:asof-->7/10<!--KRX-END:asof-->)</h3><span class="dlabel verified">검증</span></div>
     <table class="dtl">
-      <tr><th>업종</th><th>등락률</th></tr>
-      <!--KRX-START:sectors_kosdaq--><tr><td>제약</td><td class="num" style="color:var(--bear)">−3.64%</td></tr><tr><td>오락·문화</td><td class="num" style="color:var(--bull)">+2.05%</td></tr><tr><td>섬유·의류</td><td class="num" style="color:var(--bull)">+2.25%</td></tr><tr><td>운송·창고</td><td class="num" style="color:var(--bull)">+2.39%</td></tr><tr><td>음식료·담배</td><td class="num" style="color:var(--bull)">+2.89%</td></tr><!--KRX-END:sectors_kosdaq-->
+      <tr><th>업종</th><th>당일</th><th>연초 대비</th><th>대표종목 (시총 상위 3 · 당일)</th></tr>
+      <!--KRX-START:sectors_kosdaq--><tr><td>제약</td><td class="num" style="color:var(--bear)">−3.64%</td><td class="num">—</td><td>—</td></tr><tr><td>오락·문화</td><td class="num" style="color:var(--bull)">+2.05%</td><td class="num">—</td><td>—</td></tr><tr><td>섬유·의류</td><td class="num" style="color:var(--bull)">+2.25%</td><td class="num">—</td><td>—</td></tr><tr><td>운송·창고</td><td class="num" style="color:var(--bull)">+2.39%</td><td class="num">—</td><td>—</td></tr><tr><td>음식료·담배</td><td class="num" style="color:var(--bull)">+2.89%</td><td class="num">—</td><td>—</td></tr><!--KRX-END:sectors_kosdaq-->
     </table>
-    <p style="font-size:12px; color:var(--ink-2); margin-top:8px">KRX 업종지수 기준 낙폭 상위 5개다.</p>
+    <p style="font-size:12px; color:var(--ink-2); margin-top:8px">KRX 업종지수 전체(당일 등락률 내림차순) — 컬럼 구성은 코스피 표와 동일.</p>
     <p style="font-size:12px; color:var(--ink-2); margin-top:6px">개별 종목 기준으로는 에코프로·에코프로비엠·레인보우로보틱스 등 IT·2차전지 관련주가 3~6% 하락, 코오롱티슈진·올릭스·에이비엘바이오 등 바이오주도 동반 약세였다.</p>
     <p style="font-size:12px; color:var(--ink-2); margin-top:6px">코스피와 마찬가지로 업종별 순매수 금액은 미확보 — KRX 연동 성공 시 코스피와 동일하게 채울 예정.</p>
   </div>
