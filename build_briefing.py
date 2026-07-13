@@ -130,6 +130,54 @@ def _flow_cells(flow, market, period_field='investor_value', suffix=''):
     return {prefix + k + suffix: _fm_cell(v, maxabs) for k, v in vals.items()}
 
 
+def _flow_summary(flow, market):
+    """수급 매트릭스 하단 자동 해설 <p>들. 스냅샷에서 매번 재계산되므로 화석화되지 않는다.
+    전일 3주체 방향+매물 흡수 구조 → 외국인 최대 순매수/순매도 종목(로테이션 힌트) →
+    이번달 외국인 추세. 깊은 편집성 해석(로테이션의 의미 등)은 kr_issues.json 몫으로 남긴다."""
+    mk = flow.get(market) or {}
+    iv = mk.get('investor_value')
+    if not iv:
+        return None
+    f, ind, inst = _net(iv, '외국인'), _net(iv, '개인'), _net(iv, '기관합계')
+    pen = _net(iv, '연기금 등')
+    if f is None or ind is None or inst is None:
+        return None
+    trio = [('외국인', f), ('개인', ind), ('기관', inst)]
+    seg = ' · '.join(f'{n} {fmt_won(v)}' for n, v in trio)
+    sellers = [n for n, v in trio if v < 0]
+    top_buyer = max(trio, key=lambda x: x[1])
+    line1 = f'전일 {seg}'
+    if top_buyer[1] > 0 and sellers and top_buyer[0] not in sellers:
+        line1 += f' — {top_buyer[0]}이 {"·".join(sellers)} 매물을 받아낸 구조.'
+        # 연기금은 기관의 하위 항목 — 방향이 기관 전체와 갈릴 때만 별도 언급(오해 방지)
+        if pen is not None and top_buyer[0] == '기관' and pen < 0:
+            line1 += f' 다만 기관 내 연기금은 {fmt_won(pen)}로 매도 우위.'
+    else:
+        line1 += '.'
+    ps = [line1]
+
+    ft = mk.get('foreign_net_top') or {}
+    b = (ft.get('buy') or [None])[0]
+    s = (ft.get('sell') or [None])[0]
+    if b and s:
+        ps.append(f'외국인 순매수 1위 {esc(b["종목"])}({fmt_won(b["순매수"])}) '
+                  f'· 순매도 1위 {esc(s["종목"])}({fmt_won(s["순매수"])}) — '
+                  f'종목 간 로테이션의 방향을 보여준다.')
+
+    ivm = mk.get('investor_value_mtd')
+    if ivm:
+        fm = _net(ivm, '외국인')
+        im = _net(ivm, '개인')
+        if fm is not None and im is not None:
+            fdir = '순매도' if fm < 0 else '순매수'
+            idir = '순매수' if im >= 0 else '순매도'
+            ps.append(f'이번달 누적으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
+                      f'개인이 {fmt_won(im)} {idir}로 맞서고 있다.')
+
+    style = 'font-size:12px; color:var(--ink-2)'
+    return ''.join(f'<p style="{style}">{p}</p>' for p in ps)
+
+
 def _sector_rows(sectors):
     """전체 업종지수 표(당일 내림차순) — 당일 | 연초 대비 | 대표종목(시총 상위, 당일 등락).
     ytd_pct·leaders는 pykrx 확장 수집이 실패하면 없을 수 있다 — 그 칸만 '—'로 둔다."""
@@ -480,6 +528,8 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal):
             g.update(_flow_cells(flow, market, 'investor_value_ytd', '_ytd'))
         g['foreign_top_kospi'] = _foreign_top_rows(flow, 'KOSPI')
         g['foreign_top_kosdaq'] = _foreign_top_rows(flow, 'KOSDAQ')
+        g['flow_summary_kospi'] = _flow_summary(flow, 'KOSPI')
+        g['flow_summary_kosdaq'] = _flow_summary(flow, 'KOSDAQ')
         g['pension_top'] = _pension_rows(flow)
         g['pension_sell_top'] = _pension_sell_rows(flow)
         # 기간 라벨(코스피·코스닥 공용 — 같은 기준일/월초/연초를 쓰므로 마커 1쌍만 필요)
