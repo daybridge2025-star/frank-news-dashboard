@@ -26,7 +26,7 @@
       "tag": "Add",
       "cond": "KOSPI 7,000~7,200 + 외국인 순매수 전환",
       "act": "한국 비중 20% → 28% 증액 (준비된 실탄 투입)",
-      "status": "dormant",
+      "status": "approaching",
       "strategies": [
         "A"
       ]
