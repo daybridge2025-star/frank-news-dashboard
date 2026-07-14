@@ -3,9 +3,9 @@
   "triggers": [
     {
       "category": "watch",
-      "tag": "Watch · 7/14",
-      "cond": "미국 6월 CPI > 4.5%",
-      "act": "주식 순노출 10%p 추가 축소, 금 +3%p",
+      "tag": "Watch · 7/14(확정)",
+      "cond": "미국 6월 CPI 3.5%(헤드라인, 예상 대폭 하회) — 4.5% 미충족으로 조건 소멸",
+      "act": "주식 순노출 10%p 추가 축소, 금 +3%p (조건 미충족으로 미실행)",
       "status": "dormant",
       "strategies": [
         "A"
