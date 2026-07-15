@@ -89,7 +89,7 @@
       "tag": "Flow Watch",
       "cond": "외국인, 국내 하이닉스 순매도 지속 + ADR로 거래 이동",
       "act": "한국 비중 증액(→28%) 보류, 원화 반락 대비 — 국내 증시 수급 이탈 신호",
-      "status": "hit",
+      "status": "approaching",
       "strategies": [
         "A"
       ]
