@@ -1,0 +1,48 @@
+name: 전략 B 편입 스크리너 (주 1회 · 금 마감 후)
+
+# 주 1회, 미국 금요일 마감 후(=토요일 아침 KST). 이 시점이면 미국(Yahoo)·국내(pykrx)
+# 금요일 종가가 모두 확보돼 12-1 모멘텀·50일선을 안정적으로 계산할 수 있다.
+# 편입 조건은 월 1회 리밸런스 기준이므로 주 1회 스냅샷이면 충분하며, 50일선 이탈 같은
+# 수시 감시는 일일 파이프라인(지수·수급)이 별도로 커버한다.
+on:
+  schedule:
+    - cron: '0 23 * * 5'   # UTC 금 23:00 = KST 토 08:00
+  workflow_dispatch:          # 수동 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 전략 B 스크리너 계산
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}   # pykrx 시세는 무로그인이지만 있으면 전달(안정성)
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: python monitor_strategy_b.py
+
+      - name: 브리핑 HTML에 스크리너 주입
+        run: python build_briefing.py
+
+      - name: 결과 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add data/strategy_b_screen.json reports/macro-strategy-briefing.html
+          git diff --cached --quiet || git commit -m "전략 B 편입 스크리너 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
