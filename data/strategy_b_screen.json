@@ -6,8 +6,8 @@
       "mom_12_1": 1.236933000264687
     },
     "KR": {
-      "symbol": "^KS11",
-      "mom_12_1": 1.8973123839283272
+      "symbol": "^KS200",
+      "mom_12_1": 1.9585836020037526
     }
   },
   "rows": [
@@ -36,6 +36,18 @@
       "signal": "관찰"
     },
     {
+      "name": "SK하이닉스",
+      "ticker": "000660",
+      "theme": "AI 메모리/HBM",
+      "market": "KR",
+      "benchmark_key": "KR",
+      "mom_12_1": 8.319778188539741,
+      "rs_vs_bench": 6.361194586535989,
+      "above_50d": false,
+      "gap_50d": -0.15896555502794318,
+      "signal": "관찰"
+    },
+    {
       "name": "Applied Optoelectronics",
       "ticker": "AAOI",
       "theme": "AI 인프라 HW",
@@ -45,6 +57,18 @@
       "rs_vs_bench": 4.371657616198801,
       "above_50d": false,
       "gap_50d": -0.378776531725454,
+      "signal": "관찰"
+    },
+    {
+      "name": "삼성전자",
+      "ticker": "005930",
+      "theme": "AI 메모리/HBM",
+      "market": "KR",
+      "benchmark_key": "KR",
+      "mom_12_1": 4.4739336492890995,
+      "rs_vs_bench": 2.515350047285347,
+      "above_50d": false,
+      "gap_50d": -0.1676459067763416,
       "signal": "관찰"
     },
     {
@@ -118,31 +142,7 @@
       "above_50d": false,
       "gap_50d": -0.009632337590293027,
       "signal": "이탈 후보"
-    },
-    {
-      "name": "삼성전자",
-      "ticker": "005930",
-      "theme": "AI 메모리/HBM",
-      "market": "KR",
-      "benchmark_key": "KR",
-      "mom_12_1": null,
-      "rs_vs_bench": null,
-      "above_50d": null,
-      "gap_50d": null,
-      "signal": "데이터 부족"
-    },
-    {
-      "name": "SK하이닉스",
-      "ticker": "000660",
-      "theme": "AI 메모리/HBM",
-      "market": "KR",
-      "benchmark_key": "KR",
-      "mom_12_1": null,
-      "rs_vs_bench": null,
-      "above_50d": null,
-      "gap_50d": null,
-      "signal": "데이터 부족"
     }
   ],
-  "fetched_at": "2026-07-17 16:50 KST"
+  "fetched_at": "2026-07-17 19:59 KST"
 }

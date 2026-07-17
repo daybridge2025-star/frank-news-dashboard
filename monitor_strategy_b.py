@@ -100,7 +100,18 @@ def _krx_closes(code):
 
 
 def _closes(market, ticker):
-    return _krx_closes(ticker) if market == 'KR' else _yahoo_closes(ticker)
+    if market == 'KR':
+        # pykrx 우선(KRX 원천), 실패 시 Yahoo '.KS' 폴백 — 세션 컨테이너처럼
+        # KRX 자격증명이 없는 환경에서 국내 종목이 통째로 '데이터 부족'이 되는 것을
+        # 막는다(2026-07-17 실측: 005930.KS 종가가 KRX 확정치와 일치함을 확인).
+        closes = _krx_closes(ticker)
+        if closes and len(closes) >= MIN_BARS:
+            return closes
+        fallback = _yahoo_closes(f'{ticker}.KS')
+        if fallback:
+            print(f'[KR] {ticker}: pykrx 미확보 → Yahoo .KS 폴백 사용({len(fallback)}봉)')
+        return fallback or closes
+    return _yahoo_closes(ticker)
 
 
 def _momentum_12_1(closes):
