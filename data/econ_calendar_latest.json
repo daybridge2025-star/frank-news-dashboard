@@ -1,45 +1,21 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-07-13",
-  "week_end": "2026-07-19",
+  "week_start": "2026-07-20",
+  "week_end": "2026-07-26",
   "events": [
     {
-      "date": "2026-07-14",
-      "name": "CPI(소비자물가지수)",
-      "kind": "indicator",
-      "impact": "high"
-    },
-    {
-      "date": "2026-07-15",
-      "name": "PPI(생산자물가지수)",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
-      "date": "2026-07-16",
-      "name": "소매판매",
-      "kind": "indicator",
-      "impact": "high"
-    },
-    {
-      "date": "2026-07-16",
+      "date": "2026-07-23",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-07-17",
-      "name": "산업생산·설비가동률",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
-      "date": "2026-07-17",
+      "date": "2026-07-24",
       "name": "주택착공·건축허가",
       "kind": "indicator",
       "impact": "medium"
     }
   ],
-  "fetched_at": "2026-07-16T21:33:23.823405+00:00"
+  "fetched_at": "2026-07-17T21:16:00.897843+00:00"
 }
