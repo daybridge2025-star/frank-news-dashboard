@@ -48,9 +48,11 @@ SMA_WINDOW = 50
 def _yahoo_closes(symbol):
     """Yahoo chart API에서 1년 일별 종가 배열(옛→새 순). 실패 시 None."""
     try:
+        # range=1y는 거래일 ~251개로 MIN_BARS(252)에 1개 모자라 전 종목이
+        # '데이터 부족'이 되는 실측 버그가 있었다(2026-07-17) — 2y로 여유 확보.
         r = requests.get(
             f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}',
-            params={'range': '1y', 'interval': '1d'},
+            params={'range': '2y', 'interval': '1d'},
             headers=_UA, timeout=15)
         if not r.ok:
             return None
