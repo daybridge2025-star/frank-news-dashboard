@@ -147,7 +147,7 @@ def _flow_summary(flow, market):
     seg = ' · '.join(f'{n} {fmt_won(v)}' for n, v in trio)
     sellers = [n for n, v in trio if v < 0]
     top_buyer = max(trio, key=lambda x: x[1])
-    line1 = f'전일 {seg}'
+    line1 = f'📊 전일 {seg}'
     if top_buyer[1] > 0 and sellers and top_buyer[0] not in sellers:
         line1 += f' — {top_buyer[0]}이 {"·".join(sellers)} 매물을 받아낸 구조.'
         # 연기금은 기관의 하위 항목 — 방향이 기관 전체와 갈릴 때만 별도 언급(오해 방지)
@@ -161,7 +161,7 @@ def _flow_summary(flow, market):
     b = (ft.get('buy') or [None])[0]
     s = (ft.get('sell') or [None])[0]
     if b and s:
-        ps.append(f'외국인 순매수 1위 {esc(b["종목"])}({fmt_won(b["순매수"])}) '
+        ps.append(f'🔄 외국인 순매수 1위 {esc(b["종목"])}({fmt_won(b["순매수"])}) '
                   f'· 순매도 1위 {esc(s["종목"])}({fmt_won(s["순매수"])}) — '
                   f'종목 간 로테이션의 방향을 보여준다.')
 
@@ -172,7 +172,7 @@ def _flow_summary(flow, market):
         if fm is not None and im is not None:
             fdir = '순매도' if fm < 0 else '순매수'
             idir = '순매수' if im >= 0 else '순매도'
-            ps.append(f'이번달 누적으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
+            ps.append(f'📅 이번달 누적으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
                       f'개인이 {fmt_won(im)} {idir}로 맞서고 있다.')
 
     style = 'font-size:12px; color:var(--ink-2)'
@@ -371,16 +371,23 @@ def _render_issue_cards(src):
 
 
 def _render_stance(stance):
-    """stance.json({strategies:[{label,headline,detail}]}) → .srow 블록 HTML. 없으면 None(기존 유지)."""
+    """stance.json({strategies:[{label,headline,points|detail}]}) → .srow 블록 HTML. 없으면 None(기존 유지).
+    points: 이모지로 시작하는 짧은 단락(1~2문장) 배열 — 시안성 원칙(2026-07-22)의 기본 형식.
+    detail(줄글)은 구형 폴백으로만 유지한다."""
     rows = (stance or {}).get('strategies') or []
     if not rows:
         return None
     out = []
     for r in rows:
+        pts = r.get('points')
+        if pts:
+            body = '\n      '.join(f'<p class="sp">{esc(p)}</p>' for p in pts)
+        else:
+            body = f'<p>{esc(r.get("detail", ""))}</p>'
         out.append(
             f'<div class="srow"><span class="bg">{esc(r.get("label", ""))}</span>\n'
             f'      <div><div class="sv">{esc(r.get("headline", ""))}</div>\n'
-            f'      <p>{esc(r.get("detail", ""))}</p></div>\n    </div>')
+            f'      {body}</div>\n    </div>')
     return '\n    ' + '\n    '.join(out) + '\n    '
 
 
