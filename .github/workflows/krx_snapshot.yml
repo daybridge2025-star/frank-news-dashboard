@@ -47,6 +47,9 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 미국 지표 단계와 동일 시크릿 (Finnhub 무료플랜 403 확정으로 교체)
         run: python fetch_econ_calendar.py
 
+      - name: 포트폴리오 보유종목 직전 종가 수집
+        run: python fetch_portfolio_prices.py          # 야후 일원화(한국 .KS/.KQ 포함) — 무키·무로그인
+
       - name: 브리핑 HTML에 데이터 주입
         run: python build_briefing.py
 
@@ -54,6 +57,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/krx_snapshot_*.json data/us_snapshot_latest.json data/econ_calendar_latest.json reports/macro-strategy-briefing.html
+          git add data/krx_snapshot_*.json data/us_snapshot_latest.json data/econ_calendar_latest.json data/portfolio_prices_latest.json reports/macro-strategy-briefing.html
           git diff --cached --quiet || git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push

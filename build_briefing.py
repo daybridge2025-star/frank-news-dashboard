@@ -37,6 +37,8 @@ TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓
 US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
 ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 (Action 생성 — fetch_econ_calendar.py)
 SBX_PATH = 'data/strategy_b_screen.json'  # 전략 B 편입 스크리너 (Action 생성 — monitor_strategy_b.py)
+PF_HOLD_PATH = 'data/portfolio_holdings.json'      # 실계좌 보유내역 (사용자 캡처 기준 — 세션이 수동 갱신)
+PF_PRICE_PATH = 'data/portfolio_prices_latest.json'  # 보유종목 직전 종가 (Action 생성 — fetch_portfolio_prices.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -391,6 +393,191 @@ def _render_stance(stance):
     return '\n    ' + '\n    '.join(out) + '\n    '
 
 
+# ── 포트폴리오 탭 (PF 접두사) ─────────────────────────────
+# 수량·평단 = portfolio_holdings.json(캡처 원본, 수동), 가격 = portfolio_prices_latest.json(자동 직전 종가).
+# 평가액·손익·비중은 매 빌드마다 여기서 재계산되므로 화석화되지 않는다.
+
+_PF_LENS_ORDER = ('C', 'B', 'A', 'OUT')
+_PF_LENS_STYLE = {'C': 'var(--s1)', 'B': 'var(--s2)', 'A': 'var(--s3)', 'OUT': 'var(--s6)'}
+
+
+def _pf_qty(q):
+    return f'{q:,.0f}' if float(q) == int(q) else f'{q:,.2f}'
+
+
+def _pf_money(v, ccy):
+    if v is None:
+        return '—'
+    return f'${v:,.2f}' if ccy == 'USD' else f'{v:,.0f}원'
+
+
+def _pf_man(v):
+    """원화 금액 → '5,725만' (만원 단위, 부호 없는 크기 표기)."""
+    if v is None:
+        return '—'
+    return f'{v / 1e4:,.0f}만'
+
+
+def _pf_pnl_cell(p):
+    if p is None:
+        return '<td class="num">—</td>'
+    txt = ('+' if p >= 0 else MINUS) + f'{abs(p):.1f}%'
+    if p > 0:
+        return f'<td class="num" style="color:var(--good)">{txt}</td>'
+    if p <= -15:
+        return f'<td class="num" style="color:var(--crit)">{txt}</td>'
+    return f'<td class="num">{txt}</td>'
+
+
+def _pf_enrich(hold, pfp, fx):
+    """보유내역 + 가격 → 계산 완료된 브로커/종목 구조와 합산치. 가격 미확보 종목은 합산에서 제외."""
+    prices = (pfp or {}).get('prices') or {}
+    brokers = []
+    for b in hold.get('brokers', []):
+        rows = []
+        for h in b.get('holdings', []):
+            p = prices.get(h['ticker']) or {}
+            close = p.get('close')
+            e = dict(h)
+            e['close'] = close
+            e['asof'] = p.get('asof')
+            if close is not None:
+                e['pnl'] = (close / h['avg'] - 1) * 100
+                e['val'] = h['qty'] * close
+                e['cost'] = h['qty'] * h['avg']
+                if h['ccy'] == 'USD':
+                    e['val_krw'] = e['val'] * fx if fx else None
+                    e['cost_krw'] = e['cost'] * fx if fx else None
+                else:
+                    e['val_krw'], e['cost_krw'] = e['val'], e['cost']
+            else:
+                e['pnl'] = e['val'] = e['cost'] = e['val_krw'] = e['cost_krw'] = None
+            rows.append(e)
+        cash_krw = 0
+        for c in b.get('cash', []):
+            cash_krw += c['amount'] * (fx or 0) if c['ccy'] == 'USD' else c['amount']
+        brokers.append({'key': b['key'], 'name': b['name'], 'note': b.get('note', ''),
+                        'cash': b.get('cash', []), 'cash_krw': cash_krw, 'rows': rows})
+    return brokers
+
+
+def _pf_generators(hold, pfp, usm):
+    g = {}
+    if not hold or not hold.get('brokers'):
+        return g
+    fx = (((usm or {}).get('yahoo') or {}).get('usdkrw') or {}).get('price')
+    brokers = _pf_enrich(hold, pfp, fx)
+    all_rows = [r for b in brokers for r in b['rows']]
+    priced = [r for r in all_rows if r['val_krw'] is not None]
+    missing = [r['name'] for r in all_rows if r['close'] is None or r['val_krw'] is None]
+    if not priced:
+        return g
+    tot_val = sum(r['val_krw'] for r in priced)
+    tot_cost = sum(r['cost_krw'] for r in priced)
+    tot_pnl = (tot_val / tot_cost - 1) * 100 if tot_cost else None
+    cash_krw = sum(b['cash_krw'] for b in brokers)
+    usd_share = sum(r['val_krw'] for r in priced if r['ccy'] == 'USD') / tot_val * 100
+
+    # ── 기준일 라벨 ──
+    def _dlabel(mkt):
+        ds = [r['asof'] for r in priced if r['market'] == mkt and r.get('asof')]
+        return f'{int(max(ds)[5:7])}/{int(max(ds)[8:10])}' if ds else '미확보'
+    fx_txt = f'{fx:,.0f}원/$' if fx else 'FX 미확보'
+    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")} · '
+                          f'가격 자동 갱신 — 미국 {_dlabel("US")} 종가 · 한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
+
+    # ── 합산 요약 ──
+    pnl_txt = (('+' if tot_pnl >= 0 else MINUS) + f'{abs(tot_pnl):.1f}%') if tot_pnl is not None else '—'
+    diff = tot_val - tot_cost
+    diff_txt = ('+' if diff >= 0 else MINUS) + _pf_man(abs(diff)) + '원'
+    g['pf_summary_head'] = esc(f'합산 요약 — 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원 '
+                               f'· 평가손익 {diff_txt}({pnl_txt})')
+    ps = []
+    parts = []
+    for b in brokers:
+        bv = sum(r['val_krw'] for r in b['rows'] if r['val_krw'] is not None)
+        bc = sum(r['cost_krw'] for r in b['rows'] if r['cost_krw'] is not None)
+        bp = (bv / bc - 1) * 100 if bc else None
+        bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
+        parts.append(f'{b["name"]} 평가 {_pf_man(bv)}원({bp_txt})')
+    ps.append('💼 ' + ' · '.join(parts) + ' — 평단×수량×직전 종가 기준 통일 계산(계좌 앱 표기와 수수료·세금·시차만큼 차이날 수 있음).')
+    ne = tot_val / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else None
+    cash_bits = ' · '.join(
+        f'{b["name"]} ' + '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash'])
+        for b in brokers if b['cash'])
+    if cash_bits:
+        ps.append(f'💵 예수금: {cash_bits} → 합산 약 {_pf_man(cash_krw)}원. '
+                  f'주식 순노출 {ne:.0f}% · 현금 {100 - ne:.0f}% — 달러 표시 자산은 주식 평가액의 {usd_share:.1f}%.')
+    if missing:
+        ps.append(f'⚠️ 가격 미확보: {", ".join(missing)} — 해당 종목은 합산·비중에서 제외.')
+    g['pf_summary_body'] = ''.join(f'<p>{esc(p)}</p>' for p in ps)
+
+    # ── 전체 합산 표 (같은 종목 계좌 간 블렌드) ──
+    merged = {}
+    for r in priced:
+        m = merged.setdefault(r['ticker'], dict(r))
+        if m is not r and m.get('_seen'):
+            q = m['qty'] + r['qty']
+            m['avg'] = (m['qty'] * m['avg'] + r['qty'] * r['avg']) / q
+            m['qty'] = q
+            m['val'] += r['val']; m['cost'] += r['cost']
+            m['val_krw'] += r['val_krw']; m['cost_krw'] += r['cost_krw']
+            m['pnl'] = (m['close'] / m['avg'] - 1) * 100
+        m['_seen'] = True
+    rows_html = ''
+    for r in sorted(merged.values(), key=lambda x: -x['val_krw']):
+        w = r['val_krw'] / tot_val * 100
+        strat = ('<b style="color:var(--warn)">전략 외</b>' if r.get('lens') == 'OUT'
+                 else esc(r.get('strategy', '')))
+        label = esc(r['name']) + (f' {r["ticker"]}' if r['market'] == 'US' else '')
+        rows_html += (f'<tr><td>{label}</td><td class="num">{_pf_qty(r["qty"])}</td>'
+                      f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
+                      f'<td class="num">{_pf_money(r["close"], r["ccy"])}</td>'
+                      f'<td class="num">{_pf_man(r["val_krw"])}</td>'
+                      f'{_pf_pnl_cell(r["pnl"])}<td class="num">{w:.1f}%</td>'
+                      f'<td>{strat}</td></tr>')
+    rows_html += (f'<tr><td>합계</td><td class="num"></td><td class="num"></td><td class="num"></td>'
+                  f'<td class="num">{_pf_man(tot_val)}</td>{_pf_pnl_cell(tot_pnl)}'
+                  f'<td class="num">100%</td><td>달러 표시 자산 {usd_share:.1f}%</td></tr>')
+    g['pf_total_rows'] = rows_html
+
+    # ── 증권사별 표 ──
+    for b in brokers:
+        bv = sum(r['val_krw'] for r in b['rows'] if r['val_krw'] is not None)
+        bc = sum(r['cost_krw'] for r in b['rows'] if r['cost_krw'] is not None)
+        bp = (bv / bc - 1) * 100 if bc else None
+        bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
+        cash_txt = '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash']) or '미확보'
+        g[f'pf_{b["key"]}_sub'] = esc(f'{b["note"]} · 평가 {_pf_man(bv)}원 · {bp_txt} · 예수금 {cash_txt}')
+        rh = ''
+        for r in sorted(b['rows'], key=lambda x: -(x['val_krw'] or 0)):
+            w = (r['val_krw'] / bv * 100) if (bv and r['val_krw'] is not None) else None
+            rh += (f'<tr><td>{esc(r["name"])}{" " + r["ticker"] if r["market"] == "US" else ""}</td>'
+                   f'<td>{"국내" if r["market"] == "KR" else "해외"}</td>'
+                   f'<td class="num">{_pf_qty(r["qty"])}</td>'
+                   f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
+                   f'<td class="num">{_pf_money(r["close"], r["ccy"])}</td>'
+                   f'<td class="num">{_pf_money(r["val"], r["ccy"])}</td>'
+                   f'{_pf_pnl_cell(r["pnl"])}'
+                   f'<td class="num">{f"{w:.1f}%" if w is not None else "—"}</td></tr>')
+        g[f'pf_{b["key"]}_rows'] = rh
+
+    # ── 전략 렌즈 바 + 퍼센트 ──
+    lens_val = {k: 0.0 for k in _PF_LENS_ORDER}
+    for r in priced:
+        lens_val[r.get('lens') if r.get('lens') in lens_val else 'OUT'] += r['val_krw']
+    lens_pct = {k: v / tot_val * 100 for k, v in lens_val.items()}
+    spans = ''.join(
+        f'<span style="--sg:{_PF_LENS_STYLE[k]}; flex:{lens_pct[k]:.1f}" data-i="{i}" '
+        f'title="{k if k != "OUT" else "전략 외"} {lens_pct[k]:.1f}%"></span>'
+        for i, k in enumerate(_PF_LENS_ORDER) if lens_pct[k] > 0)
+    g['pf_lens_bar'] = (f'<div class="alloc-bar" id="allocP" role="img" '
+                        f'aria-label="전략별 구성(주식 평가액 기준, 매 브리핑 재계산)">{spans}</div>')
+    for k in _PF_LENS_ORDER:
+        g[f'pf_lens_pct_{k.lower()}'] = f'{lens_pct[k]:.1f}%'
+    return g
+
+
 def _mkt_generators(usm):
     """data/us_snapshot_latest.json → 핵심 지표 카드의 '값' 마커(MKT 접두사).
     수집 실패 항목은 키 자체를 만들지 않아 렌더러가 건너뛴다(기존 표기 유지)."""
@@ -480,8 +667,9 @@ def _render_range_bar(start, now, high, label, zone=None):
         f'<div class="mk" style="left:{p_start:.1f}%"></div>'
         f'<div class="mk now" style="left:{p_now:.1f}%"></div>'
         f'<div class="mk" style="left:{p_high:.1f}%"></div>'
+        # '현재' 눈금은 라벨 없이 액센트색 마커만 — 수치는 카드 상단 값과 중복이고,
+        # 현재가가 고점/연초에 붙으면 라벨끼리 겹쳐 안 보였다(2026-07-22 사용자 지시)
         f'<div class="lb top" style="left:{lbl_pos(p_start):.1f}%">연초 <b>{start:,.0f}</b></div>'
-        f'<div class="lb top" style="left:{lbl_pos(p_now):.1f}%">현재 <b>{now:,.0f}</b></div>'
         f'<div class="lb top" style="left:{lbl_pos(p_high):.1f}%">고점 <b>{high:,.0f}</b></div>'
         f'{zone_lbl}'
         f'</div>')
@@ -528,7 +716,7 @@ def _render_triggers(triggers):
     return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
 
 
-def build_generators(snap, us, kr, stance, triggers, usm, cal, screen):
+def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -632,11 +820,12 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen):
     g['sbx_screen'] = _screen_rows(screen)
     if screen and screen.get('fetched_at'):
         g['sbx_asof'] = esc(screen['fetched_at'])
+    g.update(_pf_generators(pf_hold, pf_prices, usm))
     return g
 
 
-def render(html, snap, us, kr, stance, triggers, usm, cal, screen):
-    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen)
+def render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None):
+    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -644,7 +833,7 @@ def render(html, snap, us, kr, stance, triggers, usm, cal, screen):
             continue
         # 마커 접두사: KRX(한국 숫자)·MKT(미국 시세)·US(미국 이슈)·KR(한국 이슈·스탠스) — 같은 교체 로직
         pat = re.compile(
-            r'(<!--(?:KRX|US|KR|MKT|SBX)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US|KR|MKT|SBX)-END:'
+            r'(<!--(?:KRX|US|KR|MKT|SBX|PF)-START:' + re.escape(key) + r'-->)(?:.*?)(<!--(?:KRX|US|KR|MKT|SBX|PF)-END:'
             + re.escape(key) + r'-->)', re.DOTALL)
         html, n = pat.subn(lambda m: m.group(1) + content + m.group(2), html)
         if n == 0:
@@ -697,13 +886,15 @@ def main():
     usm = _load(US_SNAP_PATH, '미국 시세')
     cal = _load(ECON_CAL_PATH, '경제 캘린더')
     screen = _load(SBX_PATH, '전략 B 스크리너')
-    if not any((snap, us, kr, stance, triggers, usm, cal, screen)):
+    pf_hold = _load(PF_HOLD_PATH, '포트폴리오 보유내역')
+    pf_prices = _load(PF_PRICE_PATH, '포트폴리오 가격')
+    if not any((snap, us, kr, stance, triggers, usm, cal, screen, pf_hold)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen)
+    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)

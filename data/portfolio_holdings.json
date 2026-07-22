@@ -1,0 +1,39 @@
+{
+  "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화.",
+  "asof": "2026-07-22 계좌 캡처",
+  "brokers": [
+    {
+      "key": "mirae",
+      "name": "미래에셋",
+      "note": "미국주식 + 국내(HLB)",
+      "cash": [
+        {"ccy": "KRW", "amount": 38666},
+        {"ccy": "USD", "amount": 5342.05}
+      ],
+      "holdings": [
+        {"name": "테슬라", "ticker": "TSLA", "yahoo": "TSLA", "market": "US", "ccy": "USD", "qty": 70, "avg": 395.4752, "lens": "C", "strategy": "C 테슬라 — 모델 배분 25%"},
+        {"name": "알파벳", "ticker": "GOOGL", "yahoo": "GOOGL", "market": "US", "ccy": "USD", "qty": 10, "avg": 372.1415, "lens": "A", "strategy": "A 퀄리티 메가캡(5%) 근접"},
+        {"name": "서클 인터넷", "ticker": "CRCL", "yahoo": "CRCL", "market": "US", "ccy": "USD", "qty": 16, "avg": 114.6541, "lens": "OUT", "strategy": "전략 외"},
+        {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 6, "avg": 153.815, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
+        {"name": "로켓랩", "ticker": "RKLB", "yahoo": "RKLB", "market": "US", "ccy": "USD", "qty": 3.160521, "avg": 96.2134, "lens": "OUT", "strategy": "전략 외"},
+        {"name": "MSTW · MSTR 연계", "ticker": "MSTW", "yahoo": "MSTW", "market": "US", "ccy": "USD", "qty": 200, "avg": 5.6953, "lens": "OUT", "strategy": "전략 외"},
+        {"name": "HLB", "ticker": "028300", "yahoo": "028300.KQ", "market": "KR", "ccy": "KRW", "qty": 7, "avg": 52582, "lens": "OUT", "strategy": "전략 외"}
+      ]
+    },
+    {
+      "key": "toss",
+      "name": "토스증권",
+      "note": "해외+국내",
+      "cash": [
+        {"ccy": "KRW", "amount": 11752},
+        {"ccy": "USD", "amount": 40.02}
+      ],
+      "holdings": [
+        {"name": "SOL AI반도체TOP2플러스", "ticker": "0167A0", "yahoo": "0167A0.KS", "market": "KR", "ccy": "KRW", "qty": 250, "avg": 26185, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
+        {"name": "MUU · 마이크론 2×", "ticker": "MUU", "yahoo": "MUU", "market": "US", "ccy": "USD", "qty": 100, "avg": 43.33, "lens": "B", "strategy": "B 마이크론(8%)의 레버리지 변형"},
+        {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 3.362479, "avg": 152.59, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
+        {"name": "MAGS · 매그니피센트7", "ticker": "MAGS", "yahoo": "MAGS", "market": "US", "ccy": "USD", "qty": 1.977044, "avg": 63.26, "lens": "A", "strategy": "A 퀄리티 메가캡 유사"}
+      ]
+    }
+  ]
+}
