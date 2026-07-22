@@ -72,9 +72,12 @@ h1{font-size:24px; font-weight:800; letter-spacing:-.02em; margin:4px 0 2px; tex
 /* 스탠스 불릿(points) — 이모지 행잉 인덴트로 훑어읽기 최적화 */
 .stance .srow p.sp{margin-top:7px; padding-left:1.55em; text-indent:-1.55em; line-height:1.62}
 .stance .srow p.sp:first-of-type{margin-top:5px}
-/* 오늘의 스탠스 블록: 대시보드·전략 탭에서만 노출 */
+/* 오늘의 스탠스 블록: 대시보드 탭에서만 노출(전략 탭은 2026-07-22부터 자체 위치로 이전 — 아래 참조) */
 html[data-tab="tab-diag"] .hdr-stance-scope, html[data-tab="tab-scn"] .hdr-stance-scope,
-html[data-tab="tab-trg"] .hdr-stance-scope, html[data-tab="tab-pf"] .hdr-stance-scope{display:none}
+html[data-tab="tab-trg"] .hdr-stance-scope, html[data-tab="tab-pf"] .hdr-stance-scope,
+html[data-tab="tab-strat"] .hdr-stance-scope{display:none}
+/* 전략 탭 내 스탠스 미니카드(각 전략 선택 탭 하단) — 헤더 .stance와 톤 통일, 상단 여백만 제거 */
+.strat-pane .stance{margin-top:0; margin-bottom:14px}
 
 /* ---------- sections & tabs ---------- */
 main section{display:none; padding-top:16px}
@@ -695,7 +698,26 @@ footer p{margin:5px 0}
     <button data-p="stratC">전략 C · 초장기 혁신기술<small>10년+ 정액매수 · 매크로 무시</small></button>
   </div>
 
+  <div class="callout" style="margin-top:12px">
+    <h3>전략 A·B·C — 뭐가 다른가</h3>
+    <p><strong>A</strong>는 분산 + 보험으로 어떤 시나리오에서도 살아남는 구조 — 베이스·베어에 강하다.</p>
+    <p><strong>B</strong>는 집중 + 손절 규율로 추세가 이어질 때 수익을 극대화하는 구조 — 불 시나리오에 강하고, 급반전·횡보에 취약하다.</p>
+    <p><strong>C</strong>는 시계 자체를 10년 이상으로 늘려 매크로를 무시하는 구조 — 이번 분기의 VIX·연준·환율은 C의 의사결정에 아예 들어오지 않는다.</p>
+    <p>세 전략은 시계와 반응 방식이 다를 뿐 상호 배타적이지 않다 — 자본 일부씩 셋에 나눠 갖는 것도 합리적 선택.</p>
+  </div>
+
 <div id="stratA" class="strat-pane on">
+  <!--KR-START:stance_a--><div class="stance"><div class="lbl">오늘의 스탠스</div><div class="srow"><span class="bg">A 바벨</span>
+      <div><div class="sv">순노출 50~60% 유지 · KOSPI 7/21 +3.56% 강반등(6,748) — 기관·외국인 쌍끌이, 매수구간과 3.7%로 재접근 · 빅테크 실적주간 개막</div>
+      <p class="sp">📈 코스피 7/21(화) +3.56%(6,747.95) 강반등 — 7/20 급락(−4.46%, 6,516.27)을 하루 만에 대부분 회복(장중 고가 6,836.86, KRX 확정). 코스닥은 +0.49%(753.34)로 반등폭이 얕았다.</p>
+      <p class="sp">🔀 수급 완전 역전 — 기관 +1조 3,744억·외국인 +3,087억 쌍끌이 순매수, 개인 −1조 6,421억 차익실현. 7/20(기관 −9,235억 매도 주도)과 정반대 구조.</p>
+      <p class="sp">🚦 Add 트리거: 두 조건 동시 접근 — 종가 6,747.95는 매수구간(7,000~7,200) 하단과 3.7% 거리로 재축소(7/20 6.9%), 외국인 순매수 2일 연속(+5,272억 → +3,087억). approaching 유지, 구간 재진입 종가 확인 전 추격·선행 매수 금지.</p>
+      <p class="sp">🛡️ 손익비 참고 손절선 6,000 유지(베어 케이스 하단). 7/21 종가 기준 손익비: 상방 +48.2%(불케이스 10,000) / 하방 −11.1%.</p>
+      <p class="sp">🇺🇸 미국은 7/21 3대지수 3거래일 만에 반등(S&amp;P +0.89%·나스닥 +1.29%·다우 +0.74%) — VIX 17.05(−8.58%)로 급락, 10년 평균(19.0)을 다시 크게 하회. 엔비디아의 네비우스 지분 확대(9.3%, 약 $50억) 등 반도체·AI 인프라가 랠리 주도, 실적 발표 66개사 중 88%가 컨센서스 상회.</p>
+      <p class="sp">📅 이번 주 알파벳(7/22 수)부터 빅테크 실적주간 본격화 — Confirm/Exit Signal 트리거의 실질 판단 근거(2026 CAPEX 컨센서스 $725B)가 나온다.</p>
+      <p class="sp">⚠️ 신규: 트럼프, 캐나다산 자동차·주류·유제품에 추가 50% 관세 선언(원유·핵심광물 제외, 30일 후 발효) — 코어PCE 63개월 연속 목표 상회와 겹치면 금리 트리거(연준 10월 인상) 논거 강화 가능. 다만 시장 컨센서스는 여전히 7/29 FOMC 동결.</p>
+      <p class="sp">💱 달러/원 1,480.04(+0.27%) — 하단(1,460)과 거리 1.4%로 큰 변화 없음. WTI $83권 되돌림·금 $4,060~4,100권 상승 — De-risk·Contrarian 트리거 임계치와는 모두 거리.</p></div>
+    </div></div><!--KR-END:stance_a-->
   <div class="callout blue">
     <h3>전략 A의 논리: 어떤 시나리오가 와도 살아남는다</h3>
     <p>베어 시나리오 확률이 평시의 두 배(30%)인데, VIX는 7/20 18.65 → 7/21 17.05로 이틀째 하락하며 안정권이고 HY스프레드(273bp, 7/17 기준)는 역사적 저점권 그대로다 — 특히 크레딧 시장은 여전히 위험을 과소평가하고 있다.</p>
@@ -755,6 +777,16 @@ footer p{margin:5px 0}
 </div><!-- /stratA -->
 
 <div id="stratB" class="strat-pane">
+  <!--KR-START:stance_b--><div class="stance"><div class="lbl">오늘의 스탠스</div><div class="srow"><span class="bg">B 모멘텀</span>
+      <div><div class="sv">손절 규율 유지 · 국내 반도체 7/21 반등(삼전 +6.15%·하이닉스 +4.08%) — 단 외국인은 삼전 매수·하이닉스 재순매도 로테이션, 빅테크 실적주간이 Confirm/Exit Signal 판단 근거</div>
+      <p class="sp">🇰🇷 삼성전자 +6.15%(259,000)·SK하이닉스 +4.08%(1,836,000) 반등(7/21 KRX 확정) — 미국 메모리 랠리(SKHY +14%·마이크론 +13%)의 국내 전이.</p>
+      <p class="sp">🔀 다만 외국인은 투톱 내 로테이션 — 삼성전자 +5,051억 순매수 1위 vs SK하이닉스 −4,340억 순매도 1위. 하이닉스 외국인 수급은 7/20 +6,111억 → 7/21 −4,340억으로 하루 만에 재반전.</p>
+      <p class="sp">🚦 Flow Watch: 하이닉스 기준 '2~3일 지속' 조건 미충족이 확인됐다 — 하루치 신호에 반응하지 않은 원칙이 옳았던 사례. approaching 유지, 삼성전자 쪽(2일 연속 순매수)은 별도 관찰.</p>
+      <p class="sp">🚀 미국 메모리 랠리 — SKHY +14% 급등($172.80, 7/20 $154.03 대비)·마이크론 +13%(FY26 3Q 매출 $414.6억·전년비 +346%·총마진 85%, 4Q 가이던스 $500억 상향). UBS는 D램·낸드 가격 전망 상향, 마이크론·삼성·하이닉스·샌디스크를 최대 수혜주로 지목.</p>
+      <p class="sp">🔧 삼성·하이닉스·마이크론, CXL 컨트롤러 자체 개발 중단·외부 공급사(Astera Labs·Marvell 등) 전환 보도 — D램 물량 확대 집중 신호.</p>
+      <p class="sp">⏸️ 신규 진입 보류 기조 유지 — CXMT발 경쟁 우려가 노이즈인지 사이클 전환인지는 이번 주 하이퍼스케일러 실적(알파벳 7/22 시작, MS·메타·애플·아마존 후속)에서 판가름.</p>
+      <p class="sp">🚨 실질 판단 주간 진입 — 1개사라도 CAPEX 가이던스 하향 시 Exit Signal 발동 검토. SK하이닉스 실적 7/29(수), CXMT $86억 IPO 7/27 상하이 STAR마켓 상장 일정 유지.</p></div>
+    </div></div><!--KR-END:stance_b-->
   <div class="callout blue">
     <h3>전략 B의 논리: 시장이 아니라 주도주를 산다</h3>
     <p>2026년 수익률은 극소수 주도 테마에 집중되어 있다 — 미국 2분기 대형 기술주 +43%, AI 반도체 장비·광통신 개별주 +300%대. 반면 에너지 대형주 −13%, 한국 조선 ETF −17%·방산 ETF −22%.</p>
@@ -824,6 +856,14 @@ footer p{margin:5px 0}
 </div><!-- /stratB -->
 
 <div id="stratC" class="strat-pane">
+  <!--KR-START:stance_c--><div class="stance"><div class="lbl">오늘의 스탠스</div><div class="srow"><span class="bg">C 초장기</span>
+      <div><div class="sv">계획대로 정액매수 지속 · 무반응 — 테슬라 7/22(현지) 오늘 장마감 후 실적 발표, SpaceX는 $119.85로 추가 하락(7/17 저점 하회, 프리마켓 반등은 되돌려짐)</div>
+      <p class="sp">🚗 테슬라 2분기 실적 오늘(7/22 현지) 장마감 후 발표 — 매출 컨센서스 $276억·순이익 $12.7억. 결과에 베팅하지 않는다.</p>
+      <p class="sp">🛰️ SpaceX(SPCX) $119.85 마감 — 7/20 프리마켓 반등(약 $126)이 정규장에서 되돌려지며 7/17 저점($122.12) 하회, 상장 후 신저가(공모가 $135 대비 −11%, 6월 고점 대비 −47%). 국방부 AI 컴퓨팅 협상·JPMorgan 합병 코멘트 등 재료는 유효하나 하방 압력 우세, 다음 실적 8/6.</p>
+      <p class="sp">🚀 스타쉽 13차 시험발사 — 엔진 2기 교체 후 7/23(목)로 날짜 구체화.</p>
+      <p class="sp">⚛️ IonQ $35.29권(최근 한 달 −35.7%대 조정 지속, 실적 8/5) · AbCellera는 7/6 매수등급 상향 외 신규 뉴스 미확보로 변동 없음.</p>
+      <p class="sp">📌 결론: 정액매수 계획 불변 — 규율상 손절 없이 지속, 매크로·단기 변동 무반응.</p></div>
+    </div></div><!--KR-END:stance_c-->
   <div class="callout blue">
     <h3>전략 C의 논리: 10년을 보면 오늘의 VIX는 노이즈다</h3>
     <p>A·B가 촘촘히 대응하는 금리·VIX·환율 트리거를 전략 C는 의도적으로 무시한다. 10년 이상의 시계에서 이 분기 연준이 인상을 하는지, KOSPI가 7,000을 지키는지는 최종 결과에 거의 영향을 주지 않기 때문이다.</p>

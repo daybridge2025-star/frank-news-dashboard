@@ -372,25 +372,39 @@ def _render_issue_cards(src):
     return '\n  ' + '\n  '.join(cards) + '\n  '
 
 
+def _stance_row_html(r):
+    """strategies[i] 1건 → .srow 블록(배지+헤드라인+본문). points(이모지 불릿, 항목당 1~2문장) 우선,
+    구형 detail(줄글)은 폴백."""
+    pts = r.get('points')
+    if pts:
+        body = '\n      '.join(f'<p class="sp">{esc(p)}</p>' for p in pts)
+    else:
+        body = f'<p>{esc(r.get("detail", ""))}</p>'
+    return (
+        f'<div class="srow"><span class="bg">{esc(r.get("label", ""))}</span>\n'
+        f'      <div><div class="sv">{esc(r.get("headline", ""))}</div>\n'
+        f'      {body}</div>\n    </div>')
+
+
 def _render_stance(stance):
-    """stance.json({strategies:[{label,headline,points|detail}]}) → .srow 블록 HTML. 없으면 None(기존 유지).
-    points: 이모지로 시작하는 짧은 단락(1~2문장) 배열 — 시안성 원칙(2026-07-22)의 기본 형식.
-    detail(줄글)은 구형 폴백으로만 유지한다."""
+    """stance.json({strategies:[{label,headline,points|detail}]}) → 대시보드 헤더용 전체(A+B+C) 블록.
+    없으면 None(기존 유지)."""
     rows = (stance or {}).get('strategies') or []
     if not rows:
         return None
-    out = []
-    for r in rows:
-        pts = r.get('points')
-        if pts:
-            body = '\n      '.join(f'<p class="sp">{esc(p)}</p>' for p in pts)
-        else:
-            body = f'<p>{esc(r.get("detail", ""))}</p>'
-        out.append(
-            f'<div class="srow"><span class="bg">{esc(r.get("label", ""))}</span>\n'
-            f'      <div><div class="sv">{esc(r.get("headline", ""))}</div>\n'
-            f'      {body}</div>\n    </div>')
+    out = [_stance_row_html(r) for r in rows]
     return '\n    ' + '\n    '.join(out) + '\n    '
+
+
+def _render_stance_single(stance, letter):
+    """전략 탭 각 pane(stratA/B/C) 상단에 들어갈 단일 전략 스탠스 미니카드.
+    label이 letter로 시작하는 항목 하나만 렌더링(예: 'A 바벨' → letter='A'). 없으면 None."""
+    rows = (stance or {}).get('strategies') or []
+    for r in rows:
+        if (r.get('label') or '').strip().upper().startswith(letter):
+            return (f'<div class="stance"><div class="lbl">오늘의 스탠스</div>'
+                    f'{_stance_row_html(r)}</div>')
+    return None
 
 
 # ── 포트폴리오 탭 (PF 접두사) ─────────────────────────────
@@ -804,7 +818,12 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     g['kr_issues'] = _render_issue_cards(kr)
 
     # ── 오늘의 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
+    # 'stance'는 대시보드 헤더용 통합 블록, 'stance_a/b/c'는 전략 탭 각 pane 상단용 단일 카드
+    # (2026-07-22 재배치 — 전략 탭에서는 헤더 블록이 숨겨지고 이 pane-분산 버전이 대신 보인다).
     g['stance'] = _render_stance(stance)
+    g['stance_a'] = _render_stance_single(stance, 'A')
+    g['stance_b'] = _render_stance_single(stance, 'B')
+    g['stance_c'] = _render_stance_single(stance, 'C')
 
     # ── 트리거 발동/임박 판단(data/triggers.json — 마켓 브리프 세션이 갱신) ──
     g['triggers'] = _render_triggers(triggers)
