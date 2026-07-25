@@ -1,6 +1,6 @@
 {
   "bas_dd": "20260724",
-  "fetched_at": "2026-07-25 22:36 KST",
+  "fetched_at": "2026-07-26 06:23 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1206,9 +1206,9 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 249500,
-      "change_pct": -7.59,
+      "change_pct": -7.592592592592593,
       "open": 266000,
       "high": 266500,
       "low": 247000,
@@ -1216,19 +1216,19 @@
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 1759000,
-      "change_pct": -8.34,
+      "change_pct": -8.337675872850443,
       "open": 1894000,
       "high": 1894000,
       "low": 1752000,
-      "volume": 4935624
+      "volume": 4935571
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 810000,
-      "change_pct": -6.79,
+      "change_pct": -6.789413118527042,
       "open": 861000,
       "high": 870000,
       "low": 791000,
@@ -1236,9 +1236,9 @@
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 202000,
-      "change_pct": -9.62,
+      "change_pct": -9.619686800894854,
       "open": 218500,
       "high": 226000,
       "low": 200000,
@@ -1246,9 +1246,9 @@
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 979000,
-      "change_pct": 2.19,
+      "change_pct": 2.1920668058455117,
       "open": 981000,
       "high": 1050000,
       "low": 965000,
@@ -1256,9 +1256,9 @@
     },
     "064350": {
       "name": "현대로템",
-      "source": "openapi",
+      "source": "pykrx",
       "close": 158400,
-      "change_pct": -4.86,
+      "change_pct": -4.864864864864865,
       "open": 166600,
       "high": 173000,
       "low": 150900,
