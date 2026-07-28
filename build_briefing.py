@@ -681,10 +681,11 @@ def _render_range_bar(start, now, high, label, zone=None):
         f'<div class="mk" style="left:{p_start:.1f}%"></div>'
         f'<div class="mk now" style="left:{p_now:.1f}%"></div>'
         f'<div class="mk" style="left:{p_high:.1f}%"></div>'
-        # '현재' 눈금은 라벨 없이 액센트색 마커만 — 수치는 카드 상단 값과 중복이고,
-        # 현재가가 고점/연초에 붙으면 라벨끼리 겹쳐 안 보였다(2026-07-22 사용자 지시)
+        # '현재' 라벨은 연초·고점과 다른 행(.lb.now, CSS에서 top 오프셋 분리)에 둬서
+        # 현재가가 고점/연초에 붙어도 텍스트가 겹치지 않는다(2026-07-23 재도입)
         f'<div class="lb top" style="left:{lbl_pos(p_start):.1f}%">연초 <b>{start:,.0f}</b></div>'
         f'<div class="lb top" style="left:{lbl_pos(p_high):.1f}%">고점 <b>{high:,.0f}</b></div>'
+        f'<div class="lb now" style="left:{lbl_pos(p_now):.1f}%">현재 <b>{now:,.0f}</b></div>'
         f'{zone_lbl}'
         f'</div>')
 
