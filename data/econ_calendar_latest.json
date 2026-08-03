@@ -5,14 +5,14 @@
   "week_end": "2026-08-09",
   "events": [
     {
-      "date": "2026-08-04",
-      "name": "JOLTS 구인·이직",
+      "date": "2026-08-03",
+      "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-08-06",
-      "name": "주간 신규 실업수당 청구",
+      "date": "2026-08-04",
+      "name": "JOLTS 구인·이직",
       "kind": "indicator",
       "impact": "medium"
     },
@@ -23,5 +23,5 @@
       "impact": "high"
     }
   ],
-  "fetched_at": "2026-08-02T21:25:26.059548+00:00"
+  "fetched_at": "2026-08-03T21:40:14.863173+00:00"
 }
