@@ -1,6 +1,6 @@
 {
   "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화.",
-  "asof": "2026-08-04 계좌 캡처 — 토스증권 전종목 + 미래에셋 테슬라·스페이스X·SK하이닉스ADR(신규)·예수금 갱신(알파벳·서클·MSTW는 이번 캡처에 미노출, 보유 여부 확인 대기)",
+  "asof": "2026-08-04 계좌 캡처 — 미래에셋 리밸런싱 완료(알파벳·서클 인터넷·MSTW 전량 매도, 그 재원으로 테슬라·스페이스X 추가매수 + SK하이닉스 ADR 신규매수, 사용자 확인) + 토스증권 4종목 수량 증가",
   "brokers": [
     {
       "key": "mirae",
@@ -12,12 +12,9 @@
       ],
       "holdings": [
         {"name": "테슬라", "ticker": "TSLA", "yahoo": "TSLA", "market": "US", "ccy": "USD", "qty": 81, "avg": 387.1949, "lens": "C", "strategy": "C 테슬라 — 모델 배분 25%"},
-        {"name": "알파벳", "ticker": "GOOGL", "yahoo": "GOOGL", "market": "US", "ccy": "USD", "qty": 10, "avg": 372.1415, "lens": "A", "strategy": "A 퀄리티 메가캡(5%) 근접"},
-        {"name": "서클 인터넷", "ticker": "CRCL", "yahoo": "CRCL", "market": "US", "ccy": "USD", "qty": 16, "avg": 114.6541, "lens": "OUT", "strategy": "전략 외"},
         {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 10, "avg": 137.649, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
         {"name": "SK하이닉스 ADR", "ticker": "SKHY", "yahoo": "SKHY", "market": "US", "ccy": "USD", "qty": 10, "avg": 156.947, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
         {"name": "로켓랩", "ticker": "RKLB", "yahoo": "RKLB", "market": "US", "ccy": "USD", "qty": 3.160521, "avg": 96.2134, "lens": "OUT", "strategy": "전략 외"},
-        {"name": "MSTW · MSTR 연계", "ticker": "MSTW", "yahoo": "MSTW", "market": "US", "ccy": "USD", "qty": 200, "avg": 5.6953, "lens": "OUT", "strategy": "전략 외"},
         {"name": "HLB", "ticker": "028300", "yahoo": "028300.KQ", "market": "KR", "ccy": "KRW", "qty": 7, "avg": 52582, "lens": "OUT", "strategy": "전략 외"}
       ]
     },
