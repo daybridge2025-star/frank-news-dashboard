@@ -5,6 +5,12 @@
   "week_end": "2026-08-16",
   "events": [
     {
+      "date": "2026-08-10",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
       "date": "2026-08-12",
       "name": "CPI(소비자물가지수)",
       "kind": "indicator",
@@ -17,17 +23,11 @@
       "impact": "medium"
     },
     {
-      "date": "2026-08-13",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
       "date": "2026-08-14",
       "name": "소매판매",
       "kind": "indicator",
       "impact": "high"
     }
   ],
-  "fetched_at": "2026-08-09T21:03:33.214578+00:00"
+  "fetched_at": "2026-08-10T21:12:34.357147+00:00"
 }
