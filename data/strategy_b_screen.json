@@ -3,7 +3,7 @@
   "benchmarks": {
     "US": {
       "symbol": "SMH",
-      "mom_12_1": 1.087558363087064
+      "mom_12_1": 0.8843400821665943
     },
     "KR": {
       "symbol": "^KS200",
@@ -17,11 +17,23 @@
       "theme": "AI 메모리/HBM",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": 7.864217308502168,
-      "rs_vs_bench": 6.776658945415104,
-      "above_50d": false,
-      "gap_50d": -0.09616974979029325,
-      "signal": "관찰"
+      "mom_12_1": 5.8098013087434905,
+      "rs_vs_bench": 4.925461226576896,
+      "above_50d": true,
+      "gap_50d": 0.011389576777287136,
+      "signal": "편입 자격"
+    },
+    {
+      "name": "Applied Optoelectronics",
+      "ticker": "AAOI",
+      "theme": "AI 인프라 HW",
+      "market": "US",
+      "benchmark_key": "US",
+      "mom_12_1": 3.7710612456811177,
+      "rs_vs_bench": 2.8867211635145233,
+      "above_50d": true,
+      "gap_50d": 0.12197480817474671,
+      "signal": "편입 자격"
     },
     {
       "name": "SK하이닉스",
@@ -29,10 +41,10 @@
       "theme": "AI 메모리/HBM",
       "market": "KR",
       "benchmark_key": "KR",
-      "mom_12_1": 6.923664122137405,
-      "rs_vs_bench": 4.492910143166618,
+      "mom_12_1": 7.069767441860465,
+      "rs_vs_bench": 4.639013462889679,
       "above_50d": false,
-      "gap_50d": -0.3304075943644994,
+      "gap_50d": -0.1946381012063293,
       "signal": "관찰"
     },
     {
@@ -41,22 +53,10 @@
       "theme": "AI 인프라 HW",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": 4.788715685755952,
-      "rs_vs_bench": 3.7011573226688883,
+      "mom_12_1": 3.461374311215474,
+      "rs_vs_bench": 2.5770342290488797,
       "above_50d": false,
-      "gap_50d": -0.18898385560063724,
-      "signal": "관찰"
-    },
-    {
-      "name": "Applied Optoelectronics",
-      "ticker": "AAOI",
-      "theme": "AI 인프라 HW",
-      "market": "US",
-      "benchmark_key": "US",
-      "mom_12_1": 4.4729063816400485,
-      "rs_vs_bench": 3.3853480185529845,
-      "above_50d": false,
-      "gap_50d": -0.01874956918872195,
+      "gap_50d": -0.1534874034303486,
       "signal": "관찰"
     },
     {
@@ -65,10 +65,10 @@
       "theme": "AI 인프라 HW",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": 3.6391439612457415,
-      "rs_vs_bench": 2.5515855981586775,
+      "mom_12_1": 3.4436905150514043,
+      "rs_vs_bench": 2.55935043288481,
       "above_50d": false,
-      "gap_50d": -0.1204105068058492,
+      "gap_50d": -0.13929566317193975,
       "signal": "관찰"
     },
     {
@@ -77,10 +77,10 @@
       "theme": "AI 메모리/HBM",
       "market": "KR",
       "benchmark_key": "KR",
-      "mom_12_1": 2.9417613636363638,
-      "rs_vs_bench": 0.5110073846655778,
+      "mom_12_1": 3.0100430416068864,
+      "rs_vs_bench": 0.5792890626361005,
       "above_50d": false,
-      "gap_50d": -0.21367055860026551,
+      "gap_50d": -0.03876457611093598,
       "signal": "관찰"
     },
     {
@@ -89,34 +89,10 @@
       "theme": "AI 인프라 HW",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": 1.3238396932785248,
-      "rs_vs_bench": 0.2362813301914608,
+      "mom_12_1": 1.2193629329114177,
+      "rs_vs_bench": 0.3350228507448234,
       "above_50d": false,
-      "gap_50d": -0.09413845679438038,
-      "signal": "관찰"
-    },
-    {
-      "name": "Eaton",
-      "ticker": "ETN",
-      "theme": "전력·원전",
-      "market": "US",
-      "benchmark_key": "US",
-      "mom_12_1": 0.1268047047028642,
-      "rs_vs_bench": -0.9607536583841998,
-      "above_50d": true,
-      "gap_50d": 0.09773156176998588,
-      "signal": "관찰"
-    },
-    {
-      "name": "Constellation",
-      "ticker": "CEG",
-      "theme": "전력·원전",
-      "market": "US",
-      "benchmark_key": "US",
-      "mom_12_1": -0.25465948466559984,
-      "rs_vs_bench": -1.3422178477526638,
-      "above_50d": true,
-      "gap_50d": 0.03438910945262985,
+      "gap_50d": -0.009798237480684424,
       "signal": "관찰"
     },
     {
@@ -125,11 +101,35 @@
       "theme": "전력·원전",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": 0.664850020365213,
-      "rs_vs_bench": -0.422708342721851,
-      "above_50d": false,
-      "gap_50d": -0.03033938501311295,
-      "signal": "이탈 후보"
+      "mom_12_1": 0.6572359753950052,
+      "rs_vs_bench": -0.2271041067715891,
+      "above_50d": true,
+      "gap_50d": 0.034758948132623146,
+      "signal": "관찰"
+    },
+    {
+      "name": "Eaton",
+      "ticker": "ETN",
+      "theme": "전력·원전",
+      "market": "US",
+      "benchmark_key": "US",
+      "mom_12_1": 0.11593912194457912,
+      "rs_vs_bench": -0.7684009602220152,
+      "above_50d": true,
+      "gap_50d": 0.09248856258531113,
+      "signal": "관찰"
+    },
+    {
+      "name": "Constellation",
+      "ticker": "CEG",
+      "theme": "전력·원전",
+      "market": "US",
+      "benchmark_key": "US",
+      "mom_12_1": -0.228196527183528,
+      "rs_vs_bench": -1.1125366093501223,
+      "above_50d": true,
+      "gap_50d": 0.08197543465906443,
+      "signal": "관찰"
     },
     {
       "name": "Vistra",
@@ -137,12 +137,12 @@
       "theme": "전력·원전",
       "market": "US",
       "benchmark_key": "US",
-      "mom_12_1": -0.2315774184464876,
-      "rs_vs_bench": -1.3191357815335516,
+      "mom_12_1": -0.24605884380082965,
+      "rs_vs_bench": -1.130398925967424,
       "above_50d": false,
-      "gap_50d": -0.09356893396537358,
+      "gap_50d": -0.037754446096549876,
       "signal": "이탈 후보"
     }
   ],
-  "fetched_at": "2026-08-08 08:31 KST"
+  "fetched_at": "2026-08-15 08:19 KST"
 }
