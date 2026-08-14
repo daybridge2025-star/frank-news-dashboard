@@ -304,3 +304,16 @@ KRX 수집 직후 자동 실행한다. 이 시점을 고른 이유: 이때는 "�
     취약하다. **트리거 카드의 cond에 날짜·숫자를 인용했다면, 그 숫자의 출처(수급표·스탠스
     등)를 갱신하는 모든 커밋에서 반드시 같이 점검**할 것 — 운영 노트 6의 점검 목록에 트리거
     cond 서술도 포함된 것으로 취급한다(마커 안이 아니라 JSON이므로 편집 대상).
+12. **KRX 스냅샷 수동 트리거(`workflow_dispatch`) — GitHub App 403 실측 (2026-08-14)**: 운영
+    노트 4의 "낡았으면 `gh workflow run krx_snapshot.yml`로 수집을 먼저 트리거"는 세션 환경이
+    GitHub MCP(App 설치) 경유일 때는 통하지 않는다 — `POST .../actions/workflows/krx_snapshot.yml/dispatches`가
+    **403 "Resource not accessible by integration"**로 거부됨을 실측(같은 세션에서 `git push`는
+    정상 — 운영 노트 1의 레포 승인과는 별개 문제, GitHub App의 Actions:write 권한 부족으로 추정).
+    같은 세션에 `pykrx`도 미설치·KRX 자격증명도 없어 로컬 재현도 불가능하다. **당분간 해결책**:
+    한국장 마감 에디션인데 `bas_dd`가 전일에 머물러 있으면(가격이 직전 영업일 마감을 반영 못함),
+    수동 트리거를 시도하되 실패를 예상하고 즉시 폴백 — 국내 주요 언론(이투데이·파이낸셜뉴스·
+    헤럴드경제 등 2곳 이상) 마감시황 교차검증으로 "[언론 교차검증, KRX 확정 아님]" 라벨을 붙여
+    `kr_issues.json`·트리거 cond·손글 섹션에 반영하고, 마커 안(`KRX-*`, 즉 `kospi_range`·지수
+    카드 값·수급표)은 그대로 KRX 확정치(전일)를 유지한 채 건드리지 않는다 — 익일 정기 Action이
+    확정치로 갱신하면 자동으로 따라잡는다. 근본 해결(GitHub App 권한에 `workflow_dispatch` 추가)은
+    저장소 소유자가 App 설치 설정에서 처리해야 하는 UI 작업이라 세션에서 우회 불가.
