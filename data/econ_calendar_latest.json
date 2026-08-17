@@ -5,6 +5,12 @@
   "week_end": "2026-08-23",
   "events": [
     {
+      "date": "2026-08-17",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
       "date": "2026-08-18",
       "name": "산업생산·설비가동률",
       "kind": "indicator",
@@ -21,13 +27,7 @@
       "name": "FOMC 의사록 공개(7/28~29 회의분)",
       "kind": "fomc",
       "impact": "medium"
-    },
-    {
-      "date": "2026-08-20",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
     }
   ],
-  "fetched_at": "2026-08-16T20:47:50.544317+00:00"
+  "fetched_at": "2026-08-17T20:54:22.998264+00:00"
 }
