@@ -1,33 +1,39 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-08-17",
-  "week_end": "2026-08-23",
+  "week_start": "2026-08-24",
+  "week_end": "2026-08-30",
   "events": [
     {
-      "date": "2026-08-17",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
-      "date": "2026-08-18",
-      "name": "산업생산·설비가동률",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
-      "date": "2026-08-18",
+      "date": "2026-08-25",
       "name": "주택착공·건축허가",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-08-19",
-      "name": "FOMC 의사록 공개(7/28~29 회의분)",
-      "kind": "fomc",
+      "date": "2026-08-26",
+      "name": "GDP(국내총생산)",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-08-26",
+      "name": "PCE 물가·개인소득/지출",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-08-27",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-08-28",
+      "name": "미시간대 소비자심리",
+      "kind": "indicator",
       "impact": "medium"
     }
   ],
-  "fetched_at": "2026-08-20T20:57:26.697241+00:00"
+  "fetched_at": "2026-08-21T20:50:23.550903+00:00"
 }
