@@ -5,6 +5,12 @@
   "week_end": "2026-08-30",
   "events": [
     {
+      "date": "2026-08-24",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
       "date": "2026-08-25",
       "name": "주택착공·건축허가",
       "kind": "indicator",
@@ -23,17 +29,11 @@
       "impact": "high"
     },
     {
-      "date": "2026-08-27",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
-    },
-    {
       "date": "2026-08-28",
       "name": "미시간대 소비자심리",
       "kind": "indicator",
       "impact": "medium"
     }
   ],
-  "fetched_at": "2026-08-22T20:49:25.749317+00:00"
+  "fetched_at": "2026-08-24T20:59:31.886840+00:00"
 }
