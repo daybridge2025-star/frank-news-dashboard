@@ -7,27 +7,27 @@
       "asof": "2026-08-28"
     },
     "usdkrw": {
-      "price": 1375.67,
+      "price": 1371.5,
       "prev": 1380.449951171875,
-      "change_pct": -0.35,
+      "change_pct": -0.65,
       "asof": "2026-08-28"
     },
     "wti": {
-      "price": 83.44,
+      "price": 83.4,
       "prev": 83.52999877929688,
-      "change_pct": -0.11,
+      "change_pct": -0.16,
       "asof": "2026-08-28"
     },
     "gold": {
-      "price": 4504.1,
+      "price": 4529.9,
       "prev": 4609.7001953125,
-      "change_pct": -2.29,
+      "change_pct": -1.73,
       "asof": "2026-08-28"
     },
     "copper": {
-      "price": 6.64,
+      "price": 6.659,
       "prev": 6.586999893188477,
-      "change_pct": 0.8,
+      "change_pct": 1.09,
       "asof": "2026-08-28"
     },
     "dxy": {
@@ -79,12 +79,12 @@
     },
     "fed_upper": {
       "value": 3.75,
-      "date": "2026-08-28"
+      "date": "2026-08-29"
     },
     "fed_lower": {
       "value": 3.5,
-      "date": "2026-08-28"
+      "date": "2026-08-29"
     }
   },
-  "fetched_at": "2026-08-29 11:54 KST"
+  "fetched_at": "2026-08-30 07:44 KST"
 }
