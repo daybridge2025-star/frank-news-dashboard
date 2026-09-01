@@ -1,8 +1,27 @@
 {
-  "status": "fred_error: HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=15)",
-  "fred_ok": false,
+  "status": "ok",
+  "fred_ok": true,
   "week_start": "2026-08-31",
   "week_end": "2026-09-06",
-  "events": [],
-  "fetched_at": "2026-09-01T00:01:28.140881+00:00"
+  "events": [
+    {
+      "date": "2026-09-01",
+      "name": "JOLTS 구인·이직",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-09-03",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-09-04",
+      "name": "고용보고서(비농업 고용·실업률)",
+      "kind": "indicator",
+      "impact": "high"
+    }
+  ],
+  "fetched_at": "2026-09-01T22:44:59.739539+00:00"
 }
