@@ -1,27 +1,27 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-08-31",
-  "week_end": "2026-09-06",
+  "week_start": "2026-09-07",
+  "week_end": "2026-09-13",
   "events": [
     {
-      "date": "2026-09-01",
-      "name": "JOLTS 구인·이직",
+      "date": "2026-09-10",
+      "name": "PPI(생산자물가지수)",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-09-03",
+      "date": "2026-09-10",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-09-04",
-      "name": "고용보고서(비농업 고용·실업률)",
+      "date": "2026-09-11",
+      "name": "CPI(소비자물가지수)",
       "kind": "indicator",
       "impact": "high"
     }
   ],
-  "fetched_at": "2026-09-03T22:44:18.503711+00:00"
+  "fetched_at": "2026-09-04T22:28:42.795547+00:00"
 }
