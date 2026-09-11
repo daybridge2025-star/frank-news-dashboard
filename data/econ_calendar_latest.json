@@ -1,27 +1,39 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-09-07",
-  "week_end": "2026-09-13",
+  "week_start": "2026-09-14",
+  "week_end": "2026-09-20",
   "events": [
     {
-      "date": "2026-09-10",
-      "name": "PPI(생산자물가지수)",
+      "date": "2026-09-16",
+      "name": "FOMC 금리 결정(9/15~16 회의)",
+      "kind": "fomc",
+      "impact": "high"
+    },
+    {
+      "date": "2026-09-16",
+      "name": "소매판매",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-09-17",
+      "name": "주택착공·건축허가",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-09-10",
+      "date": "2026-09-17",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-09-11",
-      "name": "CPI(소비자물가지수)",
+      "date": "2026-09-18",
+      "name": "산업생산·설비가동률",
       "kind": "indicator",
-      "impact": "high"
+      "impact": "medium"
     }
   ],
-  "fetched_at": "2026-09-10T22:44:10.319011+00:00"
+  "fetched_at": "2026-09-11T22:44:05.731622+00:00"
 }
