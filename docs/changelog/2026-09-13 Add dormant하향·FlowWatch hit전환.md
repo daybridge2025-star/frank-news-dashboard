@@ -60,3 +60,21 @@ summary: 미국장 마감 에디션(컨테이너 UTC 21:53 = KST 9/13 06:53 발�
 
 ## 링크
 - 아티팩트: https://claude.ai/code/artifact/f3eeaaf7-6887-4570-a949-09e490de7579
+
+---
+
+## 추가 세션 — 한국장 마감 에디션(컨테이너 UTC 07:54, 9/13 일) — 재배포만
+
+컨테이너 UTC 07:54(= KST 16:54) 발동, 지시문의 "UTC 07시대 발동 = 한국장 마감 에디션" 기준에 해당하나, 오늘(일)은 한국·미국 모두 휴장이라 위 세션이 이미 반영한 9/11 확정치가 여전히 최신 거래일 데이터임을 확인했다.
+
+- push 권한: `git push --dry-run`으로 사전 확인, 정상.
+- `krx_snapshot_latest.json`·`us_snapshot_latest.json` 모두 bas_dd·asof 20260911 그대로, fetched_at만 Action이 09-13 07:2x KST에 재수집(WTI $99.99→$100.05, 금·구리 소폭 정정 — 같은 거래일의 수치 미세 보정, 트리거 판정에 영향 없음).
+- kr/us_issues·stance·triggers.json: 위 세션이 이미 9/11 KRX·Action 확정 데이터로 완전히 갱신해 둔 상태 — 신규 거래일 없어 갱신 대상 없음(JSON 변경 없음).
+- 손글 섹션(KOSPI 위치·ADR 플레이북·정합성 매트릭스·진단·재정렬 로드맵·매크로 레짐 판정) 전수 재점검 — 위 세션이 이미 9/11까지 전부 연장해 둔 상태라 낡은 곳 없음. 트리거 cond 서술도 최신 확인(Add dormant·Flow Watch hit·De-risk hit·FX Watch hit 모두 9/11 수치로 일치).
+- `python build_briefing.py` 재실행 → "변경 없음"(멱등 확인), `git status` clean.
+- 태그 균형 검사(`<div` 493==493 등) 재확인 통과.
+- 라이브 아티팩트가 여전히 09-12 07시 에디션(전 세션 작업이 git에는 반영됐으나 이 세션 시작 시점엔 재배포가 안 된 상태)으로 남아 있어, 최신 파일로 재배포만 수행 — "identical content already refused" 거부(운영 노트 13)가 1회 발생했으나 `action:"read"`로 라이브 버전을 재조회·전체 재확인 후 재시도해 정상 반영(Version 30).
+- git 커밋·푸시 대상 없음(변경 파일 없음).
+
+### 링크
+- 아티팩트: https://claude.ai/code/artifact/f3eeaaf7-6887-4570-a949-09e490de7579 (Version 30)
