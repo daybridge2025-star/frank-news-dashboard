@@ -56,3 +56,50 @@ summary: 컨테이너 UTC 07:54(9/18) 발동 — "UTC 07시대 발동 = 한국�
 
 ## 링크
 - 아티팩트: https://claude.ai/code/artifact/f3eeaaf7-6887-4570-a949-09e490de7579 (Version 40)
+
+---
+
+# 2026-09-18 (금) 2회차 — 美 9/18 혼조 마감, 인텔·SK하이닉스 오하이오 팹 논의 지속
+
+> [!summary] 요약
+> 컨테이너 UTC 21:53(9/18) 발동 — "UTC 21시대 발동 = 미국장 마감 에디션" 기준. krx_snapshot Action이 이 에디션 시점까지도 bas_dd 9/17 그대로라(정기 Action 지연) 한국 이슈 갱신은 생략(9/15 밤 에디션과 동일 처리). 美 9/18(금) 정규장은 WebSearch 기준 다우 −0.18%·S&P500 +0.17%·나스닥 +0.39%로 혼조 마감(주간 기준 나스닥만 상승) — VIX 14.81(−4.08%)로 추가 하락, WTI $100.30(−1.6%)로 3거래일 연속 하락했으나 De-risk($95) 조건은 유지. 인텔·SK하이닉스의 美 오하이오 팹 메모리 위탁생산 논의가 이번 주 내내 반도체 섹터를 견인(인텔 9/17 +7.67%·AMD +6.36%·퀄컴 +2.09%) — SKHY(ADR) 9/18 마감가·국내 SK하이닉스 9/18 KRX 확정치는 모두 Action 확정 대기. 4개 JSON + 손글 섹션 4곳 동기화, 아티팩트 재배포.
+
+## 에디션·데이터 판정 근거
+- 컨테이너 시계 UTC 2026-09-18T21:53Z — "UTC 21시대 발동 = 미국장 마감 에디션" 기준에 부합. `git push --dry-run origin main`은 non-fast-forward 거부(정상 — 로컬이 origin보다 28커밋 stale했던 것뿐, access-denied 아님) → `git fetch && git pull --ff-only`로 정상 동기화 확인.
+- `krx_snapshot_latest.json`: bas_dd 20260917 그대로(이번 에디션 시점까지 9/18 정기 Action 미도착) — GitHub Actions `krx_snapshot.yml` 최근 실행 이력(list_workflow_runs) 확인 결과 9/17 22:57 UTC 실행이 마지막, 9/18 20:30 UTC 예정 실행분이 이 에디션 시점(21:53 UTC)까지 아직 커밋되지 않음 — 운영 노트 4의 "Action이 세션 에디션보다 늦게 도는" 상황과 일치, 한국 이슈 갱신 생략(9/15 밤 에디션 선례 동일 처리).
+- WebSearch로 美 9/18(금) 정규장 마감 데이터 확보 — Yahoo Finance 라이브블로그의 "Market Close - Friday, September 18, 2026" 명시적 블록을 1차 소스로 채택(다우 51,682.64·S&P500 7,650.50·나스닥 26,522.55·VIX 14.81·금 $4,415.90·10Y +5bp). WTI는 해당 블록의 $95.47(Oct 26 계약)이 다른 다수 소스(Reuters 스타일 "WTI −1.6% to $100.30·브렌트 −0.9% to $103.87")와 크게 어긋나 신뢰도가 낮다고 판단, 복수 소스 일치하는 $100.30을 채택 — $95.47을 그대로 썼다면 De-risk($95) 조건 판정이 사실상 뒤집힐 뻔한 사안이라 교차검증 기록.
+- 언론 검색 중 국내 SK하이닉스(000660)가 Investing.com 기준 1,825,000원(전일 1,745,000원 대비 +4.58%)까지 올랐다는 정황을 확인했으나 KRX 확정 전이라 [언론 교차검증, KRX 확정 아님] 라벨로만 미국 이슈 탭·Flow Watch cond에 참고 인용, kr_issues.json 자체는 갱신하지 않음(지어내지 않음).
+
+## 한국 수급 / 미국 이슈 / 스탠스 / 트리거
+- **한국**: bas_dd 9/17 그대로(변경 없음) — kr_issues.json은 _readme에만 생략 사유 기록.
+- **미국 9/18(금) 마감(WebSearch, Action 미확정)**: 다우 51,682.64(−95.40p, −0.18%)·S&P500 7,650.50(+12.74p, +0.17%)·나스닥 26,522.55(+104.24p, +0.39%)로 혼조 — 주간 기준 나스닥만 상승, 다우·S&P500은 하락. VIX 14.81(−4.08%), 10년물 5%대(+5bp), WTI $100.30(−1.6%)·브렌트 $103.87(−0.9%), 금 $4,415.90(+0.37%), 구리 $6.63(+0.72%). 인텔·SK하이닉스 오하이오 팹 메모리 위탁생산 논의(Reuters 단독)가 이번 주 내내 반도체 섹터를 견인(인텔 9/17 +7.67%·AMD +6.36%·퀄컴 +2.09%) — SKHY(ADR) 9/18 마감가는 Action 확정 대기. 테슬라·SpaceX·Terafab 텍사스 반도체 공장 상표권 공동 출원 보도(WebSearch) 추가.
+- **stance.json**: A는 9/18 美 혼조 마감·VIX 추가 하락·WTI 3거래일 연속 하락(De-risk 유지)·코스피 변동 없음으로 재작성. B는 인텔·SK하이닉스 반도체 랠리·Flow Watch approaching 유지(9/18 확정치 부재로 hit 판정 보류)로 재작성. C는 변경 없음(새 재료 없음).
+- **triggers.json**: De-risk cond에 9/18 WTI $100.30(−1.6%, hit 유지) 추가. Contrarian cond에 9/18 VIX 14.81·공포탐욕 28~29권 추가(dormant 유지). Flow Watch cond에 인텔·SK하이닉스 반도체 랠리 + [언론 교차검증] 국내 000660 +4.58% 정황 추가(status는 approaching 유지, 2거래일 연속 판정은 다음 에디션으로 이월) — status 변경 없음, 전부 cond 서술만 갱신.
+- 규칙 준수: "AI 분석" 라벨 금지·"검증" 표기·이모지+1~2문장 분할·같은 날짜 이중 반영 아님(us_issues 최상단에 9/18 신규 항목 추가, 가장 오래된 9/17 WebSearch 잠정치 항목은 배열 밖 정리·Action 확정판은 유지).
+
+## 손글 섹션 점검 결과 — 4곳 신규 단락 추가
+- **KOSPI 위치와 매수 구간**(대시보드 탭): "[9/18(금) 미국장 마감, WebSearch]" 단락 신규 추가(美 혼조 마감·WTI 3거래일 연속 하락·한국 이슈 갱신 생략 사유 명시).
+- **환전략 — SK하이닉스 ADR 이벤트 플레이북**(전략 탭): "[9/18(금) 미국장 마감, WebSearch]" 단락 추가(인텔·SK하이닉스 반도체 랠리·SKHY 9/18 확정 대기·Flow Watch approaching 유지).
+- **정합성 진단 ④ A 렌즈 로그·재정렬 로드맵 3단계**(포트폴리오 탭): 각각 "9/18(금, WebSearch — 코스피 신규치 없음)" 단락 추가(WTI $100.30 갱신, 실탄 집행 계속 보류 사유 명시).
+- **포트폴리오 탭 "가격 반영" 로그**: "✅ 가격 반영 완료(9/17, fetch_portfolio_prices.py Action 확정)" 단락 추가(테슬라·SPCX·SKHY 9/17 확정가 반영 완료 확인, 9/18 혼조 마감 미반영 상태 명시) — line 738의 "미확정" pending 문구를 닫는 후속 단락.
+- `.hdr-stance-scope` 래퍼·탭바 JS `data-tab` 라인 확인 — 정상 유지.
+- 태그 균형 검사(`<div`·`</div>` 508/508) 통과.
+
+## 개선 작업
+- [x] 세션 시작 직후 `git push --dry-run`으로 push 권한 확인(non-fast-forward, access-denied 아님으로 정상 판정)
+- [x] 에디션·날짜 교차검증(컨테이너 시계·krx_snapshot bas_dd·fetched_at·GitHub Actions 실행 이력)
+- [x] WebSearch로 美 9/18 정규장 마감·VIX·WTI·인텔-SK하이닉스 오하이오 팹 논의·이란 정세·Micron/Samsung/SK하이닉스 HBM 경쟁·테슬라/SpaceX 검증(WTI 소스 간 큰 편차 발견 → 다수결 채택)
+- [x] us_issues·stance·triggers 3개 JSON 갱신, kr_issues는 readme만 갱신
+- [x] `build_briefing.py` 실행 → 채움 로그 정상(신선도 경고는 예상된 것 — us_issues asof가 KRX 기준일보다 하루 앞섬)
+- [x] 손글 섹션 4곳 보강
+- [x] 태그 균형 검사 통과
+- [x] 아티팩트 재배포 — "hadn't viewed" 거부 1회 + "identical content already refused" 거부 1회 후 라이브 버전(1,413줄) 전체 완독·재조회·재시도로 정상 게시(Version 41)
+- [ ] git 커밋·푸시 — 이 파일 저장 직후 진행 예정
+
+## 내일 확인할 것
+- 9/18(금) 한국장 마감분 KRX 확정치(익일 아침 Action 반영 예정) — 외국인 순매도 7거래일째 지속 여부, [언론 교차검증] 000660 +4.58% 정황의 KRX 확정 여부
+- SKHY(ADR) 9/18 정규장 마감가(fetch_portfolio_prices.py Action 확정) — 인텔·SK하이닉스 오하이오 팹 논의 관련 국내〈ADR 격차의 2거래일 연속 지속 여부(Flow Watch hit 상향 판정 기준)
+- WTI 3거래일 연속 하락 추세의 지속 여부(De-risk $95 해제 가능성) — 이번 에디션 WebSearch 소스 간 큰 편차(Yahoo $95.47 vs 다수 소스 $100.30)가 있었던 만큼 익일 Action 확정치로 재검증 필요
+
+## 링크
+- 아티팩트: https://claude.ai/code/artifact/f3eeaaf7-6887-4570-a949-09e490de7579 (Version 41)
