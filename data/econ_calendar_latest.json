@@ -5,14 +5,14 @@
   "week_end": "2026-09-27",
   "events": [
     {
-      "date": "2026-09-24",
-      "name": "주택착공·건축허가",
+      "date": "2026-09-21",
+      "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
       "date": "2026-09-24",
-      "name": "주간 신규 실업수당 청구",
+      "name": "주택착공·건축허가",
       "kind": "indicator",
       "impact": "medium"
     },
@@ -23,5 +23,5 @@
       "impact": "medium"
     }
   ],
-  "fetched_at": "2026-09-20T22:37:15.826144+00:00"
+  "fetched_at": "2026-09-21T23:29:07.802568+00:00"
 }
