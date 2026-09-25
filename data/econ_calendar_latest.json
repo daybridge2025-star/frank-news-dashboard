@@ -1,27 +1,39 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-09-21",
-  "week_end": "2026-09-27",
+  "week_start": "2026-09-28",
+  "week_end": "2026-10-04",
   "events": [
     {
-      "date": "2026-09-21",
+      "date": "2026-09-29",
+      "name": "JOLTS 구인·이직",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-09-30",
+      "name": "GDP(국내총생산)",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-09-30",
+      "name": "PCE 물가·개인소득/지출",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-10-01",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-09-24",
-      "name": "주택착공·건축허가",
+      "date": "2026-10-02",
+      "name": "고용보고서(비농업 고용·실업률)",
       "kind": "indicator",
-      "impact": "medium"
-    },
-    {
-      "date": "2026-09-25",
-      "name": "미시간대 소비자심리",
-      "kind": "indicator",
-      "impact": "medium"
+      "impact": "high"
     }
   ],
-  "fetched_at": "2026-09-24T23:19:34.432484+00:00"
+  "fetched_at": "2026-09-25T23:25:04.991968+00:00"
 }
