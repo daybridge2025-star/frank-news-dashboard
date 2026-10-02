@@ -648,6 +648,24 @@ def _mkt_generators(usm):
         if item.get('ytd_start') is not None and item.get('ytd_high') is not None:
             g[f'mkt_{key}_range'] = _render_range_bar(
                 item['ytd_start'], item['price'], item['ytd_high'], label)
+    # 지표별 기준일 배지(.asof) — 카드 제목 옆 'M/D' 표기. 수집 소스의 asof/date를 그대로 쓴다.
+    def md(iso):
+        try:
+            return f'{int(iso[5:7])}/{int(iso[8:10])}'
+        except Exception:
+            return None
+    for key in ('vix', 'usdkrw', 'wti', 'gold', 'copper', 'sp500', 'nasdaq', 'dow'):
+        d = md((y.get(key) or {}).get('asof') or '')
+        if d:
+            g[f'mkt_{key}_d'] = d
+    fd = {k: (f.get(k) or {}).get('date') or '' for k in ('t10y', 't2y', 'hy_oas', 'fed_upper')}
+    for key, src in (('t10y', 't10y'), ('t2y', 't2y'), ('hy', 'hy_oas'), ('fed', 'fed_upper')):
+        d = md(fd[src])
+        if d:
+            g[f'mkt_{key}_d'] = d
+    sp = min((fd['t10y'], fd['t2y']) or ('',)) if fd['t10y'] and fd['t2y'] else ''
+    if md(sp):
+        g['mkt_spread_d'] = md(sp)
     return g
 
 
