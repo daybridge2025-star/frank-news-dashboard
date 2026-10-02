@@ -130,7 +130,11 @@ def _latest_business_day():
     영업일 데이터인 필드들에 오늘 날짜 라벨을 붙이는 날짜 불일치가 생기기 때문이다.
     """
     now = datetime.now(KST)
-    for i in range(7):
+    # 한국장 마감(15:30) 전에는 '오늘' 봉이 장중 부분값이라(지수·수급은 null/미완) 오늘을
+    # 건너뛴다 — GitHub cron이 +3시간 지연돼 09시 KST에 도는 날 bas_dd가 당일로 찍혀
+    # KOSPI 지수가 null이 되던 사고(2026-09-30~10-02 실측) 방지. 16시 이후엔 오늘 포함.
+    start = 0 if now.hour >= 16 else 1
+    for i in range(start, start + 7):
         d = (now - timedelta(days=i)).strftime('%Y%m%d')
         if get_stock_ohlcv(d, '005930'):
             return d
