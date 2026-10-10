@@ -1,21 +1,39 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-10-05",
-  "week_end": "2026-10-11",
+  "week_start": "2026-10-12",
+  "week_end": "2026-10-18",
   "events": [
     {
-      "date": "2026-10-05",
+      "date": "2026-10-14",
+      "name": "CPI(소비자물가지수)",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-10-15",
+      "name": "소매판매",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-10-15",
+      "name": "PPI(생산자물가지수)",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-10-15",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-10-07",
-      "name": "FOMC 의사록 공개(9/15~16 회의분)",
-      "kind": "fomc",
+      "date": "2026-10-16",
+      "name": "산업생산·설비가동률",
+      "kind": "indicator",
       "impact": "medium"
     }
   ],
-  "fetched_at": "2026-10-09T00:32:53.667720+00:00"
+  "fetched_at": "2026-10-10T00:12:39.758579+00:00"
 }
