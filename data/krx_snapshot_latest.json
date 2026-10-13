@@ -1,22 +1,22 @@
 {
-  "bas_dd": "20261012",
-  "fetched_at": "2026-10-13 11:10 KST",
+  "bas_dd": "20261013",
+  "fetched_at": "2026-10-14 08:47 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
-      "close": 6384.24,
-      "change_pct": -3.65,
-      "open": 6578.17,
-      "high": 6589.69,
-      "low": 6368.49
+      "close": 6035.35,
+      "change_pct": -5.46,
+      "open": 6186.08,
+      "high": 6198.46,
+      "low": 5911.11
     },
     "KOSDAQ": {
       "name": "코스닥",
-      "close": 849.19,
-      "change_pct": -4.83,
-      "open": 885.53,
-      "high": 891.79,
-      "low": 849.07
+      "close": 837.03,
+      "change_pct": -1.43,
+      "open": 823.69,
+      "high": 839.94,
+      "low": 802.91
     }
   },
   "sectors": {
@@ -28,268 +28,268 @@
       },
       {
         "name": "코스피",
-        "change_pct": -3.65,
-        "close": 6384.24
+        "change_pct": -5.46,
+        "close": 6035.35
       },
       {
         "name": "코스피 200",
-        "change_pct": -3.79,
-        "close": 1004.92
+        "change_pct": -6.25,
+        "close": 942.07
       },
       {
         "name": "코스피 100",
-        "change_pct": -3.82,
-        "close": 7816.37
+        "change_pct": -6.39,
+        "close": 7316.83
       },
       {
         "name": "코스피 50",
-        "change_pct": -3.8,
-        "close": 7614.08
+        "change_pct": -6.7,
+        "close": 7104.27
       },
       {
         "name": "코스피 200 중소형주",
-        "change_pct": -2.29,
-        "close": 2187.39
+        "change_pct": -1.46,
+        "close": 2155.52
       },
       {
         "name": "코스피 200 초대형제외 지수",
-        "change_pct": -2.74,
-        "close": 503.75
+        "change_pct": -2.6,
+        "close": 490.64
       },
       {
         "name": "코스피200제외 코스피지수",
-        "change_pct": -3.09,
-        "close": 4510.87
+        "change_pct": -0.7,
+        "close": 4479.13
       },
       {
         "name": "코스피 200 커뮤니케이션서비스",
-        "change_pct": -2.55,
-        "close": 1761.74
+        "change_pct": -0.29,
+        "close": 1756.64
       },
       {
         "name": "코스피 200 건설",
-        "change_pct": -3.95,
-        "close": 698.44
+        "change_pct": -2.47,
+        "close": 681.19
       },
       {
         "name": "코스피 200 중공업",
-        "change_pct": -6.01,
-        "close": 1041.92
+        "change_pct": -1.71,
+        "close": 1024.08
       },
       {
         "name": "코스피 200 철강/소재",
-        "change_pct": -2.63,
-        "close": 978.82
+        "change_pct": -0.5,
+        "close": 973.89
       },
       {
         "name": "코스피 200 에너지/화학",
-        "change_pct": -4.43,
-        "close": 1713.65
+        "change_pct": -2.02,
+        "close": 1678.97
       },
       {
         "name": "코스피 200 정보기술",
-        "change_pct": -4.72,
-        "close": 13696.81
+        "change_pct": -8.04,
+        "close": 12595.68
       },
       {
         "name": "코스피 200 금융",
-        "change_pct": 0.11,
-        "close": 1616.78
+        "change_pct": -0.83,
+        "close": 1603.33
       },
       {
         "name": "코스피 200 생활소비재",
-        "change_pct": -0.93,
-        "close": 1249.41
+        "change_pct": -2.89,
+        "close": 1213.31
       },
       {
         "name": "코스피 200 경기소비재",
-        "change_pct": -0.52,
-        "close": 2199.74
+        "change_pct": -1.13,
+        "close": 2174.95
       },
       {
         "name": "코스피 200 산업재",
-        "change_pct": -2.76,
-        "close": 1137.38
+        "change_pct": -0.58,
+        "close": 1130.73
       },
       {
         "name": "코스피 200 헬스케어",
-        "change_pct": -1.56,
-        "close": 1843.56
+        "change_pct": -0.68,
+        "close": 1830.97
       },
       {
         "name": "음식료·담배",
-        "change_pct": 1.08,
-        "close": 4686.91
+        "change_pct": -0.12,
+        "close": 4681.47
       },
       {
         "name": "섬유·의류",
-        "change_pct": -0.74,
-        "close": 232.56
+        "change_pct": -0.35,
+        "close": 231.75
       },
       {
         "name": "종이·목재",
-        "change_pct": -1.56,
-        "close": 202.59
+        "change_pct": -1.25,
+        "close": 200.05
       },
       {
         "name": "화학",
-        "change_pct": -4.17,
-        "close": 4756.85
+        "change_pct": -2.09,
+        "close": 4657.4
       },
       {
         "name": "제약",
-        "change_pct": -0.96,
-        "close": 14088.15
+        "change_pct": -0.14,
+        "close": 14068.94
       },
       {
         "name": "비금속",
-        "change_pct": -0.8,
-        "close": 3425.03
+        "change_pct": 0.78,
+        "close": 3451.88
       },
       {
         "name": "금속",
-        "change_pct": -2.54,
-        "close": 6104.49
+        "change_pct": -1.22,
+        "close": 6029.92
       },
       {
         "name": "기계·장비",
-        "change_pct": -6.72,
-        "close": 2833.87
+        "change_pct": -3.13,
+        "close": 2745.07
       },
       {
         "name": "전기전자",
-        "change_pct": -4.51,
-        "close": 104673.5
+        "change_pct": -7.61,
+        "close": 96703.14
       },
       {
         "name": "의료·정밀기기",
-        "change_pct": -4.22,
-        "close": 2148.74
+        "change_pct": 1.74,
+        "close": 2186.13
       },
       {
         "name": "운송장비·부품",
-        "change_pct": -2.7,
-        "close": 4001.72
+        "change_pct": -1.02,
+        "close": 3960.73
       },
       {
         "name": "유통",
-        "change_pct": -0.8,
-        "close": 559.54
+        "change_pct": -2.41,
+        "close": 546.06
       },
       {
         "name": "전기·가스",
-        "change_pct": -1.6,
-        "close": 929.72
+        "change_pct": 1.52,
+        "close": 943.84
       },
       {
         "name": "건설",
-        "change_pct": -4.54,
-        "close": 143.89
+        "change_pct": -1.38,
+        "close": 141.9
       },
       {
         "name": "운송·창고",
-        "change_pct": 2.29,
-        "close": 2043.76
+        "change_pct": -0.31,
+        "close": 2037.38
       },
       {
         "name": "통신",
-        "change_pct": -3.81,
-        "close": 563.39
+        "change_pct": 0.32,
+        "close": 565.21
       },
       {
         "name": "금융",
-        "change_pct": -1.87,
-        "close": 1034.04
+        "change_pct": -3.66,
+        "close": 996.24
       },
       {
         "name": "증권",
-        "change_pct": -3.29,
-        "close": 4512.1
+        "change_pct": -2.14,
+        "close": 4415.57
       },
       {
         "name": "보험",
-        "change_pct": 0.42,
-        "close": 44975.88
+        "change_pct": -2.48,
+        "close": 43858.86
       },
       {
         "name": "일반서비스",
-        "change_pct": -1.82,
-        "close": 1342.29
+        "change_pct": -0.05,
+        "close": 1341.63
       },
       {
         "name": "제조",
-        "change_pct": -4.19,
-        "close": 18954.04
+        "change_pct": -6.28,
+        "close": 17763.77
       },
       {
         "name": "코스피 대형주",
-        "change_pct": -3.76,
-        "close": 6951.22
+        "change_pct": -5.9,
+        "close": 6541.04
       },
       {
         "name": "코스피 중형주",
-        "change_pct": -2.59,
-        "close": 3989.58
+        "change_pct": -0.64,
+        "close": 3963.85
       },
       {
         "name": "코스피 소형주",
-        "change_pct": -1.78,
-        "close": 2353.91
+        "change_pct": -0.79,
+        "close": 2335.25
       },
       {
         "name": "코스피 200 비중상한 30%",
-        "change_pct": -3.77,
-        "close": 1003.57
+        "change_pct": -6.22,
+        "close": 941.19
       },
       {
         "name": "코스피 200 비중상한 25%",
-        "change_pct": -3.72,
-        "close": 1002.75
+        "change_pct": -6.13,
+        "close": 941.33
       },
       {
         "name": "코스피 200 비중상한 20%",
-        "change_pct": -3.57,
-        "close": 966.18
+        "change_pct": -5.57,
+        "close": 912.35
       },
       {
         "name": "오락·문화",
-        "change_pct": -2.37,
-        "close": 790.33
+        "change_pct": 2.11,
+        "close": 807.01
       },
       {
         "name": "IT 서비스",
-        "change_pct": -1.39,
-        "close": 1055.16
+        "change_pct": -1.11,
+        "close": 1043.41
       },
       {
         "name": "부동산",
-        "change_pct": -1.28,
-        "close": 883.57
+        "change_pct": -0.31,
+        "close": 880.83
       },
       {
         "name": "코스피 200 25/50지수",
-        "change_pct": -3.55,
-        "close": 3411.59
+        "change_pct": -5.42,
+        "close": 3226.55
       },
       {
         "name": "코스피 200 25/50 NTR 지수",
-        "change_pct": -3.55,
-        "close": 3812.12
+        "change_pct": -5.42,
+        "close": 3605.36
       },
       {
         "name": "코스피 200 25/50 NTR USD 지수",
-        "change_pct": -3.33,
-        "close": 3279.34
+        "change_pct": -6.09,
+        "close": 3079.79
       },
       {
         "name": "코스피 200 경기방어소비재지수",
-        "change_pct": -1.4,
-        "close": 1162.97
+        "change_pct": -1.36,
+        "close": 1147.14
       },
       {
         "name": "코스피 200 TOP 10",
-        "change_pct": -3.45,
-        "close": 2304.37
+        "change_pct": -3.19,
+        "close": 2230.76
       }
     ],
     "KOSDAQ": [
@@ -300,198 +300,198 @@
       },
       {
         "name": "코스닥",
-        "change_pct": -4.83,
-        "close": 849.19
+        "change_pct": -1.43,
+        "close": 837.03
       },
       {
         "name": "코스닥 150",
-        "change_pct": -5.31,
-        "close": 1451.37
+        "change_pct": -1.3,
+        "close": 1432.43
       },
       {
         "name": "코스닥 글로벌",
-        "change_pct": -5.54,
-        "close": 2023.93
+        "change_pct": -1.18,
+        "close": 2000.11
       },
       {
         "name": "코스닥 150 정보기술",
-        "change_pct": -5.15,
-        "close": 1434.22
+        "change_pct": -0.14,
+        "close": 1432.24
       },
       {
         "name": "코스닥 150 헬스케어",
-        "change_pct": -4.57,
-        "close": 3735.72
+        "change_pct": -3.75,
+        "close": 3595.58
       },
       {
         "name": "코스닥 150 커뮤니케이션서비스",
-        "change_pct": -1.87,
-        "close": 1371.04
+        "change_pct": 0.54,
+        "close": 1378.47
       },
       {
         "name": "코스닥 150 소재",
-        "change_pct": -3.99,
-        "close": 2632.52
+        "change_pct": -0.78,
+        "close": 2611.94
       },
       {
         "name": "코스닥 150 산업재",
-        "change_pct": -8.26,
-        "close": 237.75
+        "change_pct": -1.14,
+        "close": 235.05
       },
       {
         "name": "코스닥 150 필수소비재",
-        "change_pct": -2.26,
-        "close": 393.98
+        "change_pct": -3.36,
+        "close": 380.75
       },
       {
         "name": "코스닥 150 자유소비재",
-        "change_pct": -4.89,
-        "close": 387.46
+        "change_pct": -3.07,
+        "close": 375.57
       },
       {
         "name": "일반서비스",
-        "change_pct": -5.13,
-        "close": 3845.53
+        "change_pct": -3.09,
+        "close": 3726.77
       },
       {
         "name": "제조",
-        "change_pct": -4.99,
-        "close": 2980.91
+        "change_pct": -1.3,
+        "close": 2942.13
       },
       {
         "name": "건설",
-        "change_pct": -4.37,
-        "close": 70.23
+        "change_pct": -1.01,
+        "close": 69.52
       },
       {
         "name": "유통",
-        "change_pct": -3.42,
-        "close": 466.88
+        "change_pct": -2.7,
+        "close": 454.29
       },
       {
         "name": "운송·창고",
-        "change_pct": -1.78,
-        "close": 3041.43
+        "change_pct": -1.92,
+        "close": 2982.93
       },
       {
         "name": "금융",
-        "change_pct": -5.96,
-        "close": 1404.81
+        "change_pct": 0.41,
+        "close": 1410.59
       },
       {
         "name": "오락·문화",
-        "change_pct": -2.93,
-        "close": 275.67
+        "change_pct": 0.46,
+        "close": 276.95
       },
       {
         "name": "음식료·담배",
-        "change_pct": -1.47,
-        "close": 3896.5
+        "change_pct": -0.65,
+        "close": 3871.15
       },
       {
         "name": "섬유·의류",
-        "change_pct": -1.86,
-        "close": 28.48
+        "change_pct": -0.49,
+        "close": 28.34
       },
       {
         "name": "종이·목재",
-        "change_pct": -3.12,
-        "close": 6391.82
+        "change_pct": -1.62,
+        "close": 6287.99
       },
       {
         "name": "출판·매체복제",
-        "change_pct": -1.41,
-        "close": 1261.96
+        "change_pct": 2.78,
+        "close": 1297.0
       },
       {
         "name": "화학",
-        "change_pct": -3.95,
-        "close": 2217.45
+        "change_pct": -1.1,
+        "close": 2193.03
       },
       {
         "name": "제약",
-        "change_pct": -3.95,
-        "close": 8398.92
+        "change_pct": -2.51,
+        "close": 8187.82
       },
       {
         "name": "비금속",
-        "change_pct": 0.07,
-        "close": 74894.24
+        "change_pct": -3.86,
+        "close": 72002.59
       },
       {
         "name": "금속",
-        "change_pct": -4.6,
-        "close": 1834.19
+        "change_pct": -1.36,
+        "close": 1809.21
       },
       {
         "name": "기계·장비",
-        "change_pct": -4.99,
-        "close": 891.6
+        "change_pct": 0.28,
+        "close": 894.06
       },
       {
         "name": "전기전자",
-        "change_pct": -6.45,
-        "close": 1787.06
+        "change_pct": -2.24,
+        "close": 1747.09
       },
       {
         "name": "의료·정밀기기",
-        "change_pct": -3.28,
-        "close": 1813.14
+        "change_pct": -0.91,
+        "close": 1796.61
       },
       {
         "name": "운송장비·부품",
-        "change_pct": -5.73,
-        "close": 3968.95
+        "change_pct": -1.46,
+        "close": 3911.15
       },
       {
         "name": "기타제조",
-        "change_pct": -1.74,
-        "close": 521.96
+        "change_pct": -0.66,
+        "close": 518.5
       },
       {
         "name": "코스닥 대형주",
-        "change_pct": -5.49,
-        "close": 2101.66
+        "change_pct": -1.49,
+        "close": 2070.44
       },
       {
         "name": "코스닥 중형주",
-        "change_pct": -4.44,
-        "close": 888.37
+        "change_pct": -1.28,
+        "close": 877.04
       },
       {
         "name": "코스닥 소형주",
-        "change_pct": -3.33,
-        "close": 2372.27
+        "change_pct": -1.36,
+        "close": 2340.04
       },
       {
         "name": "코스닥 우량기업부",
-        "change_pct": -3.66,
-        "close": 2146.66
+        "change_pct": -0.64,
+        "close": 2132.91
       },
       {
         "name": "코스닥 벤처기업부",
-        "change_pct": -4.21,
-        "close": 1271.07
+        "change_pct": -2.13,
+        "close": 1244.0
       },
       {
         "name": "코스닥 중견기업부",
-        "change_pct": -5.98,
-        "close": 1344.61
+        "change_pct": -1.31,
+        "close": 1327.01
       },
       {
         "name": "코스닥 기술성장기업부",
-        "change_pct": -7.36,
-        "close": 5163.65
+        "change_pct": -4.03,
+        "close": 4955.54
       },
       {
         "name": "IT 서비스",
-        "change_pct": -3.32,
-        "close": 641.65
+        "change_pct": -1.08,
+        "close": 634.69
       },
       {
         "name": "통신",
-        "change_pct": -0.09,
-        "close": 1126.14
+        "change_pct": -1.57,
+        "close": 1108.47
       }
     ]
   },
@@ -499,62 +499,62 @@
     "005930": {
       "name": "삼성전자",
       "source": "openapi",
-      "close": 250500,
-      "change_pct": -4.39,
-      "open": 260000,
-      "high": 262500,
-      "low": 249500,
-      "volume": 19771955
+      "close": 232000,
+      "change_pct": -7.39,
+      "open": 241500,
+      "high": 244000,
+      "low": 228000,
+      "volume": 26790913
     },
     "000660": {
       "name": "SK하이닉스",
       "source": "openapi",
-      "close": 1605000,
-      "change_pct": -4.52,
-      "open": 1640000,
-      "high": 1653000,
-      "low": 1605000,
-      "volume": 3113644
+      "close": 1443000,
+      "change_pct": -10.09,
+      "open": 1538000,
+      "high": 1554000,
+      "low": 1425000,
+      "volume": 5455791
     },
     "267260": {
       "name": "HD현대일렉트릭",
       "source": "openapi",
-      "close": 582000,
-      "change_pct": -3.96,
-      "open": 610000,
-      "high": 622000,
-      "low": 577000,
-      "volume": 212919
+      "close": 560000,
+      "change_pct": -3.78,
+      "open": 567000,
+      "high": 567000,
+      "low": 531000,
+      "volume": 166970
     },
     "010120": {
       "name": "LS ELECTRIC",
       "source": "openapi",
-      "close": 183600,
-      "change_pct": -6.09,
-      "open": 194000,
-      "high": 195000,
-      "low": 183600,
-      "volume": 677995
+      "close": 179200,
+      "change_pct": -2.4,
+      "open": 177200,
+      "high": 182500,
+      "low": 173100,
+      "volume": 778573
     },
     "012450": {
       "name": "한화에어로스페이스",
       "source": "openapi",
-      "close": 862000,
-      "change_pct": -3.25,
-      "open": 891000,
-      "high": 892000,
-      "low": 853000,
-      "volume": 221718
+      "close": 839000,
+      "change_pct": -2.67,
+      "open": 844000,
+      "high": 844000,
+      "low": 803000,
+      "volume": 169162
     },
     "064350": {
       "name": "현대로템",
       "source": "openapi",
-      "close": 100000,
-      "change_pct": -4.94,
-      "open": 103800,
-      "high": 103900,
-      "low": 99500,
-      "volume": 444096
+      "close": 97700,
+      "change_pct": -2.3,
+      "open": 95800,
+      "high": 97800,
+      "low": 92500,
+      "volume": 605233
     }
   },
   "investor_flow": {
