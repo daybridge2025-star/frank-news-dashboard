@@ -1097,9 +1097,12 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     flow = snap.get('investor_flow', {})
     flow_ok = isinstance(flow, dict) and flow.get('status') == 'ok'
 
-    # 날짜 라벨(여러 헤더에 동일 key로 반복 사용)
+    # 업종표 제목의 기준일 — 그 시장의 업종 데이터가 이번 스냅샷에 실제로 있을 때만 갱신한다.
+    # (데이터가 비면 표 내용은 이전 날짜 그대로 남는데 라벨만 새 날짜로 바뀌는 불일치를 막는다.)
     if dd:
-        g['asof'] = date_label(dd)
+        for mkt, key in (('KOSPI', 'asof_kospi'), ('KOSDAQ', 'asof_kosdaq')):
+            if (snap.get('sectors') or {}).get(mkt):
+                g[key] = date_label(dd)
 
     # 헤더 날짜 라인 — 수기 갱신이 누락되며 화석화되던 라벨을 자동화.
     # 렌더 시각(시계)이 아니라 스냅샷 수집 시각(fetched_at) 기준이라 언제 다시 렌더해도 같은 결과.
@@ -1230,7 +1233,7 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
 
     # ── 한국 이슈 분석(data/kr_issues.json — 마켓 브리프 세션이 갱신) ──
     # 섹션 제목의 기준일(kr_issues_asof)은 카드가 해석하는 날 — 잠정 종가가 있으면 그 날, 없으면 스냅샷 기준일.
-    # (업종표 등 스냅샷 자체의 라벨은 KRX 'asof' 마커가 따로 맡는다.)
+    # (업종표 제목의 기준일은 KRX 'asof_kospi'·'asof_kosdaq' 마커가 따로 맡는다.)
     g['kr_issues'] = _render_issue_cards(kr)
     if prov or dd:
         g['kr_issues_asof'] = date_label(prov['dd'] if prov else dd)
