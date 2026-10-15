@@ -142,6 +142,31 @@ def _ytd_carry(market='KOSPI'):
     return None, None
 
 
+def _provisional(kr, bas_dd):
+    """kr_issues.json의 provisional(한국장 마감 직후 언론 집계 종가) 중 스냅샷 기준일(bas_dd)보다 *최신*인 것만 돌려준다.
+    KRX 스냅샷은 한국장 마감 뒤 늦은 저녁에야 들어와, 편집 세션(UTC 07·21시대)은 그날 종가를 언론 집계로만 안다.
+    이때 자동 구간(지수 카드·위치 바·판독·칩)이 어제 확정치를 '현재'로 보여주면 손글·트리거와 모순된다(2026-10-15 실측:
+    카드는 6,009 '손절선 +0.15% 위', 트리거는 5,554 'Stop-Loss 발동').
+    스냅샷이 따라잡으면(bas_dd >= asof) 저절로 무시된다 — 세션이 지우지 않아도 확정치로 돌아간다.
+    반환: {'dd': 'YYYYMMDD', 'source': str, 'KOSPI': {'close', 'change_pct'}, 'KOSDAQ': {...}} 또는 None(형식 오류 포함)."""
+    p = (kr or {}).get('provisional')
+    if not isinstance(p, dict):
+        return None
+    dd = re.sub(r'\D', '', str(p.get('asof') or ''))
+    if len(dd) != 8 or not (bas_dd and len(str(bas_dd)) == 8) or dd <= str(bas_dd):
+        return None
+    out = {'dd': dd, 'source': str(p.get('source') or '언론 집계')}
+    for key, mname in (('kospi', 'KOSPI'), ('kosdaq', 'KOSDAQ')):
+        m = p.get(key)
+        if not isinstance(m, dict):
+            continue
+        c, ch = m.get('close'), m.get('change_pct')
+        if isinstance(c, (int, float)) and not isinstance(c, bool) and c > 0:
+            out[mname] = {'close': float(c),
+                          'change_pct': ch if isinstance(ch, (int, float)) and not isinstance(ch, bool) else None}
+    return out if ('KOSPI' in out or 'KOSDAQ' in out) else None
+
+
 # ── 구간 생성기 ───────────────────────────────────────────
 def _fm_cell(value, maxabs):
     """투자자별 수급 '전일' 셀 하나(막대+값). value None이면 None(=건드리지 않음)."""
@@ -986,11 +1011,12 @@ def _kospi_chip(close, zone, stop):
     return 'w', '매수구간 아래 · 대기'
 
 
-def _kospi_readout(close, chg, dd, ys, yh, zone, stop, triggers):
-    """위치 바 아래 자동 판독 <p> 3줄: 위치/거리/트리거. 숫자는 전부 스냅샷·stance.json에서 계산한다."""
+def _kospi_readout(close, chg, dd, ys, yh, zone, stop, triggers, how='KRX 확정'):
+    """위치 바 아래 자동 판독 <p> 3줄: 위치/거리/트리거. 숫자는 전부 스냅샷(또는 잠정 종가)·stance.json에서 계산한다.
+    how: 값의 출처 라벨 — 'KRX 확정'(기본) 또는 잠정 종가일 때 '언론 집계 · KRX 확정 전'."""
     style = 'font-size:13px; color:var(--ink-2); margin:6px 0 0'
     ps = []
-    head = f'📍 현재 <strong>{close:,.0f}</strong> ({date_label(dd) + " " if dd else ""}KRX 확정'
+    head = f'📍 현재 <strong>{close:,.0f}</strong> ({date_label(dd) + " " if dd else ""}{how}'
     if chg is not None:
         head += f', {fmt_pct(chg)}'
     head += ')'
@@ -1062,33 +1088,49 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     zone = tuple(bz) if isinstance(bz, (list, tuple)) and len(bz) == 2 else None
     stop = (stance or {}).get('stop_loss_ref')
 
+    # 지수 현재값 — 스냅샷(KRX 확정)이 기본. 스냅샷보다 최신인 잠정 종가(언론 집계, kr_issues.json의 provisional)가
+    # 있으면 그것을 우선하고 라벨에 "언론 집계"를 밝힌다(스냅샷이 따라잡으면 _provisional이 알아서 None).
+    prov = _provisional(kr, dd)
+
+    def eff(mname):
+        """(종가, 등락률%, 기준일 YYYYMMDD, 잠정 여부) — 값이 없으면 (None, None, None, False)."""
+        pv = (prov or {}).get(mname)
+        if pv:
+            return pv['close'], pv.get('change_pct'), prov['dd'], True
+        m = idx.get(mname) or {}
+        if m.get('close') is not None:
+            return m['close'], m.get('change_pct'), dd, False
+        return None, None, None, False
+
     # 지수 카드 — 숫자(종가·등락률·기준일)와 고점 대비는 전부 자동(손글 꼬리 없음)
     for mkey, mname in (('kospi', 'KOSPI'), ('kosdaq', 'KOSDAQ')):
-        mdata = idx.get(mname)
-        if mdata and mdata.get('close') is not None:
-            close = mdata['close']
-            # 기존 카드 표기 관례: 코스피 '7,247'(정수), 코스닥 '785.0'(소수 1자리)
-            g[f'idx_{mkey}_v'] = f'{close:,.0f}' if close >= 1000 else f'{close:,.1f}'
-            if mdata.get('change_pct') is not None and dd:
-                chg = f'{fmt_pct(mdata["change_pct"])} ({date_label(dd)})'
-                m_yh = ytd[mname][1]
-                if m_yh:
-                    chg += f' · 고점 대비 {_pct0(close / m_yh - 1)}'
-                g[f'idx_{mkey}_chg'] = chg
+        close, chg_pct, when, is_prov = eff(mname)
+        if close is None:
+            continue
+        # 기존 카드 표기 관례: 코스피 '7,247'(정수), 코스닥 '785.0'(소수 1자리)
+        g[f'idx_{mkey}_v'] = f'{close:,.0f}' if close >= 1000 else f'{close:,.1f}'
+        if chg_pct is not None and when:
+            chg = f'{fmt_pct(chg_pct)} ({date_label(when)}{" 언론 집계" if is_prov else ""})'
+            m_yh = ytd[mname][1]
+            if m_yh:
+                chg += f' · 고점 대비 {_pct0(close / m_yh - 1)}'
+            g[f'idx_{mkey}_chg'] = chg
     # 코스닥 칩 — 연초 대비 등락(손글 "카드 값은 KRX 확정 … 언론" 꼬리 대체)
-    kq = idx.get('KOSDAQ') or {}
+    kq_close = eff('KOSDAQ')[0]
     kq_ys = ytd['KOSDAQ'][0]
-    if kq.get('close') is not None and kq_ys:
-        kq_ytd = kq['close'] / kq_ys - 1
+    if kq_close is not None and kq_ys:
+        kq_ytd = kq_close / kq_ys - 1
         g['idx_kosdaq_chip'] = (f'<span class="chip {"g" if kq_ytd >= 0 else "w"}">'
                                 f'연초 대비 {_pct0(kq_ytd)}</span>')
 
     # KOSPI 위치 바·판독·칩 — 연초/고점/현재는 데이터, 매수구간·손절 참고선은 편집 값(stance.json)
-    if k.get('close') is not None:
+    kc, kchg, kwhen, kprov = eff('KOSPI')
+    if kc is not None:
         if ys is not None and yh is not None:
-            g['kospi_range'] = _render_range_bar(ys, k['close'], yh, 'KOSPI', zone=zone)
-        g['kospi_readout'] = _kospi_readout(k['close'], k.get('change_pct'), dd, ys, yh, zone, stop, triggers)
-        cls, txt = _kospi_chip(k['close'], zone, stop)
+            g['kospi_range'] = _render_range_bar(ys, kc, yh, 'KOSPI', zone=zone)
+        g['kospi_readout'] = _kospi_readout(kc, kchg, kwhen, ys, yh, zone, stop, triggers,
+                                            '언론 집계 · KRX 확정 전' if kprov else 'KRX 확정')
+        cls, txt = _kospi_chip(kc, zone, stop)
         g['idx_kospi_chip'] = f'<span class="chip {cls}">{txt}</span>'
 
     # 업종별 등락률(지수 데이터는 로그인 불필요) — 연초 대비·대표종목 컬럼은 수집된 경우에만 표시
@@ -1145,8 +1187,11 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
         g['us_issues_asof'] = esc(us['asof'])
 
     # ── 한국 이슈 분석(data/kr_issues.json — 마켓 브리프 세션이 갱신) ──
-    # 날짜는 별도 필드 없이 위 KRX 'asof' 마커를 그대로 재사용(같은 기준일 데이터를 해석하므로)
+    # 섹션 제목의 기준일(kr_issues_asof)은 카드가 해석하는 날 — 잠정 종가가 있으면 그 날, 없으면 스냅샷 기준일.
+    # (업종표 등 스냅샷 자체의 라벨은 KRX 'asof' 마커가 따로 맡는다.)
     g['kr_issues'] = _render_issue_cards(kr)
+    if prov or dd:
+        g['kr_issues_asof'] = date_label(prov['dd'] if prov else dd)
 
     # ── 오늘의 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
     # 'stance'는 대시보드 헤더용 통합 블록, 'stance_a/b/c'는 전략 탭 각 pane 상단용 단일 카드
@@ -1220,9 +1265,15 @@ _JARGON = ('WebSearch', 'Action', 'fetch_', 'bas_dd', 'pykrx')
 _HTML_SOFT_LIMIT = 240_000  # 바이트. 정리 직후 약 156KB
 
 
-def _lint_sources(us, kr, stance, triggers):
+def _lint_sources(us, kr, stance, triggers, bas_dd=None):
     """편집 소스(JSON)가 작성 규칙(최신 카드 1개·덮어쓰기·분량·내부 용어 금지)을 지켰는지 점검한다. 경고만 출력 — 강제하지 않는다."""
     warn = []
+
+    pv = (kr or {}).get('provisional')
+    if pv is not None and bas_dd and _provisional(kr, bas_dd) is None:
+        warn.append(f'kr_issues.provisional(asof {pv.get("asof") if isinstance(pv, dict) else pv!r})은 무시된다 — '
+                    f'스냅샷({bas_dd})이 이미 따라잡았거나 형식 오류(asof "YYYY-MM-DD"·kospi.close 숫자). '
+                    '새 종가로 덮어쓰거나 지울 것')
 
     def jargon(where, text):
         hit = [j for j in _JARGON if j in text]
@@ -1292,7 +1343,7 @@ def main():
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
-    _lint_sources(us, kr, stance, triggers)
+    _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'))
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
     out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)

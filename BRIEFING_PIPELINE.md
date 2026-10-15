@@ -34,13 +34,13 @@ FRED(`FRED_API_KEY` 시크릿, 없으면 해당 카드 기존 표기 유지)가 
 | 영역 | 소스 파일 | 마커 접두사 | 소유자 | 갱신 방법 |
 |---|---|---|---|---|
 | 전일 주요 이슈(미국·글로벌) | `data/us_issues.json` | `US` | 마켓 브리프 세션 | JSON 편집 — **최신 카드 1개만** |
-| 한국 시장 이슈(KRX 수급 해석) | `data/kr_issues.json` | `KR` | 마켓 브리프 세션 | JSON 편집 — **최신 카드 1개만** |
+| 한국 시장 이슈(KRX 수급 해석) | `data/kr_issues.json` | `KR` | 마켓 브리프 세션 | JSON 편집 — **최신 카드 1개만**. 스냅샷이 그날 종가를 아직 못 가졌으면 **`provisional`(언론 집계 종가)을 덮어쓴다**(아래 스키마) |
 | 오늘의 스탠스 A/B/C | `data/stance.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
 | 트리거 규칙(cond/act)·현재 판독(now)·상태(status) | `data/triggers.json` | `KR` | 마켓 브리프 세션 | JSON 편집 |
 | 헤더 날짜 라인(발행일 · "최종 업데이트" 칩) | `krx_snapshot`의 `fetched_at` + `us_issues`의 `asof` | `KRX` | GitHub Action | 자동 |
 | 코스피·코스닥 수급(직전 영업일·MTD·YTD) · 외국인·연기금 상위 · 해설 `<p>` | `data/krx_snapshot_latest.json` | `KRX` | GitHub Action | 자동. **수급 응답이 비면 마지막 확정일 값을 그 날짜 라벨(`flow_asof`)·경고문(`flow_notice`)과 함께 표시** |
-| 업종별 등락률(전체 업종) · KOSPI/코스닥 지수 카드 값·고점 대비·칩 | 〃 | `KRX` | 〃 | 자동. 연초대비·대표종목 컬럼은 수집된 때만 표시(`sectors_head`) |
-| KOSPI 위치 바 + **위치 판독 3줄**(`kospi_readout`) + KOSPI 카드 칩 | 〃 (`index.KOSPI.ytd_*`, 없으면 최근 스냅샷에서 이월) | `KRX` | GitHub Action | 자동 — 단 **매수구간·손절 참고선은 `stance.json`의 `kospi_buy_zone: [하한, 상한]`·`stop_loss_ref`**(세션 소유, 전략 A 구간이 바뀔 때만 갱신) |
+| 업종별 등락률(전체 업종) · KOSPI/코스닥 지수 카드 값·고점 대비·칩 | 〃 | `KRX` | 〃 | 자동. 연초대비·대표종목 컬럼은 수집된 때만 표시(`sectors_head`). **스냅샷보다 최신인 `kr_issues.json`의 `provisional`이 있으면 그 값을 "(M/D 언론 집계)"로 표시** |
+| KOSPI 위치 바 + **위치 판독 3줄**(`kospi_readout`) + KOSPI 카드 칩 | 〃 (`index.KOSPI.ytd_*`, 없으면 최근 스냅샷에서 이월) | `KRX` | GitHub Action | 자동 — 단 **매수구간·손절 참고선은 `stance.json`의 `kospi_buy_zone: [하한, 상한]`·`stop_loss_ref`**(세션 소유, 전략 A 구간이 바뀔 때만 갱신). 현재값은 위와 같이 `provisional`이 더 최신이면 "언론 집계 · KRX 확정 전" 라벨로 따라간다 |
 | 미국 지표 카드 값·기준일 배지·**1년 레인지 눈금**(WTI·금·구리) | `data/us_snapshot_latest.json` | `MKT` | GitHub Action | 자동(Yahoo+FRED). 눈금의 저점·고점은 `build_briefing.py`의 `_RANGE_1Y` 상수 — 신고가·신저가가 나오면 카드 라벨과 함께 갱신 |
 | WTI·원/달러 카드 **상태 칩** | `triggers.json`의 De-risk·FX Watch status | `MKT` | 렌더러 | 자동 — 트리거 status를 바꾸면 칩이 따라간다 |
 | 미국 3대 지수 카드(연초 대비 바) | 〃 | `MKT` | 〃 | 자동 |
@@ -104,7 +104,17 @@ FRED(`FRED_API_KEY` 시크릿, 없으면 해당 카드 기존 표기 유지)가 
 - **[시안성 규칙, 사용자 확정 지시]** `desc` 항목은 각각 **1~2문장**, 맨 앞에 내용 성격에 맞는 **이모지 1개**
   (📈📉🔀🚦🛡️📅⚠️💱🛢️🥇🚀 등). 4문장 이상 줄글 금지 — 길면 항목을 쪼갠다. 항목 하나 = `.ds` 문단 하나.
 - `us_issues.json`의 `asof`는 **한 줄로 짧게**(헤더 "최종 업데이트" 칩에도 그대로 쓰인다). `kr_issues.json`은 `asof`가
-  필요 없다 — 헤더가 KRX 스냅샷의 기준일을 재사용한다.
+  필요 없다 — 섹션 제목의 날짜는 아래 `provisional`이 있으면 그 날, 없으면 KRX 스냅샷 기준일을 쓴다.
+- **`kr_issues.json`의 `provisional`(선택) — 스냅샷이 낡은 날의 종가.** KRX 스냅샷은 한국장 마감 뒤 늦은 저녁에 들어와, 두 편집 에디션
+  (UTC 07·21시대)은 그날 종가를 대개 언론 집계로만 안다. 이때 자동 구간(지수 카드·위치 바·판독·칩)이 어제 확정치를 "현재"로 보여주면
+  손글·트리거와 모순된다(2026-10-15 실측: 카드는 6,009 "손절선 +0.15% 위", 트리거는 5,554 "Stop-Loss 발동"). 그래서 한국장이 마감했는데
+  `krx_snapshot_latest.json`의 `bas_dd`가 그날보다 낡았으면 언론 집계 종가를 **덮어쓴다**(쌓지 않는다):
+  ```json
+  "provisional": {"asof": "2026-10-15", "source": "복수 매체 일치(매체명)",
+                  "kospi": {"close": 5554.22, "change_pct": -7.57}, "kosdaq": {"close": 760.82, "change_pct": -7.65}}
+  ```
+  2곳 이상 매체가 일치한 값만 쓴다. 렌더러는 `asof`가 스냅샷 `bas_dd`보다 **최신일 때만** 반영하고 라벨에 "언론 집계"를 밝히며,
+  스냅샷이 따라잡으면 자동으로 무시한다(그때 빌드가 ⚠️를 내면 지우거나 새 종가로 덮어쓴다). 한국장이 열리지 않은 날은 쓰지 않는다.
 - 매수구간까지 거리·위치 바 %는 쓰지 않는다(자동 판독이 있다). 환율·유가는 지표 카드·트리거 `now`에 있으니 반복하지 않는다.
 - 최신 수급 확정치가 없어 언론 집계를 쓸 때는 **그 문장 안에서** 출처를 밝힌다("언론 집계", "MTN 기준").
 
@@ -233,6 +243,8 @@ GitHub Action(`.github/workflows/krx_snapshot.yml`)이 하루 1회(KST 05:30 예
     `POST .../actions/workflows/krx_snapshot.yml/dispatches`가 "Resource not accessible by integration"으로 거부된다(Actions:write 권한 부족 추정).
     pykrx 미설치·KRX 자격증명 없음으로 로컬 재현도 불가. **폴백**: 한국장 마감 에디션인데 `bas_dd`가 전일에 머물면, 국내 언론 2곳 이상의 마감시황을
     교차검증해 문장 안에 "언론 집계"로 출처를 밝히고 `kr_issues.json`·트리거 `now`에 반영한다. 마커 안(`KRX-*`)은 건드리지 않는다 — 익일 Action이 따라잡는다.
+    종가는 `kr_issues.json`의 **`provisional`**에도 적는다(스키마는 위) — 그러면 지수 카드·위치 바·판독·칩이 "언론 집계 · KRX 확정 전"으로 따라가
+    트리거 `now`와 어긋나지 않는다. Action 스냅샷은 보통 두 편집 에디션보다 **늦게** 들어오므로 이 폴백이 예외가 아니라 일상이다.
 12. **Artifact publish 거부 유형 (2026-08-26·10-15 실측)**: "hasn't viewed the latest version" 거부는 라이브 버전을 `action:"read"`로 받고
     저장된 소스를 **끝 줄까지 `Read`로 검토**하면 풀린다(저장된 소스 파일은 수정하지 않는다). 이어서 "identical content already refused ... resent unchanged"가
     나오면 라이브 소스가 내 내용에 이미 들어 있는지 확인한 뒤 같은 파일을 **한 번 더 그대로** 올린다 — 라이브 소스는 `git show <최근 커밋>:reports/macro-strategy-briefing.html`에
