@@ -10,20 +10,21 @@
 
 원칙:
 - 자리표시(마커)가 있는 구간만 건드린다 — 마커 밖의 손으로 쓴 분석 산문은 절대 손대지 않는다.
-- 데이터가 없으면(status != ok, 값 None) 해당 구간을 건드리지 않고 기존 "미확보" 표기를 그대로 둔다.
-  즉 숫자를 지어내지도, 있던 걸 지우지도 않는다.
+- 숫자를 지어내지 않는다. 최신 스냅샷에 값이 없으면 마지막으로 확보된 값을 쓰되, **그 값의 실제 기준일을
+  라벨에 그대로 표기**한다(과거 값을 새 날짜 라벨 아래 두지 않는다 — 투자자 수급 `flow_asof`/`flow_notice`,
+  KOSPI 위치 바의 연초·고점 이월 참고). 이월할 값조차 없으면 해당 구간은 건드리지 않는다.
+- 변하는 숫자(현재가·거리·비중·트리거 상태)는 손글에 쓰지 않고 여기서 자동 계산해 넣는다
+  (`kospi_readout`, `pf_matrix_rows`, `pf_risk_summary`, 지표 카드 눈금 `mkt_*_tick`).
 - 마커를 못 찾으면 경고만 남기고 계속(마켓 브리프 세션이 마커를 지웠을 가능성 대비).
-
-단일 스냅샷은 '전일(해당 영업일)' 값만 제공하므로 투자자 수급의 연초·이번달 누적 컬럼은
-채우지 않는다(시계열 누적이 필요 — 별도 작업).
 """
 
 import sys
 import os
 import re
+import glob
 import json
 import html as _html
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
@@ -105,6 +106,42 @@ def _industry(sectors):
     return out
 
 
+def _snap_files():
+    """날짜별 KRX 스냅샷 파일(오름차순). 파일명이 krx_snapshot_YYYYMMDD.json이라 이름순=날짜순."""
+    return sorted(glob.glob(os.path.join('data', 'krx_snapshot_2*.json')))
+
+
+def _last_good_flow():
+    """최신 스냅샷에 투자자 수급이 없을 때(KRX 응답 비어있음 등) 마지막으로 status=ok였던 스냅샷의
+    (bas_dd, investor_flow)를 돌려준다. 없으면 (None, None).
+    값은 그대로 보여주되 라벨은 그 값의 실제 기준일을 써야 한다 — 과거 값을 새 날짜 라벨 아래 두지 않는다."""
+    for f in reversed(_snap_files()):
+        try:
+            with open(f, encoding='utf-8') as fh:
+                s = json.load(fh)
+        except Exception:
+            continue
+        fl = s.get('investor_flow')
+        if isinstance(fl, dict) and fl.get('status') == 'ok' and fl.get('KOSPI'):
+            return s.get('bas_dd'), fl
+    return None, None
+
+
+def _ytd_carry(market='KOSPI'):
+    """지수 연초값·연중고점이 최신 스냅샷에 없을 때(YTD 시계열 수집 실패) 가장 최근에 확보된 값을 이월한다.
+    ytd_start는 1/2 종가라 불변, ytd_high는 신고가가 나오지 않는 한 불변(호출부에서 당일 고가와 max)."""
+    for f in reversed(_snap_files()):
+        try:
+            with open(f, encoding='utf-8') as fh:
+                s = json.load(fh)
+        except Exception:
+            continue
+        k = (s.get('index') or {}).get(market) or {}
+        if k.get('ytd_start') is not None and k.get('ytd_high') is not None:
+            return k['ytd_start'], k['ytd_high']
+    return None, None
+
+
 # ── 구간 생성기 ───────────────────────────────────────────
 def _fm_cell(value, maxabs):
     """투자자별 수급 '전일' 셀 하나(막대+값). value None이면 None(=건드리지 않음)."""
@@ -133,10 +170,11 @@ def _flow_cells(flow, market, period_field='investor_value', suffix=''):
     return {prefix + k + suffix: _fm_cell(v, maxabs) for k, v in vals.items()}
 
 
-def _flow_summary(flow, market):
+def _flow_summary(flow, market, when='전일'):
     """수급 매트릭스 하단 자동 해설 <p>들. 스냅샷에서 매번 재계산되므로 화석화되지 않는다.
     전일 3주체 방향+매물 흡수 구조 → 외국인 최대 순매수/순매도 종목(로테이션 힌트) →
-    이번달 외국인 추세. 깊은 편집성 해석(로테이션의 의미 등)은 kr_issues.json 몫으로 남긴다."""
+    이번달 외국인 추세. 깊은 편집성 해석(로테이션의 의미 등)은 kr_issues.json 몫으로 남긴다.
+    when: 첫 줄의 기준 표기 — 최신 수급이 없어 과거 확정치를 쓸 땐 '전일' 대신 그 날짜('10/7')를 넣는다."""
     mk = flow.get(market) or {}
     iv = mk.get('investor_value')
     if not iv:
@@ -149,7 +187,7 @@ def _flow_summary(flow, market):
     seg = ' · '.join(f'{n} {fmt_won(v)}' for n, v in trio)
     sellers = [n for n, v in trio if v < 0]
     top_buyer = max(trio, key=lambda x: x[1])
-    line1 = f'📊 전일 {seg}'
+    line1 = f'📊 {when} {seg}'
     if top_buyer[1] > 0 and sellers and top_buyer[0] not in sellers:
         line1 += f' — {top_buyer[0]}이 {"·".join(sellers)} 매물을 받아낸 구조.'
         # 연기금은 기관의 하위 항목 — 방향이 기관 전체와 갈릴 때만 별도 언급(오해 방지)
@@ -174,43 +212,71 @@ def _flow_summary(flow, market):
         if fm is not None and im is not None:
             fdir = '순매도' if fm < 0 else '순매수'
             idir = '순매수' if im >= 0 else '순매도'
-            ps.append(f'📅 이번달 누적으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
+            # 최신 수급이 없어 과거 확정치를 쓸 땐 '이번달'이 아니라 실제 집계 구간을 밝힌다
+            mtd_txt = '이번달 누적'
+            if when != '전일' and flow.get('mtd_from'):
+                mtd_txt = f'{date_label(flow["mtd_from"])}~{when} 누적'
+            ps.append(f'📅 {mtd_txt}으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
                       f'개인이 {fmt_won(im)} {idir}로 맞서고 있다.')
 
     style = 'font-size:12px; color:var(--ink-2)'
     return ''.join(f'<p style="{style}">{p}</p>' for p in ps)
 
 
-def _sector_rows(sectors):
-    """전체 업종지수 표(당일 내림차순) — 당일 | 연초 대비 | 대표종목(시총 상위, 당일 등락).
-    ytd_pct·leaders는 pykrx 확장 수집이 실패하면 없을 수 있다 — 그 칸만 '—'로 둔다."""
+def _sector_cols(snap):
+    """업종표의 선택 컬럼 표시 여부 — 연초 대비(ytd_pct)·대표종목(leaders)이 하나라도 수집됐을 때만 보인다.
+    pykrx 확장 수집이 실패하면 두 칸이 전 행 '—'로 비어 표가 지저분해지므로 컬럼 자체를 숨긴다."""
+    has_ytd = has_lead = False
+    for mk in ('KOSPI', 'KOSDAQ'):
+        for s in _industry((snap.get('sectors') or {}).get(mk)):
+            has_ytd = has_ytd or s.get('ytd_pct') is not None
+            has_lead = has_lead or bool(s.get('leaders'))
+    return has_ytd, has_lead
+
+
+def _sector_head(has_ytd, has_lead):
+    """업종표 머리행(<tr>) — 두 시장 표가 같은 컬럼 구성을 쓰므로 마커 1개(sectors_head)를 두 번 쓴다."""
+    th = '<th>업종</th><th>당일</th>'
+    if has_ytd:
+        th += '<th>연초 대비</th>'
+    if has_lead:
+        th += '<th>대표종목 (시총 상위 3 · 당일)</th>'
+    return f'<tr>{th}</tr>'
+
+
+def _sector_rows(sectors, has_ytd=True, has_lead=True):
+    """전체 업종지수 표(당일 내림차순) — 당일 [| 연초 대비] [| 대표종목(시총 상위, 당일 등락)].
+    선택 컬럼은 _sector_cols가 판정한 경우에만 그린다. 켜진 컬럼 안의 개별 결측은 '—'."""
     ind = _industry(sectors)
     if not ind:
         return None
     ind.sort(key=lambda s: s['change_pct'], reverse=True)  # 당일 상승 순
     rows = ''
     for s in ind:
-        ytd = s.get('ytd_pct')
-        ytd_cell = (f'<span style="color:{color_of(ytd)}">{fmt_pct(ytd)}</span>'
-                    if ytd is not None else '—')
-        leaders = s.get('leaders') or []
-        if leaders:
-            parts = []
-            for l in leaders:
-                nm = esc(l.get('name', ''))
-                c = l.get('chg_pct')
-                if c is not None:
-                    parts.append(f'{nm} <span style="color:{color_of(c)}">{fmt_pct(c)}</span>')
-                else:
-                    parts.append(nm)
-            leader_cell = ' · '.join(parts)
-        else:
-            leader_cell = '—'
-        rows += (f'<tr><td>{s["name"]}</td>'
+        cells = (f'<td>{s["name"]}</td>'
                  f'<td class="num" style="color:{color_of(s["change_pct"])}">'
-                 f'{fmt_pct(s["change_pct"])}</td>'
-                 f'<td class="num">{ytd_cell}</td>'
-                 f'<td style="font-size:12px">{leader_cell}</td></tr>')
+                 f'{fmt_pct(s["change_pct"])}</td>')
+        if has_ytd:
+            ytd = s.get('ytd_pct')
+            cells += ('<td class="num">' +
+                      (f'<span style="color:{color_of(ytd)}">{fmt_pct(ytd)}</span>'
+                       if ytd is not None else '—') + '</td>')
+        if has_lead:
+            leaders = s.get('leaders') or []
+            if leaders:
+                parts = []
+                for l in leaders:
+                    nm = esc(l.get('name', ''))
+                    c = l.get('chg_pct')
+                    if c is not None:
+                        parts.append(f'{nm} <span style="color:{color_of(c)}">{fmt_pct(c)}</span>')
+                    else:
+                        parts.append(nm)
+                leader_cell = ' · '.join(parts)
+            else:
+                leader_cell = '—'
+            cells += f'<td style="font-size:12px">{leader_cell}</td>'
+        rows += f'<tr>{cells}</tr>'
     return rows
 
 
@@ -432,6 +498,11 @@ def _pf_man(v):
     return f'{v / 1e4:,.0f}만'
 
 
+def _pf_label(r):
+    """표시 이름 — 미국 종목은 티커를 덧붙인다(이름 필드에는 티커를 넣지 않는다)."""
+    return esc(r['name']) + (f' {r["ticker"]}' if r['market'] == 'US' else '')
+
+
 def _pf_pnl_cell(p):
     if p is None:
         return '<td class="num">—</td>'
@@ -475,7 +546,107 @@ def _pf_enrich(hold, pfp, fx):
     return brokers
 
 
-def _pf_generators(hold, pfp, usm):
+_PF_LV = {'crit': 'var(--crit)', 'warn': 'var(--warn)', 'good': 'var(--good)'}
+
+
+def _pf_verdict(level, text):
+    return f'<b style="color:{_PF_LV[level]}">{text}</b>'
+
+
+def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers):
+    """정합성 매트릭스(브리핑 기준 vs 실계좌)와 진단 탭 리스크 요약을 보유내역·가격에서 매번 재계산한다.
+    예전엔 손글이라 '9/24 가격 기준' 같은 낡은 수치가 표 위쪽 자동 표와 모순되는 일이 반복됐다.
+    판정 기준(상한 50%·손절 −15% 등)은 전략 탭 문서의 규율을 그대로 옮긴 것."""
+    rows = list(merged.values())
+    share = lambda r: r['val_krw'] / tot_val * 100
+    out = []
+
+    def add(item, actual, std, verdict):
+        out.append(f'<tr><td>{item}</td><td>{actual}</td><td>{std}</td><td>{verdict}</td></tr>')
+
+    # 1) 단일 종목 집중
+    top = max(rows, key=lambda r: r['val_krw'])
+    ts = share(top)
+    lv = 'crit' if ts > 50 else ('warn' if ts > 25 else 'good')
+    add('단일 종목 집중', f'{_pf_label(top)} {ts:.1f}%',
+        'C 모델 25% · 리밸런싱 규율 절대 상한 50%(초과분 트리밍)',
+        _pf_verdict(lv, {'crit': '위반', 'warn': '경고', 'good': '양호'}[lv]))
+
+    # 2) 방어자산(단기채·금·헤지 — lens DEF)
+    dsh = sum(r['val_krw'] for r in rows if r.get('lens') == 'DEF') / tot_val * 100
+    cash_note = f' (예수금 {_pf_man(cash_krw)}원은 별도 확보)' if cash_krw else ''
+    lv = 'crit' if dsh < 1 else ('warn' if dsh < 20 else 'good')
+    add('방어자산', f'단기채·금·헤지 {dsh:.0f}%{cash_note}',
+        'A 합계 43%(현금·단기채30+금10+헤지3) · 진단 탭 "저렴한 보험을 살 구간"',
+        _pf_verdict(lv, {'crit': '부재', 'warn': '부족', 'good': '양호'}[lv]))
+
+    # 3) 손절 규율(−15%): C(손절선 없는 초장기)를 뺀 포지션
+    off = sorted((r for r in rows if r.get('lens') != 'C' and r['pnl'] is not None and r['pnl'] <= -15),
+                 key=lambda r: r['pnl'])
+    if off:
+        names = ' · '.join(f'{_pf_label(r)} {MINUS}{abs(r["pnl"]):.0f}%' for r in off[:3])
+        more = f' 외 {len(off) - 3}개' if len(off) > 3 else ''
+        w = sum(share(r) for r in off)
+        add('손절 규율(−15%)', f'{len(off)}개 포지션(합계 비중 {w:.1f}%): {names}{more}',
+            'B: "예외 없이 파는 기계적 매도"', _pf_verdict('crit', '위반'))
+    else:
+        add('손절 규율(−15%)', '손절선(−15%)을 넘은 포지션 없음',
+            'B: "예외 없이 파는 기계적 매도"', _pf_verdict('good', '준수'))
+
+    # 4) 레버리지
+    lev = [r for r in rows if r.get('leveraged')]
+    if lev:
+        add('레버리지', ' · '.join(f'{_pf_label(r)} {share(r):.1f}%' for r in lev),
+            'B: 마이크론 현물 8% · 현 스탠스 "신규 진입 보류"', _pf_verdict('warn', '경고'))
+    else:
+        add('레버리지', '레버리지 상품 없음', 'B: 신규 레버리지·인버스 금지', _pf_verdict('good', '없음'))
+
+    # 5) 환노출
+    fxs = _trigger_status(triggers, 'FX Watch')
+    fx_txt = (f'FX Watch {_TRG_KO.get(fxs, fxs)}' if fxs else 'FX Watch') + \
+             (f' · 원/달러 {fx:,.0f}원' if fx else '')
+    add('환노출', f'달러 표시 자산 {usd_share:.1f}%', esc(fx_txt),
+        _pf_verdict('warn' if usd_share > 50 else 'good', '경고' if usd_share > 50 else '양호'))
+
+    # 6) C 테마 커버리지
+    tickers = {r['ticker'] for r in rows}
+    c_names = [_pf_label(r) for r in rows if r.get('lens') == 'C']
+    miss = [n for t, n in (('IONQ', 'IonQ'), ('ABCL', 'AbCellera')) if t not in tickers]
+    add('C 테마 커버리지', ' · '.join(c_names) + (f' — {"·".join(miss)} 0' if miss else ''),
+        'C: 양자 15 · AI신약 15 · 대기현금 25', _pf_verdict('warn' if miss else 'good', '불일치' if miss else '일치'))
+
+    # 7) 한국 주식 구성
+    kr = [r for r in rows if r['market'] == 'KR']
+    kr_txt = ' + '.join(f'{esc(r["name"])} {share(r):.1f}%' for r in sorted(kr, key=lambda r: -r['val_krw'])) or '없음'
+    adr = next((r for r in rows if r['ticker'] == 'SKHY'), None)
+    if adr:
+        kr_txt += f' · SK하이닉스 ADR(SKHY) {share(adr):.1f}%(미국 상장)'
+    add('한국 주식 구성', kr_txt, 'A 한국 20%: 삼전 8 · 하이닉스 6 · 전력기기 4 · 방산 2 분할매수',
+        _pf_verdict('warn', '상이'))
+
+    # 8) 현금 실탄
+    cash_sh = cash_krw / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else 0
+    add('현금 실탄', f'예수금 {_pf_man(cash_krw)}원 — 총자산의 {cash_sh:.0f}%', 'A 30% · B 20% · C 25%',
+        _pf_verdict('warn' if cash_sh < 20 else 'good', '부족' if cash_sh < 20 else '충분'))
+
+    # 9) 퀄리티 메가캡
+    a_rows = [r for r in rows if r.get('lens') == 'A']
+    a_sh = lens_pct.get('A', 0.0)
+    a_txt = ' · '.join(_pf_label(r) for r in a_rows) or '없음'
+    add('퀄리티 메가캡', f'{a_txt} {a_sh:.1f}%', 'A: 5%, "조정 시에만"',
+        _pf_verdict('good' if 2.5 <= a_sh <= 7.5 else 'warn', '근접' if 2.5 <= a_sh <= 7.5 else '미달'))
+
+    # ── 진단 탭 리스크 요약 ──
+    c_sh = lens_pct.get('C', 0.0)
+    n_off = len(off)
+    w_off = sum(share(r) for r in off) if off else 0.0
+    summary = (f'🧭 전략 C 계열 {c_sh:.1f}%(최대 단일 종목 {esc(top["name"])} {ts:.1f}%) · 방어자산 {dsh:.0f}% · '
+               f'손절 규율(−15%) 밖 {n_off}개 포지션(합계 비중 {w_off:.1f}%) — 위 진단("보험 살 구간")과 반대 구조다. '
+               f'상세 진단·재정렬 로드맵은 <strong>포트폴리오 탭</strong> 참조(평가액·비중은 매 브리핑 전일 종가로 자동 계산).')
+    return {'pf_matrix_rows': ''.join(out), 'pf_risk_summary': f'<p>{summary}</p>'}
+
+
+def _pf_generators(hold, pfp, usm, triggers=None):
     g = {}
     if not hold or not hold.get('brokers'):
         return g
@@ -497,7 +668,19 @@ def _pf_generators(hold, pfp, usm):
         ds = [r['asof'] for r in priced if r['market'] == mkt and r.get('asof')]
         return f'{int(max(ds)[5:7])}/{int(max(ds)[8:10])}' if ds else '미확보'
     fx_txt = f'{fx:,.0f}원/$' if fx else 'FX 미확보'
-    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")} · '
+    # 보유내역(수량·평단)은 사용자 캡처로만 바뀌므로 오래되면 독자가 알아보게 경고한다 — 기준은 렌더 시각이 아니라
+    # 가격 수집일(fetched_at)이라 언제 다시 빌드해도 같은 결과.
+    stale = ''
+    cap = re.match(r'(\d{4})-(\d{2})-(\d{2})', hold.get('asof') or '')
+    ref = re.match(r'(\d{4})-(\d{2})-(\d{2})', (pfp or {}).get('fetched_at') or '')
+    if cap and ref:
+        try:
+            age = (date(*map(int, ref.groups())) - date(*map(int, cap.groups()))).days
+        except ValueError:
+            age = 0
+        if age > 30:
+            stale = f' · ⚠️ 캡처 후 {age}일 경과 — 새 계좌 캡처를 공유하면 갱신'
+    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")}{stale} · '
                           f'가격 자동 갱신 — 미국 {_dlabel("US")} 종가 · 한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
 
     # ── 합산 요약 ──
@@ -543,7 +726,7 @@ def _pf_generators(hold, pfp, usm):
         w = r['val_krw'] / tot_val * 100
         strat = ('<b style="color:var(--warn)">전략 외</b>' if r.get('lens') == 'OUT'
                  else esc(r.get('strategy', '')))
-        label = esc(r['name']) + (f' {r["ticker"]}' if r['market'] == 'US' else '')
+        label = _pf_label(r)
         rows_html += (f'<tr><td>{label}</td><td class="num">{_pf_qty(r["qty"])}</td>'
                       f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
                       f'<td class="num">{_pf_money(r["close"], r["ccy"])}</td>'
@@ -566,7 +749,7 @@ def _pf_generators(hold, pfp, usm):
         rh = ''
         for r in sorted(b['rows'], key=lambda x: -(x['val_krw'] or 0)):
             w = (r['val_krw'] / bv * 100) if (bv and r['val_krw'] is not None) else None
-            rh += (f'<tr><td>{esc(r["name"])}{" " + r["ticker"] if r["market"] == "US" else ""}</td>'
+            rh += (f'<tr><td>{_pf_label(r)}</td>'
                    f'<td>{"국내" if r["market"] == "KR" else "해외"}</td>'
                    f'<td class="num">{_pf_qty(r["qty"])}</td>'
                    f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
@@ -589,7 +772,14 @@ def _pf_generators(hold, pfp, usm):
                         f'aria-label="전략별 구성(주식 평가액 기준, 매 브리핑 재계산)">{spans}</div>')
     for k in _PF_LENS_ORDER:
         g[f'pf_lens_pct_{k.lower()}'] = f'{lens_pct[k]:.1f}%'
+
+    # ── 정합성 매트릭스·리스크 요약(손글 대체) ──
+    g.update(_pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers))
     return g
+
+
+# 핵심 지표 카드의 1년 레인지 바 (저점, 고점) — 카드의 "1년 저점/고점" 라벨과 같은 값
+_RANGE_1Y = {'wti': (55.0, 117.6), 'gold': (3283.0, 5597.0), 'copper': (4.33, 6.72)}
 
 
 def _mkt_generators(usm):
@@ -620,6 +810,12 @@ def _mkt_generators(usm):
     p = price('copper')
     if p is not None:
         g['mkt_copper_v'] = f'${p:,.2f}'
+    # 1년 레인지 눈금(.mrange) 위치 — 손글 % 값이 며칠만에 화석화돼 자동화. 저점·고점은 카드 라벨의 고정값
+    # (신고가·신저가가 나오면 라벨과 함께 아래 상수를 갱신; 그 전까지는 0~100%로 클램프).
+    for key, (lo, hi) in _RANGE_1Y.items():
+        p = price(key)
+        if p is not None and hi > lo:
+            g[f'mkt_{key}_tick'] = f'<i style="left:{max(0.0, min(100.0, (p - lo) / (hi - lo) * 100)):.0f}%"></i>'
 
     t10 = (f.get('t10y') or {}).get('value')
     t2 = (f.get('t2y') or {}).get('value')
@@ -741,12 +937,88 @@ def _render_triggers(triggers):
                        'border:1px solid var(--ring); color:var(--ink);')
         strat_badges = ''.join(
             f'<span style="{badge_style}">{esc(s)}</span> ' for s in t.get('strategies', []))
+        # now: 이 트리거의 '현재 판독' 1~2문장(날짜 포함, 매 에디션 교체). cond·act는 규칙 자체라 잘 바뀌지 않는다.
+        now = (t.get('now') or '').strip()
+        now_html = (f'    <div class="now"><span class="nl">현재</span>{esc(now)}</div>\n'
+                    if now else '')
         cards.append(
             f'<div class="trg {cat}"><div class="st"></div><div>\n'
             f'    <div class="tag">{tag}</div>\n'
             f'    <div class="cond">{strat_badges}{esc(t.get("cond", ""))}</div>\n'
+            f'{now_html}'
             f'    <div class="act">{esc(t.get("act", ""))}</div></div></div>')
     return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
+
+
+# ── KOSPI 위치 판독 (손글 일지를 대체하는 자동 요약) ─────────────────────────
+_TRG_KO = {'dormant': '평시', 'approaching': '임박', 'hit': '발동'}
+
+
+def _trigger_status(triggers, tag):
+    """triggers.json에서 tag가 정확히 일치하는 첫 트리거의 status(없으면 None)."""
+    for t in (triggers or {}).get('triggers') or []:
+        if (t.get('tag') or '').strip() == tag:
+            return t.get('status')
+    return None
+
+
+def _trigger_chip(triggers, tag, hit_cls='c'):
+    """지표 카드 칩 — 해당 트리거의 현재 status에서 자동 생성한다(손글 칩이 상태가 바뀐 뒤에도 남는 문제 방지)."""
+    st = _trigger_status(triggers, tag)
+    if not st:
+        return None
+    cls = {'hit': hit_cls, 'approaching': 'w', 'dormant': 'g'}.get(st, 'w')
+    return f'<span class="chip {cls}">{tag} {_TRG_KO.get(st, st)}</span>'
+
+
+def _kospi_chip(close, zone, stop):
+    """KOSPI 카드 칩(상태 라벨) — 종가가 손절 참고선·매수구간 어디에 있는지로 자동 판정."""
+    if stop is not None and close < stop:
+        return 's', '손절 참고선 이탈'
+    if stop is not None and close <= stop * 1.03:
+        return 'c', '손절 참고선 근접'
+    if zone:
+        lo, hi = zone
+        if lo <= close <= hi:
+            return 'g', '매수구간 안'
+        if close > hi:
+            return 'w', '매수구간 위'
+    return 'w', '매수구간 아래 · 대기'
+
+
+def _kospi_readout(close, chg, dd, ys, yh, zone, stop, triggers):
+    """위치 바 아래 자동 판독 <p> 3줄: 위치/거리/트리거. 숫자는 전부 스냅샷·stance.json에서 계산한다."""
+    style = 'font-size:13px; color:var(--ink-2); margin:6px 0 0'
+    ps = []
+    head = f'📍 현재 <strong>{close:,.0f}</strong> ({date_label(dd) + " " if dd else ""}KRX 확정'
+    if chg is not None:
+        head += f', {fmt_pct(chg)}'
+    head += ')'
+    if ys is not None and yh is not None and yh > ys:
+        pos = (close - ys) / (yh - ys) * 100
+        head += (f' — 연초 {ys:,.0f}~고점 {yh:,.0f} 구간의 {pos:.0f}% 지점, '
+                 f'고점 대비 {_pct0(close / yh - 1)}')
+    ps.append(head)
+    dist = []
+    if zone:
+        lo, hi = zone
+        if close < lo:
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 하단까지 +{(lo / close - 1) * 100:.1f}%')
+        elif close <= hi:
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 안')
+        else:
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 위 +{(close / hi - 1) * 100:.1f}%')
+    if stop is not None:
+        gap = (close / stop - 1) * 100
+        dist.append(f'손절 참고선({stop:,.0f})보다 ' +
+                    (f'+{gap:.2f}% 위' if gap >= 0 else f'{MINUS}{abs(gap):.2f}% 아래(이탈)'))
+    if dist:
+        ps.append('📐 ' + ' · '.join(dist))
+    st = [(tag, _trigger_status(triggers, tag)) for tag in ('Add', 'Stop-Loss')]
+    st = [f'{tag} {_TRG_KO.get(s, s)}' for tag, s in st if s]
+    if st:
+        ps.append('🚦 트리거: ' + ' · '.join(st) + ' — 판정 근거는 트리거 탭')
+    return ''.join(f'<p style="{style}">{p}</p>' for p in ps)
 
 
 def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None):
@@ -773,59 +1045,99 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
             upd += f' · {esc(us["asof"])}'
         g['hdr_updated'] = upd
 
-    # 지수 카드 — 숫자(종가·등락률·기준일)만 자동, 해석 꼬리는 편집 소유(마커 밖)
+    # 지수 연초값·연중고점 — 최신 스냅샷에 없으면(YTD 시계열 수집 실패) 가장 최근에 확보된 값을 이월한다.
+    # (이월 없이 두면 위치 바만 과거 종가에 멈춰 지수 카드와 어긋난다.)
+    ytd = {}
+    for mname in ('KOSPI', 'KOSDAQ'):
+        m = idx.get(mname) or {}
+        s_, h_ = m.get('ytd_start'), m.get('ytd_high')
+        if (s_ is None or h_ is None) and m.get('close') is not None:
+            s_, h_ = _ytd_carry(mname)
+            if h_ is not None and m.get('high') is not None:
+                h_ = max(h_, m['high'])
+        ytd[mname] = (s_, h_)
     k = idx.get('KOSPI') or {}
-    for mkey, mdata in (('kospi', idx.get('KOSPI')), ('kosdaq', idx.get('KOSDAQ'))):
+    ys, yh = ytd['KOSPI']
+    bz = (stance or {}).get('kospi_buy_zone')
+    zone = tuple(bz) if isinstance(bz, (list, tuple)) and len(bz) == 2 else None
+    stop = (stance or {}).get('stop_loss_ref')
+
+    # 지수 카드 — 숫자(종가·등락률·기준일)와 고점 대비는 전부 자동(손글 꼬리 없음)
+    for mkey, mname in (('kospi', 'KOSPI'), ('kosdaq', 'KOSDAQ')):
+        mdata = idx.get(mname)
         if mdata and mdata.get('close') is not None:
             close = mdata['close']
             # 기존 카드 표기 관례: 코스피 '7,247'(정수), 코스닥 '785.0'(소수 1자리)
             g[f'idx_{mkey}_v'] = f'{close:,.0f}' if close >= 1000 else f'{close:,.1f}'
             if mdata.get('change_pct') is not None and dd:
-                g[f'idx_{mkey}_chg'] = f'{fmt_pct(mdata["change_pct"])} ({date_label(dd)})'
+                chg = f'{fmt_pct(mdata["change_pct"])} ({date_label(dd)})'
+                m_yh = ytd[mname][1]
+                if m_yh:
+                    chg += f' · 고점 대비 {_pct0(close / m_yh - 1)}'
+                g[f'idx_{mkey}_chg'] = chg
+    # 코스닥 칩 — 연초 대비 등락(손글 "카드 값은 KRX 확정 … 언론" 꼬리 대체)
+    kq = idx.get('KOSDAQ') or {}
+    kq_ys = ytd['KOSDAQ'][0]
+    if kq.get('close') is not None and kq_ys:
+        kq_ytd = kq['close'] / kq_ys - 1
+        g['idx_kosdaq_chip'] = (f'<span class="chip {"g" if kq_ytd >= 0 else "w"}">'
+                                f'연초 대비 {_pct0(kq_ytd)}</span>')
 
-    # KOSPI 위치 바 — 연초/고점/현재는 데이터(pykrx YTD), 매수구간은 편집 값(stance.json)
-    if all(k.get(f) is not None for f in ('ytd_start', 'ytd_high', 'close')):
-        bz = (stance or {}).get('kospi_buy_zone')
-        zone = tuple(bz) if isinstance(bz, (list, tuple)) and len(bz) == 2 else None
-        g['kospi_range'] = _render_range_bar(
-            k['ytd_start'], k['close'], k['ytd_high'], 'KOSPI', zone=zone)
-
-    # 업종별 등락률(지수 데이터는 로그인 불필요 — 키만 있으면 채워짐)
-    g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'))
-    g['sectors_kosdaq'] = _sector_rows((snap.get('sectors') or {}).get('KOSDAQ'))
-
-    # 투자자 수급 전일·이번달·연초 + 상위 종목(로그인 필요 — flow_ok일 때만)
-    if flow_ok:
-        for market in ('KOSPI', 'KOSDAQ'):
-            g.update(_flow_cells(flow, market))
-            g.update(_flow_cells(flow, market, 'investor_value_mtd', '_mtd'))
-            g.update(_flow_cells(flow, market, 'investor_value_ytd', '_ytd'))
-        g['foreign_top_kospi'] = _foreign_top_rows(flow, 'KOSPI')
-        g['foreign_top_kosdaq'] = _foreign_top_rows(flow, 'KOSDAQ')
-        g['flow_summary_kospi'] = _flow_summary(flow, 'KOSPI')
-        g['flow_summary_kosdaq'] = _flow_summary(flow, 'KOSDAQ')
-        g['pension_top'] = _pension_rows(flow)
-        g['pension_sell_top'] = _pension_sell_rows(flow)
-        # 기간 라벨(코스피·코스닥 공용 — 같은 기준일/월초/연초를 쓰므로 마커 1쌍만 필요)
-        mtd_from, ytd_from = flow.get('mtd_from'), flow.get('ytd_from')
-        if mtd_from and dd:
-            g['mtd_label'] = f'{date_label(mtd_from)}~{date_label(dd)}'
-        if ytd_from and dd:
-            g['ytd_label'] = f'{date_label(ytd_from)}~{date_label(dd)}'
-
-    # 연동 상태 노트
-    sources = []
+    # KOSPI 위치 바·판독·칩 — 연초/고점/현재는 데이터, 매수구간·손절 참고선은 편집 값(stance.json)
     if k.get('close') is not None:
-        sources.append('지수·업종·종목 시세(Open API)')
+        if ys is not None and yh is not None:
+            g['kospi_range'] = _render_range_bar(ys, k['close'], yh, 'KOSPI', zone=zone)
+        g['kospi_readout'] = _kospi_readout(k['close'], k.get('change_pct'), dd, ys, yh, zone, stop, triggers)
+        cls, txt = _kospi_chip(k['close'], zone, stop)
+        g['idx_kospi_chip'] = f'<span class="chip {cls}">{txt}</span>'
+
+    # 업종별 등락률(지수 데이터는 로그인 불필요) — 연초 대비·대표종목 컬럼은 수집된 경우에만 표시
+    has_ytd, has_lead = _sector_cols(snap)
+    g['sectors_head'] = _sector_head(has_ytd, has_lead)
+    g['sectors_kospi'] = _sector_rows((snap.get('sectors') or {}).get('KOSPI'), has_ytd, has_lead)
+    g['sectors_kosdaq'] = _sector_rows((snap.get('sectors') or {}).get('KOSDAQ'), has_ytd, has_lead)
+
+    # 투자자 수급 전일·이번달·연초 + 상위 종목(로그인 필요). 최신 스냅샷에 없으면(KRX 응답 비어있음)
+    # 마지막 확정 스냅샷 값을 보여주되 기준일 라벨을 그 값의 날짜로 바꾸고 안내문을 붙인다 —
+    # 과거 값을 새 날짜 라벨 아래 두면(이전 동작) 독자가 오래된 수급을 최신으로 오인한다.
     if flow_ok:
-        sources.append('투자자별 수급·순매수 상위(정보데이터시스템)')
-    if sources:
-        cum_note = ('연초·이번달 누적은 KRX 서버가 해당 기간을 직접 합산해 조회한 값이다.'
-                    if flow_ok else '연초·이번달 누적은 투자자 수급 로그인 연동 전까지 미확보로 남는다.')
-        g['integration_note'] = (
-            f'✅ KRX 직접 연동 가동 중 — {" · ".join(sources)}를 매 영업일 자동 수집·주입. '
-            f'기준일 {date_label(dd)}. {cum_note} '
-            f'확보 못 한 값은 지어내지 않고 "미확보/집계중"으로 남긴다.')
+        flow_src, flow_dd = flow, dd
+    else:
+        flow_dd, flow_src = _last_good_flow()
+    if flow_src:
+        for market in ('KOSPI', 'KOSDAQ'):
+            g.update(_flow_cells(flow_src, market))
+            g.update(_flow_cells(flow_src, market, 'investor_value_mtd', '_mtd'))
+            g.update(_flow_cells(flow_src, market, 'investor_value_ytd', '_ytd'))
+        g['foreign_top_kospi'] = _foreign_top_rows(flow_src, 'KOSPI')
+        g['foreign_top_kosdaq'] = _foreign_top_rows(flow_src, 'KOSDAQ')
+        when = '전일' if flow_ok else date_label(flow_dd)
+        g['flow_summary_kospi'] = _flow_summary(flow_src, 'KOSPI', when)
+        g['flow_summary_kosdaq'] = _flow_summary(flow_src, 'KOSDAQ', when)
+        g['pension_top'] = _pension_rows(flow_src)
+        g['pension_sell_top'] = _pension_sell_rows(flow_src)
+        # 기간 라벨(코스피·코스닥 공용 — 같은 기준일/월초/연초를 쓰므로 마커 1쌍만 필요)
+        mtd_from, ytd_from = flow_src.get('mtd_from'), flow_src.get('ytd_from')
+        if mtd_from and flow_dd:
+            g['mtd_label'] = f'{date_label(mtd_from)}~{date_label(flow_dd)}'
+        if ytd_from and flow_dd:
+            g['ytd_label'] = f'{date_label(ytd_from)}~{date_label(flow_dd)}'
+        g['flow_asof'] = date_label(flow_dd)
+    else:
+        g['flow_asof'] = '미수집'
+    g['flow_col'] = '직전 영업일' if flow_ok else '최근 확정일'
+    if flow_ok:
+        g['flow_notice'] = ''
+    elif flow_src:
+        g['flow_notice'] = (
+            '<p style="font-size:12.5px; color:var(--warn); margin:6px 0 10px">'
+            f'⚠️ KRX 투자자별 수급 응답이 {date_label(flow_dd)} 이후 비어 있어, 수급 표·상위종목은 '
+            f'마지막 확정일({date_label(flow_dd)}) 값을 표시한다. 이후 거래일의 수급은 '
+            '위 \'한국 시장 이슈\'의 언론 집계를 참고.</p>')
+    else:
+        g['flow_notice'] = (
+            '<p style="font-size:12.5px; color:var(--warn); margin:6px 0 10px">'
+            '⚠️ KRX 투자자별 수급 확정치를 아직 확보하지 못했다(지어내지 않음).</p>')
 
     # ── 미국 이슈(별도 소스 data/us_issues.json — 마켓 브리프 세션이 갱신) ──
     g['us_issues'] = _render_issue_cards(us)
@@ -849,6 +1161,8 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
 
     # ── 미국·글로벌 시세(data/us_snapshot_latest.json — Action 자동) ──
     g.update(_mkt_generators(usm))
+    g['mkt_wti_chip'] = _trigger_chip(triggers, 'De-risk')
+    g['mkt_usdkrw_chip'] = _trigger_chip(triggers, 'FX Watch', hit_cls='w')
 
     # ── 이번 주 경제 캘린더(data/econ_calendar_latest.json — Action 자동, Finnhub) ──
     g['econ_calendar'] = _econ_calendar_rows(cal)
@@ -858,7 +1172,7 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     g['sbx_screen'] = _screen_rows(screen)
     if screen and screen.get('fetched_at'):
         g['sbx_asof'] = esc(screen['fetched_at'])
-    g.update(_pf_generators(pf_hold, pf_prices, usm))
+    g.update(_pf_generators(pf_hold, pf_prices, usm, triggers))
     return g
 
 
@@ -900,6 +1214,54 @@ def _warn_if_editorial_stale(us, snap):
                   f'(한쪽 휴장이면 정상). 마켓 브리프 세션 확인 필요.')
 
 
+# ── 작성 규칙 점검 (경고만) ────────────────────────────────────────────────
+# 3개월간 에디션마다 경과를 덧붙여 페이지가 443KB·일지 문단 60여 개로 부풀었던 사고(2026-10-15 감사)의 재발 방지 가드.
+_JARGON = ('WebSearch', 'Action', 'fetch_', 'bas_dd', 'pykrx')
+_HTML_SOFT_LIMIT = 240_000  # 바이트. 정리 직후 약 156KB
+
+
+def _lint_sources(us, kr, stance, triggers):
+    """편집 소스(JSON)가 작성 규칙(최신 카드 1개·덮어쓰기·분량·내부 용어 금지)을 지켰는지 점검한다. 경고만 출력 — 강제하지 않는다."""
+    warn = []
+
+    def jargon(where, text):
+        hit = [j for j in _JARGON if j in text]
+        if hit:
+            warn.append(f'{where}: 독자 문장에 내부 용어 {hit}')
+
+    for name, src in (('us_issues', us), ('kr_issues', kr)):
+        issues = (src or {}).get('issues') or []
+        if len(issues) > 1:
+            warn.append(f'{name}.json issues {len(issues)}개 — 최신 에디션 카드 1개만 둔다(이전 카드는 삭제)')
+        for it in issues:
+            jargon(f'{name} 제목', it.get('title', ''))
+            for d in it.get('desc', []):
+                jargon(f'{name} desc', d)
+                if len(d) > 330:
+                    warn.append(f'{name} desc {len(d)}자 — 1~2문장으로 쪼갤 것: {d[:24]}…')
+    for r in (stance or {}).get('strategies') or []:
+        label = r.get('label', '?')
+        pts = r.get('points') or []
+        if len(pts) > 5:
+            warn.append(f'stance {label} points {len(pts)}개 — 5개 이내로')
+        for p in [r.get('headline', '')] + pts:
+            jargon(f'stance {label}', p)
+        for p in pts:
+            if len(p) > 280:
+                warn.append(f'stance {label} 항목 {len(p)}자 — 1~2문장으로 쪼갤 것: {p[:24]}…')
+    for t in (triggers or {}).get('triggers') or []:
+        tag = t.get('tag', '?')
+        for fld, lim in (('cond', 300), ('act', 600), ('now', 400)):
+            v = t.get(fld) or ''
+            jargon(f'트리거 {tag}.{fld}', v)
+            if len(v) > lim:
+                warn.append(f'트리거 {tag}.{fld} {len(v)}자(>{lim}) — 판독을 이어붙이지 말고 덮어쓸 것')
+        if '| 이전:' in (t.get('cond') or '') + (t.get('now') or ''):
+            warn.append(f'트리거 {tag}: "| 이전:" 꼬리 — 지난 판독은 보존하지 않는다(이력은 git·작업일지)')
+    for w in warn:
+        print('⚠️ 작성 규칙 —', w)
+
+
 def _load(path, label):
     if not os.path.exists(path):
         print(f'{label} 없음: {path} — 해당 영역 주입 생략')
@@ -930,9 +1292,13 @@ def main():
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
+    _lint_sources(us, kr, stance, triggers)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
     out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)
+    size = len(out.encode('utf-8'))
+    if size > _HTML_SOFT_LIMIT:
+        print(f'⚠️ 분량 경고 — HTML {size:,}바이트 > {_HTML_SOFT_LIMIT:,}: 일지식 덧붙임이 쌓였는지 확인할 것(BRIEFING_PIPELINE.md "본문 작성 규칙")')
     if out != html:
         with open(HTML_PATH, 'w', encoding='utf-8') as f:
             f.write(out)

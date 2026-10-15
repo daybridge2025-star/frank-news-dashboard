@@ -1,6 +1,6 @@
 {
-  "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화.",
-  "asof": "2026-08-04 계좌 캡처 — 미래에셋 리밸런싱 완료(알파벳·서클 인터넷·MSTW 전량 매도, 그 재원으로 테슬라·스페이스X 추가매수 + SK하이닉스 ADR 신규매수, 사용자 확인) + 토스증권 4종목 수량 증가",
+  "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화. leveraged: true면 정합성 매트릭스 '레버리지' 행에 집계된다. name에는 티커를 넣지 않는다(미국 종목은 표에서 티커를 자동으로 덧붙임).",
+  "asof": "2026-08-04 계좌 캡처",
   "brokers": [
     {
       "key": "mirae",
@@ -28,9 +28,9 @@
       ],
       "holdings": [
         {"name": "SOL AI반도체TOP2플러스", "ticker": "0167A0", "yahoo": "0167A0.KS", "market": "KR", "ccy": "KRW", "qty": 275, "avg": 25496, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
-        {"name": "MUU · 마이크론 2×", "ticker": "MUU", "yahoo": "MUU", "market": "US", "ccy": "USD", "qty": 120, "avg": 41.82, "lens": "B", "strategy": "B 마이크론(8%)의 레버리지 변형"},
+        {"name": "마이크론 2× 레버리지", "ticker": "MUU", "yahoo": "MUU", "market": "US", "ccy": "USD", "qty": 120, "avg": 41.82, "lens": "B", "leveraged": true, "strategy": "B 마이크론(8%)의 레버리지 변형"},
         {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 4.158725, "avg": 145.01, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
-        {"name": "MAGS · 매그니피센트7", "ticker": "MAGS", "yahoo": "MAGS", "market": "US", "ccy": "USD", "qty": 2.676721, "avg": 63.54, "lens": "A", "strategy": "A 퀄리티 메가캡 유사"}
+        {"name": "매그니피센트7 ETF", "ticker": "MAGS", "yahoo": "MAGS", "market": "US", "ccy": "USD", "qty": 2.676721, "avg": 63.54, "lens": "A", "strategy": "A 퀄리티 메가캡 유사"}
       ]
     }
   ]
