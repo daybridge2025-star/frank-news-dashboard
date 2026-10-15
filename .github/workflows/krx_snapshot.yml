@@ -60,3 +60,16 @@ jobs:
           git add data/krx_snapshot_*.json data/us_snapshot_latest.json data/econ_calendar_latest.json data/portfolio_prices_latest.json reports/macro-strategy-briefing.html
           git diff --cached --quiet || git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      # 수집·커밋이 모두 끝난 뒤 마지막에 점검한다 — 투자자 수급이 비면(예: KRX 비밀번호 만료) 이 실행을 실패로 표시해
+      # GitHub 알림 메일이 오게 한다. (2026-10-08부터 비밀번호 만료로 수급이 비었는데 실행은 계속 '성공'이라 일주일간 아무도 몰랐다.)
+      - name: KRX 투자자 수급 점검 (결측이면 실패 표시 → 알림)
+        run: |
+          python - <<'PY'
+          import json, sys
+          fl = json.load(open('data/krx_snapshot_latest.json', encoding='utf-8')).get('investor_flow') or {}
+          if fl.get('status') != 'ok':
+              print(f"::error title=KRX 투자자 수급 결측::{fl.get('reason')}")
+              sys.exit(1)
+          print('KRX 투자자 수급 정상')
+          PY
