@@ -803,6 +803,10 @@ def _pf_generators(hold, pfp, usm, triggers=None):
     return g
 
 
+# 공포탐욕지수 등급(CNN) → (한글 라벨, 칩 색). 극단 구간은 경고색, 중립은 녹색.
+_FNG_KO = {'extreme fear': ('극단적 공포', 'c'), 'fear': ('공포', 'w'), 'neutral': ('중립', 'g'),
+           'greed': ('탐욕', 'w'), 'extreme greed': ('극단적 탐욕', 'c')}
+
 # 핵심 지표 카드의 1년 레인지 바 (저점, 고점) — 카드의 "1년 저점/고점" 라벨과 같은 값
 _RANGE_1Y = {'wti': (55.0, 117.6), 'gold': (3283.0, 5597.0), 'copper': (4.33, 6.72)}
 
@@ -887,6 +891,44 @@ def _mkt_generators(usm):
     sp = min((fd['t10y'], fd['t2y']) or ('',)) if fd['t10y'] and fd['t2y'] else ''
     if md(sp):
         g['mkt_spread_d'] = md(sp)
+
+    # 공포탐욕지수(CNN) — 값·기준일·전일/1주/1개월 비교·상태 칩. 수집 실패 시 키가 없어 마지막 값과 그 기준일이 그대로 남는다.
+    fg = (usm or {}).get('fear_greed') or {}
+    sc = fg.get('score')
+    if isinstance(sc, (int, float)):
+        g['mkt_fng_v'] = f'{sc:.0f}'
+        if md(fg.get('asof') or ''):
+            g['mkt_fng_d'] = md(fg['asof'])
+        rating = str(fg.get('rating') or '').lower()
+        if rating not in _FNG_KO:      # 등급 문자열을 못 읽으면 CNN 구간표로 직접 판정
+            rating = ('extreme fear' if sc < 25 else 'fear' if sc < 45 else 'neutral' if sc < 55
+                      else 'greed' if sc < 75 else 'extreme greed')
+        label, cls = _FNG_KO[rating]
+        g['mkt_fng_chip'] = f'<span class="chip {cls}">{label}</span>'
+        cmp_ = [f'{lab} {fg[k]:.0f}' for k, lab in (('prev_close', '전일'), ('prev_week', '1주 전'),
+                                                    ('prev_month', '1개월 전'))
+                if isinstance(fg.get(k), (int, float))]
+        g['mkt_fng_sub'] = ' · '.join(cmp_ + ['CNN' if fg.get('source') == 'CNN' else 'CNN 미러'])
+
+    # S&P 500 선행 PER(FactSet 주간 보고서) — 10년 평균 대비 위치를 칩으로 자동 판정
+    va = (usm or {}).get('valuation') or {}
+    pe = va.get('forward_pe')
+    if isinstance(pe, (int, float)):
+        g['mkt_pe_v'] = f'{pe:.1f}'
+        if md(va.get('asof') or ''):
+            g['mkt_pe_d'] = md(va['asof'])
+        a5, a10 = va.get('avg5'), va.get('avg10')
+        sub = 'Forward P/E'
+        if isinstance(a5, (int, float)):
+            sub += f' · 5년 평균 {a5:.1f}'
+        if isinstance(a10, (int, float)):
+            sub += f' · 10년 평균 {a10:.1f}'
+        g['mkt_pe_sub'] = sub + ' · FactSet'
+        if isinstance(a10, (int, float)) and a10 > 0:
+            dev = pe / a10 - 1
+            txt = ('10년 평균 수준' if abs(dev) < 0.015
+                   else f'10년 평균 대비 {"+" if dev > 0 else MINUS}{abs(dev) * 100:.0f}%')
+            g['mkt_pe_chip'] = f'<span class="chip {"g" if dev <= 0.03 else "w" if dev <= 0.12 else "c"}">{txt}</span>'
     return g
 
 

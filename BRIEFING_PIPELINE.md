@@ -42,6 +42,7 @@ FRED(`FRED_API_KEY` 시크릿, 없으면 해당 카드 기존 표기 유지)가 
 | 업종별 등락률(전체 업종) · KOSPI/코스닥 지수 카드 값·고점 대비·칩 | 〃 | `KRX` | 〃 | 자동. 연초대비·대표종목 컬럼은 수집된 때만 표시(`sectors_head`). **스냅샷보다 최신인 `kr_issues.json`의 `provisional`이 있으면 그 값을 "(M/D 언론 집계)"로 표시** |
 | KOSPI 위치 바 + **위치 판독 3줄**(`kospi_readout`) + KOSPI 카드 칩 | 〃 (`index.KOSPI.ytd_*`, 없으면 최근 스냅샷에서 이월) | `KRX` | GitHub Action | 자동 — 단 **매수구간·손절 참고선은 `stance.json`의 `kospi_buy_zone: [하한, 상한]`·`stop_loss_ref`**(세션 소유, 전략 A 구간이 바뀔 때만 갱신). 현재값은 위와 같이 `provisional`이 더 최신이면 "언론 집계 · KRX 확정 전" 라벨로 따라간다 |
 | 미국 지표 카드 값·기준일 배지·**1년 레인지 눈금**(WTI·금·구리) | `data/us_snapshot_latest.json` | `MKT` | GitHub Action | 자동(Yahoo+FRED). 눈금의 저점·고점은 `build_briefing.py`의 `_RANGE_1Y` 상수 — 신고가·신저가가 나오면 카드 라벨과 함께 갱신 |
+| **공포탐욕지수** 카드 · **S&P 500 밸류(선행 PER)** 카드 | `us_snapshot_latest.json`의 `fear_greed`(CNN, 막히면 GitHub 미러 CSV)·`valuation`(FactSet Earnings Insight 주간 PDF) | `MKT` | GitHub Action | 자동(2026-10-15~). 수집 실패일은 해당 키가 빠져 마지막 값과 기준일 배지가 그대로 남는다. 트리거 `now`에 쓸 공포탐욕 값은 이 스냅샷에서 읽는다(WebSearch 불필요) |
 | WTI·원/달러 카드 **상태 칩** | `triggers.json`의 De-risk·FX Watch status | `MKT` | 렌더러 | 자동 — 트리거 status를 바꾸면 칩이 따라간다 |
 | 미국 3대 지수 카드(연초 대비 바) | 〃 | `MKT` | 〃 | 자동 |
 | 이번 주 주요 경제 캘린더 | `data/econ_calendar_latest.json` (+ `data/fomc_schedule.json`) | `MKT` | GitHub Action | 자동 — FOMC JSON만 연 1회 수동 갱신(운영 노트 5) |
@@ -261,9 +262,13 @@ GitHub Action(`.github/workflows/krx_snapshot.yml`)이 하루 1회(KST 05:30 예
     **재발 방지(10/15 적용)**: `utils/krx_scrape.py`가 로그인 거부 문구를 감지해 `investor_flow.code="password_change_required"`+원인 문구를 스냅샷에 남기고,
     `fetch_krx_snapshot.py`가 Actions 오류 주석을 띄우며, 워크플로 마지막 단계가 수급 결측이면 실행을 실패 처리해 GitHub 알림 메일이 간다(수집·커밋은 그 전에 끝난다).
     렌더러는 마지막 확정일(10/7) 값을 그 날짜 라벨·경고문과 함께 보여준다. 업종 연초대비·대표종목과 KOSPI·코스닥 연초/고점 값도 같은 이유로 비었다(렌더러가 이월·컬럼 숨김으로 처리).
-    ② **공포탐욕지수는 자동 수집 불가**(CNN 엔드포인트가 봇에 HTTP 418) — 값이 확인된 때만 카드를 갱신하고 기준일을 표기한다(현재 9/25 36).
-    ③ **"S&P 500 밸류(Forward P/E 20.4)" 카드는 최초 발행(7/9) 이후 갱신된 적 없다** — 출처 확보 전까지 카드에 "기준 7/9 · 미갱신"을 표기해 둔다.
-    ④ **하이퍼스케일러 CAPEX 헤드라인($725B)과 개별 합계(아마존 ~$200B·구글 ~$185B·메타 $125~145B·MS ~$120B ≈ $630~650B)가 맞지 않는다** — 집계 범위 확인 필요.
+    ② **공포탐욕지수 — 자동화 완료(10/15)**: 이전 진단("CNN이 봇을 막는다")은 반쪽이었다 — User-Agent만 보내면 HTTP 418이지만 브라우저가 보내는 `Origin`·`Referer`를 함께 주면 200이 온다
+    (`utils/us_market.py::fetch_fear_greed`). 막히면 GitHub 미러 CSV로 폴백, 둘 다 실패하면 키가 빠져 카드는 마지막 값과 기준일을 유지한다. 단 Actions(Azure IP)에서 통하는지는 첫 실행 로그로 확인할 것.
+    ③ **S&P 500 밸류 카드 — 자동화 완료(10/15)**: 옛 값 "20.4배"는 FactSet 기준 **6월 말(6/30) 값**이었고 10/9 현재 19.1배(5년 평균 19.8·10년 평균 19.1)다. FactSet이 매주 금요일 내는 Earnings Insight PDF의
+    "forward 12-month P/E ratio" 문장을 `fetch_valuation`이 읽는다(pypdf, 안 되면 pdftotext). 옛 "5년 피크 23.5" 눈금은 출처가 없어 삭제.
+    ④ **하이퍼스케일러 CAPEX 헤드라인($725B) vs 개별 합계 불일치 — 원인은 낡은 MS 수치**: 카드의 "MS ~$120B"는 오래된 값이고 언론 집계는 ~$190B(달력연도)다. 고치면 개별 합이 약 $700~720B로 헤드라인과 대체로 맞는다.
+    헤드라인 자체도 출처마다 $700B(Yahoo)·$725B(FT 집계)·$745B(FT 헤드라인)로 다르므로 3분기 실적(10월 하순~)에서 회사 공시 기준으로 다시 확인한다.
     ⑤ **보유내역은 2026-08-04 캡처 그대로**라 헤더에 경과일 경고가 붙는다 — 새 캡처가 오면 갱신.
-    ⑥ 전략 B 스크리너의 국내 종목(삼성전자·SK하이닉스)은 벤치마크 `^KS200`의 12-1 모멘텀이 비어(`strategy_b_screen.json`의 `benchmarks.KR.mom_12_1: null`) RS를 못 구해 "데이터 부족"으로 남는다.
+    ⑥ **전략 B 스크리너 국내 종목 "데이터 부족" — 해결(10/15)**: 원인은 벤치마크 `^KS200`을 Yahoo가 당일 **1봉**만 돌려줘 12-1 모멘텀을 못 구한 것. 같은 지수를 추종하는 KODEX 200 ETF(`069500`, 485봉)로
+    대용하도록 `data/strategy_b_universe.json`을 고쳤다(종목처럼 pykrx 우선·Yahoo `.KS` 폴백). 삼성전자·SK하이닉스 모두 RS가 계산된다.
     ⑦ 저장소에 뉴스 대시보드용 레거시 워크플로(`collect_news.yml`·`daily_briefing.yml`·`midnight_reset.yml`)와 무관 파일이 남아 있다 — 브리핑과 무관, 정리 여부는 소유자 판단.

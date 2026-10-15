@@ -9,3 +9,4 @@ google-genai>=1.0.0
 plotly>=5.0.0
 yfinance>=0.2.40
 pykrx>=1.2.8
+pypdf>=4.0.0

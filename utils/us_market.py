@@ -11,7 +11,10 @@
 기존 표기가 유지된다(브리핑의 '미확보' 원칙과 동일).
 """
 
+import io
 import os
+import re
+import subprocess
 import time
 import requests
 from datetime import datetime, timezone, timedelta
@@ -165,10 +168,151 @@ def fetch_fred(series=None):
     return out
 
 
+# ── 공포탐욕지수(CNN) ────────────────────────────────────────────────────
+# 2026-10-15 실측: 헤더 없이(또는 User-Agent만) 부르면 HTTP 418 "I'm a teapot. You're a bot."을 돌려주지만
+# 브라우저가 보내는 Origin/Referer를 함께 주면 200이 온다. 막히면 GitHub 미러 CSV로 폴백한다.
+_CNN_FNG_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata'
+_CNN_HEADERS = {**_UA,
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Origin': 'https://www.cnn.com',
+                'Referer': 'https://www.cnn.com/markets/fear-and-greed'}
+_FNG_MIRROR_URL = 'https://raw.githubusercontent.com/whit3rabbit/fear-greed-data/main/fear-greed.csv'
+
+
+def _us_session_date(ts_utc):
+    """CNN 값이 계산된 시각(UTC) → 그 값이 반영한 미국 정규장 날짜(ISO). 정규장 마감(16시 ET) 전이면 직전 거래일,
+    주말이면 금요일로 돌린다(공휴일은 고려하지 않는 근사)."""
+    et = ts_utc.astimezone(_ET)
+    d = et.date()
+    if et.hour < 16:
+        d -= timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d.isoformat()
+
+
+def fetch_fear_greed():
+    """
+    CNN 공포탐욕지수(0~100). 반환: {'score','rating','asof','prev_close','prev_week','prev_month','source'} 또는 None.
+    CNN 실패 → 미러 CSV(Date,Fear Greed,Rating)의 마지막 행 → 둘 다 실패하면 None(렌더러가 기존 표기를 유지).
+    """
+    try:
+        r = requests.get(_CNN_FNG_URL, headers=_CNN_HEADERS, timeout=15)
+        if r.ok:
+            fg = (r.json().get('fear_and_greed') or {})
+            score = fg.get('score')
+            if isinstance(score, (int, float)):
+                ts = datetime.fromisoformat(fg['timestamp'])
+                out = {'score': round(float(score), 1),
+                       'rating': str(fg.get('rating') or '').strip().lower(),
+                       'asof': _us_session_date(ts), 'source': 'CNN'}
+                for src, dst in (('previous_close', 'prev_close'), ('previous_1_week', 'prev_week'),
+                                 ('previous_1_month', 'prev_month')):
+                    v = fg.get(src)
+                    if isinstance(v, (int, float)):
+                        out[dst] = round(float(v), 1)
+                return out
+        else:
+            print(f'[FearGreed] CNN HTTP {r.status_code}')
+    except Exception as e:
+        print(f'[FearGreed] CNN 실패: {e}')
+    try:
+        r = requests.get(_FNG_MIRROR_URL, timeout=20)
+        if r.ok:
+            rows = [ln.split(',') for ln in r.text.strip().splitlines()[1:] if ln.count(',') >= 2]
+            if rows:
+                out = {'score': round(float(rows[-1][1]), 1), 'rating': rows[-1][2].strip().lower(),
+                       'asof': rows[-1][0].strip(), 'source': 'mirror'}
+                if len(rows) >= 2:
+                    out['prev_close'] = round(float(rows[-2][1]), 1)
+                print('[FearGreed] CNN 대신 미러 CSV 사용')
+                return out
+    except Exception as e:
+        print(f'[FearGreed] 미러 실패: {e}')
+    return None
+
+
+# ── S&P 500 선행 PER(FactSet Earnings Insight) ───────────────────────────
+# FactSet이 매주 금요일 공개 PDF를 낸다(URL 끝이 MMDDYY). 첫 쪽 요약에 "The forward 12-month P/E ratio for the
+# S&P 500 is 19.1. This P/E ratio is below the 5-year average (19.8) but equal to the 10-year average (19.1)."가 있다.
+_FACTSET_URL = ('https://advantage.factset.com/hubfs/Website/Resources%20Section/Research%20Desk/'
+                'Earnings%20Insight/EarningsInsight_{d}.pdf')
+_NUM = r'(\d+(?:\.\d+)?)'
+_PE_RE = re.compile(r'forward 12-month P/E ratio for the S&P 500 is\s*' + _NUM, re.I)
+_AVG5_RE = re.compile(r'5-year average\s*(?:of\s*)?\(?\s*' + _NUM, re.I)
+_AVG10_RE = re.compile(r'10-year average\s*(?:of\s*)?\(?\s*' + _NUM, re.I)
+
+
+def parse_factset_pe(text):
+    """PDF 본문 텍스트 → {'forward_pe','avg5','avg10'}(없는 항목은 생략) 또는 None. 같은 문장 근처(260자)에서만 평균을 찾는다."""
+    t = re.sub(r'\s+', ' ', text or '')
+    m = _PE_RE.search(t)
+    if not m:
+        return None
+    out = {'forward_pe': float(m.group(1))}
+    seg = t[m.end(): m.end() + 260]
+    a5, a10 = _AVG5_RE.search(seg), _AVG10_RE.search(seg)
+    if a5:
+        out['avg5'] = float(a5.group(1))
+    if a10:
+        out['avg10'] = float(a10.group(1))
+    return out
+
+
+def _pdf_texts(content):
+    """PDF 바이트 → 앞 4쪽 텍스트 후보들(pypdf, poppler pdftotext 순). 한쪽이 문장을 못 살려도 다음 것으로 재시도하게 제너레이터로 낸다."""
+    try:
+        from pypdf import PdfReader
+        rd = PdfReader(io.BytesIO(content))
+        yield ' '.join((rd.pages[i].extract_text() or '') for i in range(min(4, len(rd.pages))))
+    except Exception as e:
+        print(f'[Valuation] pypdf 사용 불가({e})')
+    try:
+        p = subprocess.run(['pdftotext', '-l', '4', '-', '-'], input=content, capture_output=True, timeout=60)
+        yield p.stdout.decode('utf-8', 'replace')
+    except Exception as e:
+        print(f'[Valuation] pdftotext 사용 불가: {e}')
+
+
+def fetch_valuation(today=None):
+    """
+    최근 2주 안의 금요일 FactSet 보고서 중 가장 최신 것에서 S&P 500 선행 PER를 읽는다.
+    반환: {'forward_pe','avg5','avg10','asof','source'} 또는 None(렌더러가 기존 표기를 유지).
+    """
+    today = today or datetime.now(timezone.utc).date()
+    for back in range(15):
+        d = today - timedelta(days=back)
+        if d.weekday() != 4:      # 금요일 발간
+            continue
+        try:
+            r = requests.get(_FACTSET_URL.format(d=d.strftime('%m%d%y')), headers=_UA, timeout=30)
+            if not r.ok or not r.content.startswith(b'%PDF'):
+                continue
+            pe = next((x for x in (parse_factset_pe(tx) for tx in _pdf_texts(r.content)) if x), None)
+            if pe:
+                pe.update(asof=d.isoformat(), source='FactSet Earnings Insight')
+                return pe
+        except Exception as e:
+            print(f'[Valuation] {d} 실패: {e}')
+    return None
+
+
 def collect():
-    """전체 수집 — {'yahoo': {...}, 'fred': {...}}. 부분 실패 허용."""
+    """전체 수집 — {'yahoo': {...}, 'fred': {...}, 'fear_greed': {...}, 'valuation': {...}}. 부분 실패 허용
+    (못 구한 항목은 키 자체를 뺀다 → 렌더러가 해당 카드의 기존 표기와 그 기준일 배지를 그대로 둔다)."""
     yahoo = fetch_yahoo()
     yahoo = enrich_ytd(yahoo)
     fred = fetch_fred()
     print(f'[US] Yahoo {len(yahoo)}/{len(YAHOO_SYMBOLS)}개 · FRED {len(fred)}/{len(FRED_SERIES)}개 수집')
-    return {'yahoo': yahoo, 'fred': fred}
+    out = {'yahoo': yahoo, 'fred': fred}
+    for key, fn in (('fear_greed', fetch_fear_greed), ('valuation', fetch_valuation)):
+        try:
+            v = fn()
+        except Exception as e:          # 보조 지표가 핵심 수집을 죽이지 않게
+            print(f'[US] {key} 수집 예외: {e}')
+            v = None
+        if v:
+            out[key] = v
+    print(f'[US] 공포탐욕 {"OK" if "fear_greed" in out else "없음"} · 선행PER {"OK" if "valuation" in out else "없음"}')
+    return out
