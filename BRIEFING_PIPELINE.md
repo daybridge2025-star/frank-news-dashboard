@@ -233,9 +233,12 @@ GitHub Action(`.github/workflows/krx_snapshot.yml`)이 하루 1회(KST 05:30 예
     `POST .../actions/workflows/krx_snapshot.yml/dispatches`가 "Resource not accessible by integration"으로 거부된다(Actions:write 권한 부족 추정).
     pykrx 미설치·KRX 자격증명 없음으로 로컬 재현도 불가. **폴백**: 한국장 마감 에디션인데 `bas_dd`가 전일에 머물면, 국내 언론 2곳 이상의 마감시황을
     교차검증해 문장 안에 "언론 집계"로 출처를 밝히고 `kr_issues.json`·트리거 `now`에 반영한다. 마커 안(`KRX-*`)은 건드리지 않는다 — 익일 Action이 따라잡는다.
-12. **Artifact publish 거부 유형 (2026-08-26 실측)**: "hasn't viewed the latest version" 거부는 라이브 버전을 `action:"read"`로 받아 전체를 검토하면 통과한다.
-    그다음 단계에서 "identical content already refused ... resent unchanged"가 4회 연속 나오면 툴 지시대로 중단한다(`force:true`는 사용자의 명시적
-    확인 없이는 쓰지 않는다 — 무인 실행은 확인을 못 받는다). 그 경우 git·JSON 커밋·푸시는 정상 완료하고 아티팩트는 스테일로 둔 채 작업일지·보고에 명시한다.
+12. **Artifact publish 거부 유형 (2026-08-26·10-15 실측)**: "hasn't viewed the latest version" 거부는 라이브 버전을 `action:"read"`로 받고
+    저장된 소스를 **끝 줄까지 `Read`로 검토**하면 풀린다(저장된 소스 파일은 수정하지 않는다). 이어서 "identical content already refused ... resent unchanged"가
+    나오면 라이브 소스가 내 내용에 이미 들어 있는지 확인한 뒤 같은 파일을 **한 번 더 그대로** 올린다 — 라이브 소스는 `git show <최근 커밋>:reports/macro-strategy-briefing.html`에
+    플랫폼 래퍼(첫 줄 문서 헤더·끝 `</body></html>`)만 더한 것이라 `diff`로 대조하면 되고(10/15: 루틴이 올린 `c77e595` 버전과 래퍼 2줄 외 동일), 그러면 통과한다.
+    빠진 내용이 있으면 병합해서 올린다. 이렇게 확인하고도 4회 연속 거부되면 툴 지시대로 중단한다(`force:true`는 사용자의 명시적 확인 없이는 쓰지 않는다 —
+    무인 실행은 확인을 못 받는다). 그 경우 git·JSON 커밋·푸시는 정상 완료하고 아티팩트는 스테일로 둔 채 작업일지·보고에 명시한다.
 13. **전체 감사 (2026-10-15)**: 중복·낡은 내용·중언부언을 걷어낸 뒤 알려진 미해결 사항 —
     ① **투자자별 수급이 2026-10-08 이후 비어 있다**(`investor_flow.status="unavailable"`, pykrx 쪽 KRX 응답 형식 변경 추정 — `_probe_sector_flow`가
     `ticker_list_error: '시장'`을 기록). 렌더러가 10/7 확정치를 그 날짜 라벨·경고문과 함께 보여준다. 근본 해결은 Action 환경의 pykrx 업그레이드 또는
