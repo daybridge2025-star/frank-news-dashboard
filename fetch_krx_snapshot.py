@@ -245,6 +245,9 @@ def main():
     flow = get_investor_flow(bas_dd)  # pykrx (KRX_ID/PW 있을 때만 채워짐)
     print(f"투자자 수급: {flow.get('status')}"
           + (f" — {flow.get('reason')}" if flow.get('status') != 'ok' else ''))
+    if flow.get('code') == 'password_change_required':
+        # Actions 화면 상단에 오류 주석으로 띄운다(단계 자체는 성공 처리 — 지수·미국 지표 수집을 막지 않기 위해)
+        print(f"::error title=KRX 로그인 실패 — 비밀번호 변경 필요::{flow.get('reason')}")
 
     _print_kospi_buy_trigger_hint((index.get('KOSPI') or {}).get('close'), flow)
 

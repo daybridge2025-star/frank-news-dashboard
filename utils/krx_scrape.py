@@ -13,6 +13,7 @@ pykrx는 import 시점에 KRX_ID/KRX_PW 환경변수를 읽어 자동 로그인�
 """
 
 import os
+import sys
 import time
 
 # 이 리포트의 투자자별 수급 표가 쓰는 4개 주체
@@ -326,14 +327,53 @@ def _period_bounds(bas_dd):
     return month + '01', year + '0102'
 
 
+class _TeeOut:
+    """스트림을 감싸 출력은 그대로 내보내면서 텍스트를 따로 모은다.
+    pykrx는 로그인 실패를 예외가 아니라 print로만 알린다 — 그대로 두면 호출부에는 '빈 응답'으로만 보인다."""
+    def __init__(self, real):
+        self._real, self.captured = real, []
+
+    def write(self, s):
+        self.captured.append(s if isinstance(s, str) else str(s))
+        return self._real.write(s)
+
+    def flush(self):
+        self._real.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+# pykrx가 로그인 거부 사유로 찍는 문구(2026-10-14 Actions 로그 실측: "KRX 비밀번호 변경이 필요합니다 / 패스워드 변경 필요")
+_PW_PHRASES = ('비밀번호 변경이 필요', '패스워드 변경 필요')
+_PW_REASON = ('KRX 로그인 실패 — 비밀번호 변경 필요(KRX 정책상 약 90일 주기). '
+              'data.krx.co.kr에 로그인해 비밀번호를 바꾼 뒤 GitHub 시크릿 KRX_PW를 새 값으로 갱신하면 다음 수집부터 복구된다.')
+
+
 def get_investor_flow(bas_dd):
     """
     스냅샷용 통합 진입점. 자격증명 없으면 unavailable을 명확히 반환.
     fetch_krx_snapshot.py가 이 함수의 반환을 investor_flow에 그대로 넣는다.
+    로그인이 비밀번호 변경 요구로 거부되면 '응답 비어있음'이 아니라 원인(code=password_change_required)을 밝힌다.
     """
     if not has_credentials():
         return _unavailable('KRX_ID/KRX_PW 미설정 — data.krx.co.kr 무료 회원가입 후 시크릿 등록 필요')
 
+    real_out, real_err = sys.stdout, sys.stderr
+    tee_out, tee_err = _TeeOut(real_out), _TeeOut(real_err)
+    sys.stdout, sys.stderr = tee_out, tee_err
+    try:
+        result = _collect_investor_flow(bas_dd)
+    finally:
+        sys.stdout, sys.stderr = real_out, real_err
+    if result.get('status') != 'ok':
+        log = ''.join(tee_out.captured) + ''.join(tee_err.captured)
+        if any(p in log for p in _PW_PHRASES):
+            return {'status': 'unavailable', 'code': 'password_change_required', 'reason': _PW_REASON}
+    return result
+
+
+def _collect_investor_flow(bas_dd):
     mtd_from, ytd_from = _period_bounds(bas_dd)
     result = {'status': 'ok', 'bas_dd': bas_dd, 'mtd_from': mtd_from, 'ytd_from': ytd_from}
     for market in ('KOSPI', 'KOSDAQ'):
