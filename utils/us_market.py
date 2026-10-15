@@ -239,19 +239,21 @@ def fetch_fear_greed():
 _FACTSET_URL = ('https://advantage.factset.com/hubfs/Website/Resources%20Section/Research%20Desk/'
                 'Earnings%20Insight/EarningsInsight_{d}.pdf')
 _NUM = r'(\d+(?:\.\d+)?)'
-_PE_RE = re.compile(r'forward 12-month P/E ratio for the S&P 500 is\s*' + _NUM, re.I)
-_AVG5_RE = re.compile(r'5-year average\s*(?:of\s*)?\(?\s*' + _NUM, re.I)
-_AVG10_RE = re.compile(r'10-year average\s*(?:of\s*)?\(?\s*' + _NUM, re.I)
+# 추출기마다 공백이 다르다(2026-10-15 실측: pypdf는 "forward 12 -month"처럼 하이픈 앞에 공백을 넣어 옛 패턴이 안 맞았다).
+# 그래서 공백을 전부 지운 문자열에서 공백 없는 패턴으로 찾는다.
+_PE_RE = re.compile(r'forward12-?monthP/Eratiofor(?:the)?S&P500is' + _NUM, re.I)
+_AVG5_RE = re.compile(r'5-?yearaverage(?:of)?\(?' + _NUM, re.I)
+_AVG10_RE = re.compile(r'10-?yearaverage(?:of)?\(?' + _NUM, re.I)
 
 
 def parse_factset_pe(text):
-    """PDF 본문 텍스트 → {'forward_pe','avg5','avg10'}(없는 항목은 생략) 또는 None. 같은 문장 근처(260자)에서만 평균을 찾는다."""
-    t = re.sub(r'\s+', ' ', text or '')
-    m = _PE_RE.search(t)
+    """PDF 본문 텍스트 → {'forward_pe','avg5','avg10'}(없는 항목은 생략) 또는 None. 같은 문장 근처(200자)에서만 평균을 찾는다."""
+    s = re.sub(r'\s+', '', re.sub(r'[\u2010-\u2015\u2212]', '-', text or ''))
+    m = _PE_RE.search(s)
     if not m:
         return None
     out = {'forward_pe': float(m.group(1))}
-    seg = t[m.end(): m.end() + 260]
+    seg = s[m.end(): m.end() + 200]
     a5, a10 = _AVG5_RE.search(seg), _AVG10_RE.search(seg)
     if a5:
         out['avg5'] = float(a5.group(1))
