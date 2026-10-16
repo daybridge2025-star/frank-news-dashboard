@@ -14,6 +14,7 @@ fred_ok=False로 표시해 렌더러가 "지표 일정 미확보"를 명시하�
 
 import json
 import os
+import time
 import requests
 from datetime import datetime, timedelta, timezone
 
@@ -63,6 +64,35 @@ def _match_release(name):
     return None
 
 
+# FRED releases/dates는 무거운 조회라 러너 구간에 따라 15초 안에 못 끝나는 날이 있다
+# (2026-10-15 수동 #109·정기 #110 연속 Read timed out). 시간초과·연결오류·5xx만 늘린 타임아웃으로
+# 재시도하고, 4xx(키·파라미터 문제)는 재시도해도 같으므로 즉시 돌려준다. (타임아웃초, 시도 전 대기초)
+_FRED_ATTEMPTS = ((20, 0), (40, 3), (60, 6))
+
+
+def _fred_get(params):
+    """FRED releases/dates 호출 + 재시도. 응답 객체를 반환하고, 끝내 응답이 없으면 마지막 예외를 던진다."""
+    last_exc, last_resp = None, None
+    for timeout, wait in _FRED_ATTEMPTS:
+        if wait:
+            time.sleep(wait)
+        try:
+            r = requests.get('https://api.stlouisfed.org/fred/releases/dates',
+                             params=params, headers=_UA, timeout=timeout)
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_exc = e
+            print(f'[EconCal] FRED 응답 지연·연결 오류({timeout}s 제한) — 재시도: {e}')
+            continue
+        if r.status_code >= 500:
+            last_resp = r
+            print(f'[EconCal] FRED HTTP {r.status_code}({timeout}s 제한) — 재시도')
+            continue
+        return r
+    if last_resp is not None:
+        return last_resp
+    raise last_exc
+
+
 def fetch_fred_releases(monday, sunday):
     """
     FRED 릴리스 캘린더에서 해당 주의 큐레이션된 발표 일정을 가져온다.
@@ -74,14 +104,11 @@ def fetch_fred_releases(monday, sunday):
         print('[EconCal] FRED_API_KEY 없음 — 지표 발표 일정 미확보(FOMC 일정만 표시)')
         return [], 'fred_no_key'
     try:
-        r = requests.get(
-            'https://api.stlouisfed.org/fred/releases/dates',
-            params={'api_key': api_key, 'file_type': 'json',
-                    'realtime_start': monday.isoformat(),
-                    'realtime_end': sunday.isoformat(),
-                    'include_release_dates_with_no_data': 'true',
-                    'limit': 1000, 'sort_order': 'asc'},
-            headers=_UA, timeout=15)
+        r = _fred_get({'api_key': api_key, 'file_type': 'json',
+                       'realtime_start': monday.isoformat(),
+                       'realtime_end': sunday.isoformat(),
+                       'include_release_dates_with_no_data': 'true',
+                       'limit': 1000, 'sort_order': 'asc'})
         if not r.ok:
             print(f'[EconCal] FRED HTTP {r.status_code}: {r.text[:200]}')
             return [], f'fred_http_{r.status_code}'

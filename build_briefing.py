@@ -1256,7 +1256,9 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
 
     # ── 이번 주 경제 캘린더(data/econ_calendar_latest.json — Action 자동, Finnhub) ──
     g['econ_calendar'] = _econ_calendar_rows(cal)
-    if cal and cal.get('week_start') and cal.get('week_end'):
+    # 제목의 주차는 표가 실제로 갱신될 때만 바꾼다 — FRED 장애로 표가 직전 주 그대로일 때
+    # 제목만 새 주차가 되는 라벨-내용 불일치를 막는다(표가 낡았으면 낡은 주차가 그대로 보인다)
+    if g['econ_calendar'] is not None and cal.get('week_start') and cal.get('week_end'):
         ws, we = cal['week_start'], cal['week_end']
         g['econ_cal_week'] = f'{int(ws[5:7])}/{int(ws[8:10])}~{int(we[5:7])}/{int(we[8:10])}'
     g['sbx_screen'] = _screen_rows(screen)
