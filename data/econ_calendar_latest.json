@@ -1,8 +1,27 @@
 {
-  "status": "fred_error: HTTPSConnectionPool(host='api.stlouisfed.org', port=443): Read timed out. (read timeout=15)",
-  "fred_ok": false,
-  "week_start": "2026-10-12",
-  "week_end": "2026-10-18",
-  "events": [],
-  "fetched_at": "2026-10-15T23:11:57.932141+00:00"
+  "status": "ok",
+  "fred_ok": true,
+  "week_start": "2026-10-19",
+  "week_end": "2026-10-25",
+  "events": [
+    {
+      "date": "2026-10-20",
+      "name": "주택착공·건축허가",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-10-22",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-10-23",
+      "name": "미시간대 소비자심리",
+      "kind": "indicator",
+      "impact": "medium"
+    }
+  ],
+  "fetched_at": "2026-10-16T22:58:47.186009+00:00"
 }
