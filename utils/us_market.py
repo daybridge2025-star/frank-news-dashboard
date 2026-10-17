@@ -52,6 +52,9 @@ def fetch_yahoo(symbols=None):
     Yahoo chart API에서 최근 종가·전일대비를 수집.
     반환: {key: {'price': float, 'prev': float|None, 'change_pct': float|None,
                  'asof': 'YYYY-MM-DD'(현지 근사)}} — 실패 항목은 제외.
+    price: 수집 시각이 17시 ET 이후이고 같은 날 일봉이 있으면 그 일봉 종가, 아니면 수집 순간의 시세.
+    선물·환율(WTI·금·구리·원/달러)은 저녁에도 야간 거래가 이어져 regularMarketPrice가 '종가'가 아니라
+    수집 순간의 호가이기 때문이다(2026-10-15 WTI: 호가 96.15 vs 확정 종가 97.97 — 하루 뒤에야 드러났다).
     """
     out = {}
     for key, sym in (symbols or YAHOO_SYMBOLS).items():
@@ -78,10 +81,13 @@ def fetch_yahoo(symbols=None):
             bars = [(t, c) for t, c in zip(raw_ts, raw_cl) if c is not None]
             prev = None
             if bars and ts:
-                mkt_date = datetime.fromtimestamp(ts, tz=_ET).date()
+                mkt_dt = datetime.fromtimestamp(ts, tz=_ET)
+                mkt_date = mkt_dt.date()
                 last_date = datetime.fromtimestamp(bars[-1][0], tz=_ET).date()
                 if last_date == mkt_date and len(bars) >= 2:
                     prev = bars[-2][1]
+                    if mkt_dt.hour >= 17:           # 정규장·원자재 정산 이후 → 오늘 일봉 종가가 확정값
+                        price = bars[-1][1]
                 else:
                     prev = bars[-1][1]
             if prev is None:
