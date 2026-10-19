@@ -341,6 +341,19 @@ mark{background:var(--mint); color:inherit; padding:1px 2px; border-radius:3px; 
 .kro{margin:8px 0 0; font-size:14px; line-height:1.75; color:var(--ink-2)}
 .kro b{color:var(--ink); font-weight:800}
 .fnote{margin:8px 0 10px; padding:2px 0 2px 10px; border-left:3px solid var(--warn); font-size:13px; line-height:1.7; color:var(--ink-2)}
+/* "읽기 쉬웠나요?" 피드백 — artifact db 기능이 있을 때만 보인다(JS가 hidden을 푼다) */
+.fb{margin:6px 0 18px; padding:16px 18px; border-radius:16px; background:var(--box); color:var(--ink)}
+.fb-q{font-size:15.5px; font-weight:800; letter-spacing:-.01em}
+.fb-btns{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.fb-btns button{appearance:none; border:1px solid var(--ring); background:var(--card); color:var(--ink); border-radius:99px; padding:8px 16px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer}
+.fb-btns button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.fb-btns button:focus-visible, .fb-row button:focus-visible, .fb-row input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.fb-more{margin-top:12px}
+.fb-lbl{display:block; margin-bottom:6px; font-size:12.5px; line-height:1.5; color:var(--ink-3)}
+.fb-row{display:flex; gap:8px}
+.fb-row input{flex:1; min-width:0; border:1px solid var(--ring); background:var(--card); color:var(--ink); border-radius:10px; padding:9px 12px; font-family:inherit; font-size:14px}
+.fb-row button{appearance:none; flex:none; border:0; background:var(--accent); color:#fff; border-radius:10px; padding:9px 16px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer}
+.fb-done{margin:10px 0 0; font-size:13.5px; line-height:1.6; color:var(--ink-2)}
 
 /* strategy switcher */
 .seg{display:flex; gap:6px; background:var(--card); border:1px solid var(--ring); border-radius:12px; padding:5px; margin:14px 0 4px}
@@ -382,7 +395,7 @@ footer p{margin:5px 0}
   <div class="hdr-stance-scope">
   <div class="hello"><div class="av"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="12" width="4" height="8" rx="1.2" fill="#2a78d6"/><rect x="10" y="7" width="4" height="13" rx="1.2" fill="#2a78d6"/><rect x="16" y="3" width="4" height="17" rx="1.2" fill="#2a78d6"/></svg></div><p>JM님, 안녕하세요.<br>오늘 꼭 볼 것만 짚어드릴게요.</p></div>
   <p class="lead"><!--KR-START:lead-->코스피가 이틀째 올랐지만 <mark>손절 참고선(6,000)은 아직 넘지 못했어요.</mark> 오늘은 방어를 유지하면서 외국인이 순매수로 돌아서는지 지켜봐요.<!--KR-END:lead--></p>
-  <div class="box sched"><!--MKT-START:sched_box--><div class="st"><span class="ckico">✓</span>앞으로 볼 일정</div><div class="sg">경제 지표·연준 (미국 현지 날짜 기준)</div><ul><li><b>10월 20일(화):</b> 주택착공·건축허가</li><li><b>10월 22일(목):</b> 주간 신규 실업수당 청구</li><li><b>10월 23일(금):</b> 미시간대 소비자심리</li><li><b>10월 27~28일:</b> 연준(FOMC) 금리 결정</li></ul><!--MKT-END:sched_box--></div>
+  <div class="box sched"><!--MKT-START:sched_box--><div class="st"><span class="ckico">✓</span>앞으로 볼 일정</div><div class="sg">경제 지표·연준 (미국 현지 날짜 기준)</div><ul><li><b>10월 20일(화):</b> 주택착공·건축허가</li><li><b>10월 22일(목):</b> 주간 신규 실업수당 청구</li><li><b>10월 23일(금):</b> 미시간대 소비자심리</li><li><b>10월 27~28일:</b> 연준(FOMC) 금리 결정</li></ul><div class="sg">실적 발표 (한국시간 기준)</div><ul><li><b>10월 21일(수) 오전 5시 이후:</b> 스페이스X(보유)</li><li><b>10월 22일(목) 오전 5시 이후:</b> 테슬라(보유) · 메타 · 램리서치</li><li><b>10월 29일(목) 오전 5시 이후:</b> 마이크로소프트 · 구글(예정)</li><li><b>10월 29일(목) 오전 9시:</b> SK하이닉스(보유·예정)</li><li><b>10월 30일(금) 오전 5시 이후:</b> 아마존</li></ul><p class="fn" style="margin:2px 0 4px">미국 기업은 현지 장 마감 뒤에 발표해서 한국시간으로는 다음 날 새벽이에요. (보유)는 JM님 계좌에 있는 종목이에요. (예정)은 회사가 아직 날짜를 공지하지 않은 일정이에요.</p><!--MKT-END:sched_box--></div>
   <div class="stance2">
     <span class="tagpill">#오늘의 스탠스</span>
     <!--KR-START:stance--><div class="srow2"><div class="sh"><span class="sb">A 바벨</span><span class="sv2">이틀 연속 반등에도 손절 참고선 아래라, 방어 모드를 유지해요</span></div><ul class="spl"><li>코스피가 종가 기준 <b>6,000을 넘어 2거래일 연속</b> 버텨야 방어를 풀어요. 그 전까지는 손절 규율 1~4번(트리거 탭)을 그대로 지켜요.</li><li>신규 한국 매수는 계속 멈춰요. 예수금은 방어자산을 살 돈으로 쓰고, 금·인덱스 풋·현금성 자산 중 모자란 것부터 채워요.</li><li>Add(추가 매수)는 대기 상태예요. 외국인이 순매도 폭만 줄였을 뿐 순매수로 돌아선 건 아니라서, 늘릴 신호로 보지 않아요.</li><li>유가 신호(De-risk)는 임박 단계예요. 호르무즈 봉쇄가 확인되지 않아 기다리되, 겹치면 방어 강도를 한 단계 높여요.</li></ul></div><div class="srow2"><div class="sh"><span class="sb">B 모멘텀</span><span class="sv2">반도체 반등이 약해서 신규 편입은 보류하고, 개별 −15% 손절 점검은 유지해요</span></div><ul class="spl"><li>삼성전자·SK하이닉스의 반등폭이 시장보다 작았어요. 모멘텀이 회복됐다고 보기는 어려워요.</li><li>손절은 종가 기준으로 판단해요. 실행하기 전에 JM님께 먼저 확인받아요.</li><li>업종 전반이 위험을 피하는 흐름이라 '국내에서 팔고 ADR로 옮기는' 패턴은 아니에요. Exit Signal(CAPEX 하향)도 아직 조건을 채우지 않았어요.</li><li>결론은 <b>신규 편입 보류</b>예요. 반도체 수급이 이틀 이상 이어지는지 본 뒤 다시 판단해요.</li></ul></div><div class="srow2"><div class="sh"><span class="sb">C 초장기</span><span class="sv2">시장 흐름에 반응하지 않고, 정액매수 계획을 그대로 가져가요</span></div><ul class="spl"><li>테슬라·SPCX는 시장이 급락해도 상관없이 <b>기술 테제</b>만 기준으로 봐요. 정액매수 계획은 그대로예요.</li><li>점검할 건 하나예요. '기술 테제가 무효가 되는지'만 확인해요.</li></ul></div><!--KR-END:stance-->
@@ -1029,6 +1042,19 @@ footer p{margin:5px 0}
 </main>
 
 <footer>
+  <section class="fb" id="fb" hidden aria-label="읽기 쉬웠는지 알려 주세요">
+    <div class="fb-q">이번 브리핑, 읽기 쉬웠나요?</div>
+    <div class="fb-btns" role="group" aria-label="읽기 쉬웠는지 고르기">
+      <button type="button" data-v="easy">쉬웠어요</button>
+      <button type="button" data-v="ok">보통이에요</button>
+      <button type="button" data-v="hard">어려웠어요</button>
+    </div>
+    <div class="fb-more" id="fbMore" hidden>
+      <label class="fb-lbl" for="fbNote">어느 부분이 그랬는지 한 줄만 남겨 주세요(선택)</label>
+      <div class="fb-row"><input id="fbNote" type="text" maxlength="200" autocomplete="off"><button type="button" id="fbSend">보내기</button></div>
+    </div>
+    <p class="fb-done" id="fbDone" role="status" hidden></p>
+  </section>
   <p>매크로·미국 시장: FRED · BLS · BEA · CNBC · CNN Fear &amp; Greed · Bloomberg · Micron IR · FactSet · Trading Economics.</p>
   <p>한국 시장·수급: KRX 정보데이터시스템(직접 연동) · KB증권 · FASTJUSIK · 국내 언론(이데일리·머니투데이·파이낸셜뉴스·이투데이 등).</p>
   <p style="font-size:11px; color:var(--ink-3)">최초 발행 2026-07-08 · 시세와 수급은 매일 자동으로 모으고, 분석은 하루 2회(한국장 마감 후, 미국장 마감 후) 갱신해요. 상단의 "최종 업데이트" 표기가 실제 기준 시점이에요.</p>
@@ -1111,5 +1137,47 @@ footer p{margin:5px 0}
       document.getElementById(b.dataset.p).classList.add('on');
     });
   });
+})();
+</script>
+<script>
+// "읽기 쉬웠나요?" — artifact의 db 기능이 이 화면에 있을 때만 켜진다. 없으면(로컬 파일·권한 없음) 숨긴 채로 둔다.
+// 응답은 db의 feedback 컬렉션에 한 건씩 쌓이고, 세션이 ArtifactData로 읽어 문체에 반영한다(BRIEFING_PIPELINE.md).
+(function(){
+  var box=document.getElementById('fb');
+  if(!box||!window.claude||typeof window.claude.use!=='function') return;
+  var btns=box.querySelectorAll('.fb-btns button'), more=document.getElementById('fbMore'),
+      note=document.getElementById('fbNote'), send=document.getElementById('fbSend'), done=document.getElementById('fbDone');
+  var db=null, uid=null, ref=null, busy=false;
+  function say(t){ done.textContent=t; done.hidden=!t; }
+  function fail(e){
+    if(e&&e.code==='invalid_argument'){ box.hidden=true; return; }   // 쓰기 권한이 없는 열람이면 감춘다
+    say('지금은 저장하지 못했어요. 잠시 뒤에 다시 눌러 주세요.');
+  }
+  function edition(){ var d=document.querySelector('.dateline'); return d?d.textContent.replace(/\s+/g,' ').trim().slice(0,90):''; }
+  function pick(v,b){
+    if(busy) return; busy=true; say('');
+    var body={v:v, note:'', ts:new Date().toISOString(), tab:document.documentElement.getAttribute('data-tab')||'tab-dash', edition:edition(), uid:uid, style:'article-v2'};
+    var p = ref ? ref.update({v:v, ts:body.ts}) : db.collection('feedback').add(body).then(function(r){ ref=r; });
+    p.then(function(){
+      btns.forEach(function(x){ x.classList.toggle('on', x===b); });
+      more.hidden=false; say('고마워요, JM님. 다음 브리핑부터 반영할게요.');
+    }).catch(fail).then(function(){ busy=false; });
+  }
+  btns.forEach(function(b){ b.addEventListener('click', function(){ pick(b.getAttribute('data-v'), b); }); });
+  function sendNote(){
+    var t=(note.value||'').trim(); if(!t||!ref||busy) return; busy=true;
+    ref.update({note:t.slice(0,200)}).then(function(){ say('한 줄 잘 받았어요. 고마워요.'); note.value=''; more.hidden=true; })
+      .catch(fail).then(function(){ busy=false; });
+  }
+  send.addEventListener('click', sendNote);
+  note.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendNote(); } });
+  Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function(r){
+    db=r[0]; var user=r[1];
+    if(!db) return;
+    return Promise.all([user&&user.can?user.can('data.write'):null, user&&user.id?user.id():null]).then(function(x){
+      if(x[0]===false) return;          // 이 열람자는 저장할 수 없다
+      uid=x[1]; box.hidden=false;
+    });
+  }).catch(function(){});
 })();
 </script>

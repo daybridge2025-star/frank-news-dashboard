@@ -260,7 +260,8 @@ def sched_box(cal, fomc_meetings, earnings, ref, ref_kr=None):
         merged = []                                 # 같은 날짜·시각은 한 줄로 묶는다
         for e in erows:
             key = (e.get('date'), e.get('time', ''))
-            nm = e.get('name', '') + ('' if e.get('status', '확정') == '확정' else '(예정)')
+            tags = (['보유'] if e.get('kind') == '보유' else []) + ([] if e.get('status', '확정') == '확정' else ['예정'])
+            nm = e.get('name', '') + (f'({"·".join(tags)})' if tags else '')
             if merged and merged[-1][0] == key:
                 merged[-1][1].append(nm)
             else:
@@ -269,7 +270,13 @@ def sched_box(cal, fomc_meetings, earnings, ref, ref_kr=None):
         for (d, tm), names in merged:
             dt = kdate(d) or d
             items += _li(f'{dt} {tm}'.strip(), ' · '.join(names))
-        groups.append(f'<div class="sg">실적 발표 (한국시간 기준)</div><ul>{items}</ul>')
+        note = '미국 기업은 현지 장 마감 뒤에 발표해서 한국시간으로는 다음 날 새벽이에요.'
+        if any(e.get('kind') == '보유' for e in erows):
+            note += ' (보유)는 JM님 계좌에 있는 종목이에요.'
+        if any(e.get('status', '확정') != '확정' for e in erows):
+            note += ' (예정)은 회사가 아직 날짜를 공지하지 않은 일정이에요.'
+        groups.append(f'<div class="sg">실적 발표 (한국시간 기준)</div><ul>{items}</ul>'
+                      f'<p class="fn" style="margin:2px 0 4px">{esc(note)}</p>')
 
     if not groups:
         return ''
