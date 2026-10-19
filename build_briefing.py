@@ -5,8 +5,12 @@
   data/krx_snapshot_latest.json  <!--KRX-START/END:key-->  Action(숫자, 하루 1회 자동)
   data/us_issues.json            <!--US-START/END:key-->   마켓 브리프 세션(미국 이슈 분석)
   data/kr_issues.json,           <!--KR-START/END:key-->   마켓 브리프 세션(한국 이슈 분석 ·
-  data/stance.json,                                         오늘의 스탠스 A/B/C ·
+  data/stance.json,                                         오늘의 스탠스 A/B/C · 오늘의 한 줄(lead) ·
   data/triggers.json                                        트리거 발동/임박 판단 — 셋 다 KR 접두사)
+  data/earnings_calendar.json    <!--MKT-START/END:sched_box-->  마켓 브리프 세션(보유·전략 관련 기업 실적 일정)
+
+독자 노출 문장의 문체·형식(해요체, JM님 호칭, 이모지 없음, 기사형 카드)은 utils/article.py가 코드로 고정한다 —
+편집 소스(JSON)는 `**굵게**`·`==형광펜==` 두 가지 가벼운 마크업만 쓰고, 그 밖의 HTML은 전부 이스케이프된다.
 
 원칙:
 - 자리표시(마커)가 있는 구간만 건드린다 — 마커 밖의 손으로 쓴 분석 산문은 절대 손대지 않는다.
@@ -30,6 +34,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
+from utils import article  # noqa: E402  (표준 라이브러리만 씀 — Action 러너에서도 그대로 import 가능)
+
 SNAP_PATH = 'data/krx_snapshot_latest.json'   # 한국 숫자 (Action 생성)
 US_PATH = 'data/us_issues.json'               # 미국 이슈 분석 (마켓 브리프 세션 생성)
 KR_PATH = 'data/kr_issues.json'               # 한국 이슈 분석 (마켓 브리프 세션 생성)
@@ -37,6 +43,8 @@ STANCE_PATH = 'data/stance.json'              # 오늘의 스탠스 A/B/C (마�
 TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓 브리프 세션 생성)
 US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
 ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 (Action 생성 — fetch_econ_calendar.py)
+FOMC_PATH = 'data/fomc_schedule.json'         # 연준 공식 FOMC 일정 (수동, 연 1회)
+EARN_PATH = 'data/earnings_calendar.json'     # 보유·전략 관련 기업 실적 발표 일정 (마켓 브리프 세션이 갱신)
 SBX_PATH = 'data/strategy_b_screen.json'  # 전략 B 편입 스크리너 (Action 생성 — monitor_strategy_b.py)
 PF_HOLD_PATH = 'data/portfolio_holdings.json'      # 실계좌 보유내역 (사용자 캡처 기준 — 세션이 수동 갱신)
 PF_PRICE_PATH = 'data/portfolio_prices_latest.json'  # 보유종목 직전 종가 (Action 생성 — fetch_portfolio_prices.py)
@@ -167,6 +175,14 @@ def _provisional(kr, bas_dd):
     return out if ('KOSPI' in out or 'KOSDAQ' in out) else None
 
 
+def _ro(txt):
+    """'억'→'으로', '조'→'로' 처럼 마지막 글자의 받침으로 조사(으)로를 고른다(ㄹ 받침은 '로')."""
+    last = str(txt)[-1:]
+    if '가' <= last <= '힣':
+        return '로' if (ord(last) - 0xAC00) % 28 in (0, 8) else '으로'
+    return '로'
+
+
 # ── 구간 생성기 ───────────────────────────────────────────
 def _fm_cell(value, maxabs):
     """투자자별 수급 '전일' 셀 하나(막대+값). value None이면 None(=건드리지 않음)."""
@@ -212,23 +228,21 @@ def _flow_summary(flow, market, when='전일'):
     seg = ' · '.join(f'{n} {fmt_won(v)}' for n, v in trio)
     sellers = [n for n, v in trio if v < 0]
     top_buyer = max(trio, key=lambda x: x[1])
-    line1 = f'📊 {when} {seg}'
+    line1 = f'<b>{when} 수급</b> {seg}.'
     if top_buyer[1] > 0 and sellers and top_buyer[0] not in sellers:
-        line1 += f' — {top_buyer[0]}이 {"·".join(sellers)} 매물을 받아낸 구조.'
+        line1 += f' {top_buyer[0]}이 {"·".join(sellers)} 매물을 받아냈어요.'
         # 연기금은 기관의 하위 항목 — 방향이 기관 전체와 갈릴 때만 별도 언급(오해 방지)
         if pen is not None and top_buyer[0] == '기관' and pen < 0:
-            line1 += f' 다만 기관 내 연기금은 {fmt_won(pen)}로 매도 우위.'
-    else:
-        line1 += '.'
+            line1 += f' 다만 기관 안의 연기금은 {fmt_won(pen)}{_ro(fmt_won(pen))} 순매도 쪽이에요.'
     ps = [line1]
 
     ft = mk.get('foreign_net_top') or {}
     b = (ft.get('buy') or [None])[0]
     s = (ft.get('sell') or [None])[0]
     if b and s:
-        ps.append(f'🔄 외국인 순매수 1위 {esc(b["종목"])}({fmt_won(b["순매수"])}) '
-                  f'· 순매도 1위 {esc(s["종목"])}({fmt_won(s["순매수"])}) — '
-                  f'종목 간 로테이션의 방향을 보여준다.')
+        ps.append(f'<b>외국인 순매수 1위</b> {esc(b["종목"])}({fmt_won(b["순매수"])}) '
+                  f'· <b>순매도 1위</b> {esc(s["종목"])}({fmt_won(s["순매수"])}). '
+                  f'종목 사이 로테이션이 어느 쪽으로 가는지 보여줘요.')
 
     ivm = mk.get('investor_value_mtd')
     if ivm:
@@ -241,11 +255,14 @@ def _flow_summary(flow, market, when='전일'):
             mtd_txt = '이번달 누적'
             if when != '전일' and flow.get('mtd_from'):
                 mtd_txt = f'{date_label(flow["mtd_from"])}~{when} 누적'
-            ps.append(f'📅 {mtd_txt}으로는 외국인 {fmt_won(fm)} {fdir} 기조가 이어지는 가운데 '
-                      f'개인이 {fmt_won(im)} {idir}로 맞서고 있다.')
+            tail = ''
+            if fm < 0 <= im:
+                tail = ' 외국인이 판 물량을 개인이 받아내는 흐름이에요.'
+            elif im < 0 <= fm:
+                tail = ' 외국인이 사고 개인이 파는 흐름이에요.'
+            ps.append(f'<b>{mtd_txt}</b> 외국인은 {fmt_won(fm)} {fdir}, 개인은 {fmt_won(im)} {idir}예요.{tail}')
 
-    style = 'font-size:12px; color:var(--ink-2)'
-    return ''.join(f'<p style="{style}">{p}</p>' for p in ps)
+    return ''.join(f'<p class="fsum">{p}</p>' for p in ps)
 
 
 def _sector_cols(snap):
@@ -356,47 +373,6 @@ def _pension_sell_rows(flow, n=5):
 
 _KST = timezone(timedelta(hours=9))
 
-_CAL_KIND = {'fomc': '연준', 'indicator': '지표'}
-_CAL_IMP = {'high': ('높음', 'var(--crit)'), 'medium': ('중간', 'var(--warn)')}
-
-
-def _econ_calendar_rows(cal):
-    """data/econ_calendar_latest.json(FRED 릴리스+FOMC) → 캘린더 표 행(날짜|구분|일정|중요도).
-    소스가 전무하면 None(기존 표기 유지). FRED만 실패한 경우엔 FOMC 행 + 미확보 안내 행을 넣어
-    '조용히 비어 보이는' 것과 '지표 일정을 못 가져온 것'을 구분한다."""
-    if not cal:
-        return None
-    events = cal.get('events') or []
-    # fred_ok가 없는 구버전 파일(Finnhub 시절)은 status로 판정 — 403 파일이 "일정 없음"으로 둔갑하지 않게
-    fred_ok = cal.get('fred_ok', cal.get('status') == 'ok')
-    if not events and not fred_ok:
-        return None
-    rows, last_date = [], None
-    for ev in sorted(events, key=lambda x: (x.get('date', ''), x.get('kind', ''))):
-        d = ev.get('date', '')
-        try:
-            dt = datetime.strptime(d, '%Y-%m-%d')
-            mmdd = f'{dt.month}/{dt.day} ({"월화수목금토일"[dt.weekday()]})'
-        except ValueError:
-            mmdd = d
-        show_date = d != last_date
-        last_date = d
-        is_fomc = ev.get('kind') == 'fomc'
-        kind = _CAL_KIND.get(ev.get('kind'), '지표')
-        kind_cell = f'<b style="color:var(--accent)">{kind}</b>' if is_fomc else kind
-        imp_label, imp_color = _CAL_IMP.get(ev.get('impact'), ('중간', 'var(--warn)'))
-        rows.append(
-            f'<tr><td>{mmdd if show_date else ""}</td><td>{kind_cell}</td>'
-            f'<td>{esc(ev.get("name", ""))}</td>'
-            f'<td><b style="color:{imp_color}">{imp_label}</b></td></tr>')
-    if not rows:
-        rows.append('<tr><td colspan="4" style="text-align:center;color:var(--ink-3);'
-                    'padding:10px 0">이번 주에는 표시할 주요 일정이 없습니다</td></tr>')
-    if not fred_ok:
-        rows.append('<tr><td colspan="4" style="text-align:center;color:var(--ink-3);'
-                    'padding:8px 0">미국 지표 발표 일정 미확보(FRED 응답 없음) — 연준 일정만 표시</td></tr>')
-    return ''.join(rows)
-
 
 _SBX_SIGNAL_COLOR = {
     '편입 자격': 'var(--good)', '관찰': 'var(--warn)',
@@ -443,59 +419,14 @@ def _screen_rows(screen):
     return out
 
 
-def _render_issue_cards(src):
-    """{issues:[...]} 형태(us_issues.json / kr_issues.json 공용) → .iss 카드 HTML. 없으면 None(기존 유지)."""
+def _render_issue_cards(src, tag, meta=None):
+    """{issues:[...]} 형태(us_issues.json / kr_issues.json 공용) → 기사형 카드(.art) HTML. 없으면 None(기존 유지).
+    tag: 카드 위 알약 라벨('#미국장 마감'), meta: 제목 아래 기준 문구.
+    v2({title, lead, sections[], impacts[], sources})와 구형 v1({title, desc[], impacts[]}) 모두 그린다."""
     issues = (src or {}).get('issues') or []
     if not issues:
         return None
-    cards = []
-    for it in issues:
-        title = esc(it.get('title', ''))
-        ds = ''.join(f'<div class="ds">{esc(d)}</div>' for d in it.get('desc', []))
-        imps = ''
-        for imp in it.get('impacts', []):
-            lvl = imp.get('level', 'w')
-            if lvl not in ('g', 'w', 'c', 's'):
-                lvl = 'w'
-            imps += (f'<div class="imp {lvl}"><span class="bg">{esc(imp.get("strategy", ""))}</span>'
-                     f'<span>{esc(imp.get("text", ""))}</span></div>')
-        cards.append(f'<div class="iss"><div class="hd">{title}</div>{ds}{imps}</div>')
-    return '\n  ' + '\n  '.join(cards) + '\n  '
-
-
-def _stance_row_html(r):
-    """strategies[i] 1건 → .srow 블록(배지+헤드라인+본문). points(이모지 불릿, 항목당 1~2문장) 우선,
-    구형 detail(줄글)은 폴백."""
-    pts = r.get('points')
-    if pts:
-        body = '\n      '.join(f'<p class="sp">{esc(p)}</p>' for p in pts)
-    else:
-        body = f'<p>{esc(r.get("detail", ""))}</p>'
-    return (
-        f'<div class="srow"><span class="bg">{esc(r.get("label", ""))}</span>\n'
-        f'      <div><div class="sv">{esc(r.get("headline", ""))}</div>\n'
-        f'      {body}</div>\n    </div>')
-
-
-def _render_stance(stance):
-    """stance.json({strategies:[{label,headline,points|detail}]}) → 대시보드 헤더용 전체(A+B+C) 블록.
-    없으면 None(기존 유지)."""
-    rows = (stance or {}).get('strategies') or []
-    if not rows:
-        return None
-    out = [_stance_row_html(r) for r in rows]
-    return '\n    ' + '\n    '.join(out) + '\n    '
-
-
-def _render_stance_single(stance, letter):
-    """전략 탭 각 pane(stratA/B/C) 상단에 들어갈 단일 전략 스탠스 미니카드.
-    label이 letter로 시작하는 항목 하나만 렌더링(예: 'A 바벨' → letter='A'). 없으면 None."""
-    rows = (stance or {}).get('strategies') or []
-    for r in rows:
-        if (r.get('label') or '').strip().upper().startswith(letter):
-            return (f'<div class="stance"><div class="lbl">오늘의 스탠스</div>'
-                    f'{_stance_row_html(r)}</div>')
-    return None
+    return '\n  ' + '\n  '.join(article.issue_card(it, tag, meta) for it in issues) + '\n  '
 
 
 # ── 포트폴리오 탭 (PF 접두사) ─────────────────────────────
@@ -665,9 +596,11 @@ def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers):
     c_sh = lens_pct.get('C', 0.0)
     n_off = len(off)
     w_off = sum(share(r) for r in off) if off else 0.0
-    summary = (f'🧭 전략 C 계열 {c_sh:.1f}%(최대 단일 종목 {esc(top["name"])} {ts:.1f}%) · 방어자산 {dsh:.0f}% · '
-               f'손절 규율(−15%) 밖 {n_off}개 포지션(합계 비중 {w_off:.1f}%) — 위 진단("보험 살 구간")과 반대 구조다. '
-               f'상세 진단·재정렬 로드맵은 <strong>포트폴리오 탭</strong> 참조(평가액·비중은 매 브리핑 전일 종가로 자동 계산).')
+    summary = (f'<strong>전략 C 계열이 {c_sh:.1f}%</strong>예요(최대 단일 종목은 {esc(top["name"])} {ts:.1f}%). '
+               f'방어자산은 {dsh:.0f}%이고, 손절 규율(−15%) 밖에 있는 포지션이 {n_off}개(합계 비중 {w_off:.1f}%)예요. '
+               f'위 진단의 "보험 살 구간"과는 반대 구조예요. '
+               f'자세한 진단과 재정렬 로드맵은 <strong>포트폴리오 탭</strong>에서 볼 수 있어요. '
+               f'평가액과 비중은 매 브리핑마다 전일 종가로 자동 계산해요.')
     return {'pf_matrix_rows': ''.join(out), 'pf_risk_summary': f'<p>{summary}</p>'}
 
 
@@ -704,15 +637,15 @@ def _pf_generators(hold, pfp, usm, triggers=None):
         except ValueError:
             age = 0
         if age > 30:
-            stale = f' · ⚠️ 캡처 후 {age}일 경과 — 새 계좌 캡처를 공유하면 갱신'
+            stale = f' (캡처 후 {age}일 지났어요, 새 캡처를 주시면 갱신해요)'
     g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")}{stale} · '
-                          f'가격 자동 갱신 — 미국 {_dlabel("US")} 종가 · 한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
+                          f'가격은 미국 {_dlabel("US")}·한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
 
     # ── 합산 요약 ──
     pnl_txt = (('+' if tot_pnl >= 0 else MINUS) + f'{abs(tot_pnl):.1f}%') if tot_pnl is not None else '—'
     diff = tot_val - tot_cost
     diff_txt = ('+' if diff >= 0 else MINUS) + _pf_man(abs(diff)) + '원'
-    g['pf_summary_head'] = esc(f'합산 요약 — 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원 '
+    g['pf_summary_head'] = esc(f'합산 요약 · 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원 '
                                f'· 평가손익 {diff_txt}({pnl_txt})')
     ps = []
     parts = []
@@ -721,18 +654,19 @@ def _pf_generators(hold, pfp, usm, triggers=None):
         bc = sum(r['cost_krw'] for r in b['rows'] if r['cost_krw'] is not None)
         bp = (bv / bc - 1) * 100 if bc else None
         bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
-        parts.append(f'{b["name"]} 평가 {_pf_man(bv)}원({bp_txt})')
-    ps.append('💼 ' + ' · '.join(parts) + ' — 평단×수량×직전 종가 기준 통일 계산(계좌 앱 표기와 수수료·세금·시차만큼 차이날 수 있음).')
+        parts.append(f'{b["name"]} {_pf_man(bv)}원({bp_txt})')
+    ps.append('**계좌별 평가** ' + ' · '.join(parts) + '. 평단×수량×직전 종가로 통일해 계산해서, '
+              '계좌 앱 표기와는 수수료·세금·시차만큼 다를 수 있어요.')
     ne = tot_val / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else None
     cash_bits = ' · '.join(
         f'{b["name"]} ' + '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash'])
         for b in brokers if b['cash'])
     if cash_bits:
-        ps.append(f'💵 예수금: {cash_bits} → 합산 약 {_pf_man(cash_krw)}원. '
-                  f'주식 순노출 {ne:.0f}% · 현금 {100 - ne:.0f}% — 달러 표시 자산은 주식 평가액의 {usd_share:.1f}%.')
+        ps.append(f'**예수금** {cash_bits}, 합쳐서 약 {_pf_man(cash_krw)}원이에요. '
+                  f'주식 비중은 {ne:.0f}%, 현금은 {100 - ne:.0f}%이고, 달러 자산은 주식 평가액의 {usd_share:.1f}%예요.')
     if missing:
-        ps.append(f'⚠️ 가격 미확보: {", ".join(missing)} — 해당 종목은 합산·비중에서 제외.')
-    g['pf_summary_body'] = ''.join(f'<p>{esc(p)}</p>' for p in ps)
+        ps.append(f'**가격 미확보** {", ".join(missing)} 종목은 가격을 아직 못 가져와서 합산과 비중에서 뺐어요.')
+    g['pf_summary_body'] = ''.join(f'<p>{article.rich(p)}</p>' for p in ps)
 
     # ── 전체 합산 표 (같은 종목 계좌 간 블렌드) ──
     merged = {}
@@ -971,54 +905,8 @@ def _render_range_bar(start, now, high, label, zone=None):
         f'</div>')
 
 
-_STATUS_ORDER = {'hit': 0, 'approaching': 1, 'dormant': 2}
-_STATUS_BADGE = {
-    'hit':         ('발동', 'var(--crit)'),
-    'approaching': ('임박', 'var(--warn)'),
-}
-
-
-def _render_triggers(triggers):
-    """triggers.json({triggers:[{category,tag,cond,act,status,strategies}]}) → .trg 카드 HTML.
-    상태 우선순위(발동>임박>평시)로 정렬하고, 평시가 아니면 tag에 배지를 붙인다.
-    카드 좌측 색상바(category: buy/sell/watch)는 액션 종류를 뜻하며 status와는 별개다.
-    strategies(예: ["A","B"])는 .bg와 같은 모양의 배지로 cond 앞에 표시 — 단 .bg 클래스 자체는
-    CSS에서 .stance .srow .bg / .iss .imp .bg 로만 스코프돼 있어 .trg 안에선 안 먹으므로,
-    <style> 블록을 건드리지 않고 인라인 스타일로 같은 모양을 재현한다."""
-    rows = (triggers or {}).get('triggers') or []
-    if not rows:
-        return None
-    ordered = sorted(rows, key=lambda t: _STATUS_ORDER.get(t.get('status'), 2))
-    cards = []
-    for t in ordered:
-        cat = t.get('category', 'watch')
-        if cat not in ('buy', 'sell', 'watch'):
-            cat = 'watch'
-        tag = esc(t.get('tag', ''))
-        badge = _STATUS_BADGE.get(t.get('status'))
-        if badge:
-            label, color = badge
-            tag += f' <span style="color:{color}; font-weight:800;">· {label}</span>'
-        badge_style = ('display:inline-block; font-size:10px; font-weight:800; letter-spacing:.04em; '
-                       'border-radius:6px; padding:1px 6px; margin-right:4px; '
-                       'border:1px solid var(--ring); color:var(--ink);')
-        strat_badges = ''.join(
-            f'<span style="{badge_style}">{esc(s)}</span> ' for s in t.get('strategies', []))
-        # now: 이 트리거의 '현재 판독' 1~2문장(날짜 포함, 매 에디션 교체). cond·act는 규칙 자체라 잘 바뀌지 않는다.
-        now = (t.get('now') or '').strip()
-        now_html = (f'    <div class="now"><span class="nl">현재</span>{esc(now)}</div>\n'
-                    if now else '')
-        cards.append(
-            f'<div class="trg {cat}"><div class="st"></div><div>\n'
-            f'    <div class="tag">{tag}</div>\n'
-            f'    <div class="cond">{strat_badges}{esc(t.get("cond", ""))}</div>\n'
-            f'{now_html}'
-            f'    <div class="act">{esc(t.get("act", ""))}</div></div></div>')
-    return '\n\n  ' + '\n\n  '.join(cards) + '\n\n  '
-
-
 # ── KOSPI 위치 판독 (손글 일지를 대체하는 자동 요약) ─────────────────────────
-_TRG_KO = {'dormant': '평시', 'approaching': '임박', 'hit': '발동'}
+_TRG_KO = {'dormant': '대기', 'approaching': '임박', 'hit': '발동'}
 
 
 def _trigger_status(triggers, tag):
@@ -1055,41 +943,57 @@ def _kospi_chip(close, zone, stop):
 
 def _kospi_readout(close, chg, dd, ys, yh, zone, stop, triggers, how='KRX 확정'):
     """위치 바 아래 자동 판독 <p> 3줄: 위치/거리/트리거. 숫자는 전부 스냅샷(또는 잠정 종가)·stance.json에서 계산한다.
-    how: 값의 출처 라벨 — 'KRX 확정'(기본) 또는 잠정 종가일 때 '언론 집계 · KRX 확정 전'."""
-    style = 'font-size:13px; color:var(--ink-2); margin:6px 0 0'
+    how: 값의 출처 라벨 — 'KRX 확정'(기본) 또는 잠정 종가일 때 '언론 집계 · KRX 확정 전'. 문장은 해요체."""
     ps = []
-    head = f'📍 현재 <strong>{close:,.0f}</strong> ({date_label(dd) + " " if dd else ""}{how}'
+    head = f'<b>현재 {close:,.0f}</b> ({date_label(dd) + " " if dd else ""}{how}'
     if chg is not None:
         head += f', {fmt_pct(chg)}'
     head += ')'
     if ys is not None and yh is not None and yh > ys:
         pos = (close - ys) / (yh - ys) * 100
-        head += (f' — 연초 {ys:,.0f}~고점 {yh:,.0f} 구간의 {pos:.0f}% 지점, '
-                 f'고점 대비 {_pct0(close / yh - 1)}')
-    ps.append(head)
+        head += (f'. 연초 {ys:,.0f}에서 고점 {yh:,.0f}까지의 {pos:.0f}% 지점이고, '
+                 f'고점 대비 {_pct0(close / yh - 1)}예요')
+    ps.append(head + '.')
     dist = []
     if zone:
         lo, hi = zone
         if close < lo:
-            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 하단까지 +{(lo / close - 1) * 100:.1f}%')
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 하단까지 +{(lo / close - 1) * 100:.1f}% 더 올라야 해요')
         elif close <= hi:
-            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 안')
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 안에 있어요')
         else:
-            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f}) 위 +{(close / hi - 1) * 100:.1f}%')
+            dist.append(f'매수구간({lo:,.0f}~{hi:,.0f})보다 +{(close / hi - 1) * 100:.1f}% 위에 있어요')
     if stop is not None:
         gap = (close / stop - 1) * 100
         dist.append(f'손절 참고선({stop:,.0f})보다 ' +
-                    (f'+{gap:.2f}% 위' if gap >= 0 else f'{MINUS}{abs(gap):.2f}% 아래(이탈)'))
+                    (f'+{gap:.2f}% 위예요' if gap >= 0 else f'{MINUS}{abs(gap):.2f}% 아래라 이탈 상태예요'))
     if dist:
-        ps.append('📐 ' + ' · '.join(dist))
+        ps.append('. '.join(dist) + '.')
     st = [(tag, _trigger_status(triggers, tag)) for tag in ('Add', 'Stop-Loss')]
     st = [f'{tag} {_TRG_KO.get(s, s)}' for tag, s in st if s]
     if st:
-        ps.append('🚦 트리거: ' + ' · '.join(st) + ' — 판정 근거는 트리거 탭')
-    return ''.join(f'<p style="{style}">{p}</p>' for p in ps)
+        ps.append('트리거는 ' + ' · '.join(st) + ' 상태예요. 근거는 트리거 탭에서 볼 수 있어요.')
+    return ''.join(f'<p class="kro">{p}</p>' for p in ps)
 
 
-def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None):
+def _cal_refs(cal, snap):
+    """일정 박스의 '지난 일정 거르기' 기준일 (미국 현지 날짜, 한국 날짜).
+    렌더 시각(시계)이 아니라 데이터 수집 시각에서 받아, 언제 다시 빌드해도 같은 결과가 나온다."""
+    for raw in ((cal or {}).get('fetched_at'), (snap or {}).get('fetched_at')):
+        if not raw:
+            continue
+        try:
+            t = datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+        except ValueError:
+            continue
+        if t.tzinfo is None:                       # 스냅샷의 'YYYY-MM-DD HH:MM'은 한국시간
+            t = t.replace(tzinfo=_KST)
+        return t.astimezone(timezone.utc).date(), t.astimezone(_KST).date()
+    return None, None
+
+
+def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None,
+                     fomc=None, earnings=None):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -1111,10 +1015,7 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
         y, mo, d_ = int(m_fa.group(1)), int(m_fa.group(2)), int(m_fa.group(3))
         wd = '월화수목금토일'[datetime(y, mo, d_).weekday()]
         g['hdr_date'] = f'{y}년 {mo}월 {d_}일 ({wd})'
-        upd = f'최종 업데이트 {m_fa.group(2)}-{m_fa.group(3)} {m_fa.group(4)}시'
-        if us and us.get('asof'):
-            upd += f' · {esc(us["asof"])}'
-        g['hdr_updated'] = upd
+        g['hdr_updated'] = f'최종 업데이트 {mo}월 {d_}일 {m_fa.group(4)}시'
 
     # 지수 연초값·연중고점 — 최신 스냅샷에 없으면(YTD 시계열 수집 실패) 가장 최근에 확보된 값을 이월한다.
     # (이월 없이 두면 위치 바만 과거 종가에 멈춰 지수 카드와 어긋난다.)
@@ -1217,50 +1118,51 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
         g['flow_notice'] = ''
     elif flow_src:
         g['flow_notice'] = (
-            '<p style="font-size:12.5px; color:var(--warn); margin:6px 0 10px">'
-            f'⚠️ KRX 투자자별 수급 응답이 {date_label(flow_dd)} 이후 비어 있어, 수급 표·상위종목은 '
-            f'마지막 확정일({date_label(flow_dd)}) 값을 표시한다. 이후 거래일의 수급은 '
-            '위 \'한국 시장 이슈\'의 언론 집계를 참고.</p>')
+            '<p class="fnote">'
+            f'KRX 투자자별 수급 응답이 {date_label(flow_dd)} 이후 비어 있어서, 수급 표와 상위종목은 '
+            f'마지막 확정일({date_label(flow_dd)}) 값을 보여줘요. 그 뒤 거래일의 수급은 '
+            '위쪽 \'#한국장 마감\' 카드의 언론 집계를 참고해 주세요.</p>')
     else:
         g['flow_notice'] = (
-            '<p style="font-size:12.5px; color:var(--warn); margin:6px 0 10px">'
-            '⚠️ KRX 투자자별 수급 확정치를 아직 확보하지 못했다(지어내지 않음).</p>')
+            '<p class="fnote">KRX 투자자별 수급 확정치를 아직 확보하지 못했어요. 지어내지 않고 비워 둘게요.</p>')
 
     # ── 미국 이슈(별도 소스 data/us_issues.json — 마켓 브리프 세션이 갱신) ──
-    g['us_issues'] = _render_issue_cards(us)
-    if us and us.get('asof'):
-        g['us_issues_asof'] = esc(us['asof'])
+    # 카드 위 알약 '#미국장 마감', 제목 아래 기준 문구는 us_issues.json의 asof를 그대로 쓴다.
+    us_asof = (us or {}).get('asof')
+    g['us_issues'] = _render_issue_cards(us, '#미국장 마감', us_asof)
 
     # ── 한국 이슈 분석(data/kr_issues.json — 마켓 브리프 세션이 갱신) ──
-    # 섹션 제목의 기준일(kr_issues_asof)은 카드가 해석하는 날 — 잠정 종가가 있으면 그 날, 없으면 스냅샷 기준일.
+    # 카드의 기준일 문구는 카드가 해석하는 날 — 잠정 종가가 있으면 그 날, 없으면 스냅샷 기준일.
     # (업종표 제목의 기준일은 KRX 'asof_kospi'·'asof_kosdaq' 마커가 따로 맡는다.)
-    g['kr_issues'] = _render_issue_cards(kr)
-    if prov or dd:
-        g['kr_issues_asof'] = date_label(prov['dd'] if prov else dd)
+    kr_dd = prov['dd'] if prov else dd
+    kr_meta = None
+    if kr_dd:
+        kr_meta = f'{article.kdate(kr_dd)} 마감 기준' + (' · 언론 집계(KRX 확정 전)' if prov else '')
+    g['kr_issues'] = _render_issue_cards(kr, '#한국장 마감', kr_meta)
 
-    # ── 오늘의 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
-    # 'stance'는 대시보드 헤더용 통합 블록, 'stance_a/b/c'는 전략 탭 각 pane 상단용 단일 카드
-    # (2026-07-22 재배치 — 전략 탭에서는 헤더 블록이 숨겨지고 이 pane-분산 버전이 대신 보인다).
-    g['stance'] = _render_stance(stance)
-    g['stance_a'] = _render_stance_single(stance, 'A')
-    g['stance_b'] = _render_stance_single(stance, 'B')
-    g['stance_c'] = _render_stance_single(stance, 'C')
+    # ── 오늘의 한 줄 + 스탠스 A/B/C(data/stance.json — 마켓 브리프 세션이 갱신) ──
+    # 'lead'는 인사 배너 아래 한 줄 요약, 'stance'는 대시보드 헤더용 통합 블록, 'stance_a/b/c'는 전략 탭 각 pane
+    # 상단용 단일 카드(2026-07-22 재배치 — 전략 탭에서는 헤더 블록이 숨겨지고 이 pane-분산 버전이 대신 보인다).
+    lead = ((stance or {}).get('lead') or '').strip()
+    g['lead'] = article.rich(lead) if lead else None
+    g['stance'] = article.stance_all(stance)
+    g['stance_a'] = article.stance_single(stance, 'A')
+    g['stance_b'] = article.stance_single(stance, 'B')
+    g['stance_c'] = article.stance_single(stance, 'C')
 
     # ── 트리거 발동/임박 판단(data/triggers.json — 마켓 브리프 세션이 갱신) ──
-    g['triggers'] = _render_triggers(triggers)
+    g['triggers'] = article.trigger_cards(triggers)
 
     # ── 미국·글로벌 시세(data/us_snapshot_latest.json — Action 자동) ──
     g.update(_mkt_generators(usm))
     g['mkt_wti_chip'] = _trigger_chip(triggers, 'De-risk')
     g['mkt_usdkrw_chip'] = _trigger_chip(triggers, 'FX Watch', hit_cls='w')
 
-    # ── 이번 주 경제 캘린더(data/econ_calendar_latest.json — Action 자동, Finnhub) ──
-    g['econ_calendar'] = _econ_calendar_rows(cal)
-    # 제목의 주차는 표가 실제로 갱신될 때만 바꾼다 — FRED 장애로 표가 직전 주 그대로일 때
-    # 제목만 새 주차가 되는 라벨-내용 불일치를 막는다(표가 낡았으면 낡은 주차가 그대로 보인다)
-    if g['econ_calendar'] is not None and cal.get('week_start') and cal.get('week_end'):
-        ws, we = cal['week_start'], cal['week_end']
-        g['econ_cal_week'] = f'{int(ws[5:7])}/{int(ws[8:10])}~{int(we[5:7])}/{int(we[8:10])}'
+    # ── 앞으로 볼 일정 박스: 경제 지표·연준(econ_calendar_latest.json — Action 자동, FRED + fomc_schedule.json)
+    #    + 실적 발표(earnings_calendar.json — 마켓 브리프 세션). 둘 다 비면 ''라서 박스가 통째로 숨겨진다 —
+    #    낡은 일정을 남겨 두지 않는다(옛 경제 캘린더 표와 달리 '기존 유지'가 없다).
+    ref_us, ref_kr = _cal_refs(cal, snap)
+    g['sched_box'] = article.sched_box(cal, (fomc or {}).get('meetings'), earnings, ref_us, ref_kr)
     g['sbx_screen'] = _screen_rows(screen)
     if screen and screen.get('fetched_at'):
         g['sbx_asof'] = esc(screen['fetched_at'])
@@ -1268,8 +1170,9 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     return g
 
 
-def render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None):
-    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)
+def render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None,
+           fomc=None, earnings=None):
+    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices, fomc, earnings)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -1298,7 +1201,7 @@ def _warn_if_editorial_stale(us, snap):
     다르면 대개 us_issues.json 갱신 누락이며, 드물게 한쪽 휴장으로 정상 어긋남일 수 있다."""
     asof = (us or {}).get('asof') or ''
     dd = (snap or {}).get('bas_dd') or ''
-    m = re.search(r'(\d{1,2})\s*/\s*(\d{1,2})', asof)
+    m = re.search(r'(\d{1,2})\s*/\s*(\d{1,2})', asof) or re.search(r'(\d{1,2})\s*월\s*(\d{1,2})\s*일', asof)
     if m and len(dd) == 8:
         if (int(m.group(1)), int(m.group(2))) != (int(dd[4:6]), int(dd[6:8])):
             print(f'⚠️ 신선도 경고: 미국 이슈 asof "{asof}" ≠ KRX 기준일 '
@@ -1312,8 +1215,9 @@ _JARGON = ('WebSearch', 'Action', 'fetch_', 'bas_dd', 'pykrx')
 _HTML_SOFT_LIMIT = 240_000  # 바이트. 정리 직후 약 156KB
 
 
-def _lint_sources(us, kr, stance, triggers, bas_dd=None):
-    """편집 소스(JSON)가 작성 규칙(최신 카드 1개·덮어쓰기·분량·내부 용어 금지)을 지켰는지 점검한다. 경고만 출력 — 강제하지 않는다."""
+def _lint_sources(us, kr, stance, triggers, bas_dd=None, earnings=None):
+    """편집 소스(JSON)가 작성 규칙(최신 카드 1개·덮어쓰기·분량·내부 용어 금지)과 문체 가이드(해요체·이모지 없음·
+    한 문장 90자 안팎 — BRIEFING_PIPELINE.md "문체·형식 가이드")를 지켰는지 점검한다. 경고만 출력 — 강제하지 않는다."""
     warn = []
 
     pv = (kr or {}).get('provisional')
@@ -1327,35 +1231,93 @@ def _lint_sources(us, kr, stance, triggers, bas_dd=None):
         if hit:
             warn.append(f'{where}: 독자 문장에 내부 용어 {hit}')
 
+    def check(where, text):
+        """독자에게 보이는 문장 1개: 내부 용어 + 문체(해요체·이모지·문장 길이)."""
+        text = str(text or '')
+        jargon(where, text)
+        warn.extend(article.style_warnings(where, text))
+
     for name, src in (('us_issues', us), ('kr_issues', kr)):
         issues = (src or {}).get('issues') or []
         if len(issues) > 1:
             warn.append(f'{name}.json issues {len(issues)}개 — 최신 에디션 카드 1개만 둔다(이전 카드는 삭제)')
+        if (src or {}).get('asof'):
+            check(f'{name}.asof', src['asof'])
         for it in issues:
-            jargon(f'{name} 제목', it.get('title', ''))
+            title = it.get('title', '')
+            check(f'{name} 제목', title)
+            if len(article.plain(title)) > 60:
+                warn.append(f'{name} 제목 {len(article.plain(title))}자 — 60자 안팎의 한 문장으로')
+            if it.get('desc') and not it.get('sections'):
+                warn.append(f'{name}: 구형 desc 형식 — v2(lead·sections[]·impacts[])로 쓸 것(BRIEFING_PIPELINE.md)')
             for d in it.get('desc', []):
                 jargon(f'{name} desc', d)
                 if len(d) > 330:
                     warn.append(f'{name} desc {len(d)}자 — 1~2문장으로 쪼갤 것: {d[:24]}…')
+            if it.get('lead'):
+                check(f'{name} lead', it['lead'])
+            secs = it.get('sections') or []
+            if len(secs) > 4:
+                warn.append(f'{name} sections {len(secs)}개 — 4개 이내로(소제목은 질문/주장형 한 줄)')
+            for i, sc in enumerate(secs, 1):
+                check(f'{name} 섹션{i} 소제목', sc.get('heading', ''))
+                for b in sc.get('body') or []:
+                    check(f'{name} 섹션{i} 본문', b)
+                for c in sc.get('checks') or []:
+                    check(f'{name} 섹션{i} 확인할 것', c)
+                nt = sc.get('note')
+                for n in ([nt] if isinstance(nt, str) else (nt or [])):
+                    check(f'{name} 섹션{i} 각주', n)
+            for imp in it.get('impacts') or []:
+                check(f'{name} 영향 {imp.get("strategy", "?")}', imp.get('text', ''))
+            jargon(f'{name} 출처', it.get('sources', ''))
+
+    if (stance or {}).get('lead'):
+        check('stance lead', stance['lead'])
+    elif stance:
+        warn.append('stance.json에 lead(오늘의 한 줄) 없음 — 인사 배너 아래 한 줄 요약을 쓸 것')
     for r in (stance or {}).get('strategies') or []:
         label = r.get('label', '?')
         pts = r.get('points') or []
         if len(pts) > 5:
             warn.append(f'stance {label} points {len(pts)}개 — 5개 이내로')
-        for p in [r.get('headline', '')] + pts:
-            jargon(f'stance {label}', p)
+        if r.get('detail') and not pts:
+            warn.append(f'stance {label}: 구형 detail 줄글 — points[] 점 목록으로')
+        check(f'stance {label} 헤드라인', r.get('headline', ''))
         for p in pts:
+            check(f'stance {label} 항목', p)
             if len(p) > 280:
                 warn.append(f'stance {label} 항목 {len(p)}자 — 1~2문장으로 쪼갤 것: {p[:24]}…')
+
     for t in (triggers or {}).get('triggers') or []:
         tag = t.get('tag', '?')
+        if t.get('status') not in ('hit', 'approaching', 'dormant'):
+            warn.append(f'트리거 {tag}: status "{t.get("status")}" — hit·approaching·dormant 중 하나여야 한다')
+        if not t.get('ko'):
+            warn.append(f'트리거 {tag}: ko(우리말 풀이) 없음 — 영어 태그 옆에 병기할 한글 이름을 넣을 것')
         for fld, lim in (('cond', 300), ('act', 600), ('now', 400)):
             v = t.get(fld) or ''
-            jargon(f'트리거 {tag}.{fld}', v)
+            check(f'트리거 {tag}.{fld}', v)
             if len(v) > lim:
                 warn.append(f'트리거 {tag}.{fld} {len(v)}자(>{lim}) — 판독을 이어붙이지 말고 덮어쓸 것')
+        for a in t.get('acts') or []:
+            check(f'트리거 {tag}.acts', a)
+        gl = t.get('gloss')
+        for g_ in ([gl] if isinstance(gl, str) else (gl or [])):
+            check(f'트리거 {tag}.gloss', g_)
         if '| 이전:' in (t.get('cond') or '') + (t.get('now') or ''):
             warn.append(f'트리거 {tag}: "| 이전:" 꼬리 — 지난 판독은 보존하지 않는다(이력은 git·작업일지)')
+
+    # 실적 일정: 출처 없는 일정은 만들지 않는다(지어내지 않음 원칙)
+    for e in (earnings or {}).get('events') or []:
+        nm = e.get('name', '?')
+        if not re.match(r'\d{4}-\d{2}-\d{2}$', e.get('date') or ''):
+            warn.append(f'실적 일정 {nm}: date 형식 오류(YYYY-MM-DD) — {e.get("date")!r}')
+        if e.get('status') not in ('확정', '예상'):
+            warn.append(f'실적 일정 {nm}: status는 "확정"|"예상" — {e.get("status")!r}')
+        if not e.get('source'):
+            warn.append(f'실적 일정 {nm}: source(출처) 없음 — 확인한 출처 없이 일정을 적지 않는다')
+
     for w in warn:
         print('⚠️ 작성 규칙 —', w)
 
@@ -1383,17 +1345,19 @@ def main():
     triggers = _load(TRIGGERS_PATH, '트리거')
     usm = _load(US_SNAP_PATH, '미국 시세')
     cal = _load(ECON_CAL_PATH, '경제 캘린더')
+    fomc = _load(FOMC_PATH, 'FOMC 일정')
+    earnings = _load(EARN_PATH, '실적 발표 일정')
     screen = _load(SBX_PATH, '전략 B 스크리너')
     pf_hold = _load(PF_HOLD_PATH, '포트폴리오 보유내역')
     pf_prices = _load(PF_PRICE_PATH, '포트폴리오 가격')
-    if not any((snap, us, kr, stance, triggers, usm, cal, screen, pf_hold)):
+    if not any((snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, earnings)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
-    _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'))
+    _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'), earnings)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices)
+    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices, fomc, earnings)
     size = len(out.encode('utf-8'))
     if size > _HTML_SOFT_LIMIT:
         print(f'⚠️ 분량 경고 — HTML {size:,}바이트 > {_HTML_SOFT_LIMIT:,}: 일지식 덧붙임이 쌓였는지 확인할 것(BRIEFING_PIPELINE.md "본문 작성 규칙")')
