@@ -498,7 +498,8 @@ def _pf_enrich(hold, pfp, fx):
         for c in b.get('cash', []):
             cash_krw += c['amount'] * (fx or 0) if c['ccy'] == 'USD' else c['amount']
         brokers.append({'key': b['key'], 'name': b['name'], 'note': b.get('note', ''),
-                        'cash': b.get('cash', []), 'cash_krw': cash_krw, 'rows': rows})
+                        'cash': b.get('cash', []), 'cash_asof': b.get('cash_asof'),
+                        'cash_krw': cash_krw, 'rows': rows})
     return brokers
 
 
@@ -509,7 +510,7 @@ def _pf_verdict(level, text):
     return f'<b style="color:{_PF_LV[level]}">{text}</b>'
 
 
-def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers):
+def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers, cash_lbl=''):
     """정합성 매트릭스(브리핑 기준 vs 실계좌)와 진단 탭 리스크 요약을 보유내역·가격에서 매번 재계산한다.
     예전엔 손글이라 '9/24 가격 기준' 같은 낡은 수치가 표 위쪽 자동 표와 모순되는 일이 반복됐다.
     판정 기준(상한 50%·손절 −15% 등)은 전략 탭 문서의 규율을 그대로 옮긴 것."""
@@ -530,7 +531,8 @@ def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers):
 
     # 2) 방어자산(단기채·금·헤지 — lens DEF)
     dsh = sum(r['val_krw'] for r in rows if r.get('lens') == 'DEF') / tot_val * 100
-    cash_note = f' (예수금 {_pf_man(cash_krw)}원은 별도 확보)' if cash_krw else ''
+    cash_note = (f' (예수금 {_pf_man(cash_krw)}원은 별도 확보' + (f', {cash_lbl} 캡처 기준' if cash_lbl else '') + ')'
+                 if cash_krw else '')
     lv = 'crit' if dsh < 1 else ('warn' if dsh < 20 else 'good')
     add('방어자산', f'단기채·금·헤지 {dsh:.0f}%{cash_note}',
         'A 합계 43%(현금·단기채30+금10+헤지3) · 진단 탭 "저렴한 보험을 살 구간"',
@@ -582,7 +584,8 @@ def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers):
 
     # 8) 현금 실탄
     cash_sh = cash_krw / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else 0
-    add('현금 실탄', f'예수금 {_pf_man(cash_krw)}원 — 총자산의 {cash_sh:.0f}%', 'A 30% · B 20% · C 25%',
+    add('현금 실탄', f'예수금 {_pf_man(cash_krw)}원 — 총자산의 {cash_sh:.0f}%' + (f' · {cash_lbl} 캡처 기준' if cash_lbl else ''),
+        'A 30% · B 20% · C 25%',
         _pf_verdict('warn' if cash_sh < 20 else 'good', '부족' if cash_sh < 20 else '충분'))
 
     # 9) 퀄리티 메가캡
@@ -621,6 +624,16 @@ def _pf_generators(hold, pfp, usm, triggers=None):
     cash_krw = sum(b['cash_krw'] for b in brokers)
     usd_share = sum(r['val_krw'] for r in priced if r['ccy'] == 'USD') / tot_val * 100
 
+    # 예수금 화면이 빠진 캡처가 오면 cash는 그대로 두고 broker.cash_asof(YYYY-MM-DD)에 그 값을 캡처한 날짜를 적는다.
+    # 낡은 예수금이 새 값처럼 보이지 않도록, 보유내역 기준일보다 앞선 계좌만 '○월 ○일'로 화면에 밝힌다.
+    def _md(d):
+        m = re.match(r'\d{4}-(\d{2})-(\d{2})', d or '')
+        return f'{int(m.group(1))}월 {int(m.group(2))}일' if m else None
+    cap_day = (hold.get('asof') or '')[:10]
+    cash_stale = {b['key']: _md(b['cash_asof']) for b in brokers
+                  if b['cash'] and _md(b['cash_asof']) and b['cash_asof'] < cap_day}
+    cash_lbl = '·'.join(dict.fromkeys(cash_stale.values()))
+
     # ── 기준일 라벨 ──
     def _dlabel(mkt):
         ds = [r['asof'] for r in priced if r['market'] == mkt and r.get('asof')]
@@ -638,14 +651,16 @@ def _pf_generators(hold, pfp, usm, triggers=None):
             age = 0
         if age > 30:
             stale = f' (캡처 후 {age}일 지났어요, 새 캡처를 주시면 갱신해요)'
-    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")}{stale} · '
+    cash_txt_hdr = f' · 예수금은 {cash_lbl} 캡처 기준' if cash_lbl else ''
+    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")}{stale}{cash_txt_hdr} · '
                           f'가격은 미국 {_dlabel("US")}·한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
 
     # ── 합산 요약 ──
     pnl_txt = (('+' if tot_pnl >= 0 else MINUS) + f'{abs(tot_pnl):.1f}%') if tot_pnl is not None else '—'
     diff = tot_val - tot_cost
     diff_txt = ('+' if diff >= 0 else MINUS) + _pf_man(abs(diff)) + '원'
-    g['pf_summary_head'] = esc(f'합산 요약 · 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원 '
+    cash_head = f'({cash_lbl} 기준)' if cash_lbl else ''
+    g['pf_summary_head'] = esc(f'합산 요약 · 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원{cash_head} '
                                f'· 평가손익 {diff_txt}({pnl_txt})')
     ps = []
     parts = []
@@ -662,7 +677,9 @@ def _pf_generators(hold, pfp, usm, triggers=None):
         f'{b["name"]} ' + '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash'])
         for b in brokers if b['cash'])
     if cash_bits:
-        ps.append(f'**예수금** {cash_bits}, 합쳐서 약 {_pf_man(cash_krw)}원이에요. '
+        cash_why = (f' 이번 캡처에는 예수금 화면이 없어서 {cash_lbl} 값을 그대로 썼어요. 그 뒤의 거래는 반영하지 못했어요.'
+                    if cash_lbl else '')
+        ps.append(f'**예수금** {cash_bits}, 합쳐서 약 {_pf_man(cash_krw)}원이에요.{cash_why} '
                   f'주식 비중은 {ne:.0f}%, 현금은 {100 - ne:.0f}%이고, 달러 자산은 주식 평가액의 {usd_share:.1f}%예요.')
     if missing:
         ps.append(f'**가격 미확보** {", ".join(missing)} 종목은 가격을 아직 못 가져와서 합산과 비중에서 뺐어요.')
@@ -704,7 +721,8 @@ def _pf_generators(hold, pfp, usm, triggers=None):
         bp = (bv / bc - 1) * 100 if bc else None
         bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
         cash_txt = '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash']) or '미확보'
-        g[f'pf_{b["key"]}_sub'] = esc(f'{b["note"]} · 평가 {_pf_man(bv)}원 · {bp_txt} · 예수금 {cash_txt}')
+        cash_when = f'({cash_stale[b["key"]]} 기준)' if b['key'] in cash_stale else ''
+        g[f'pf_{b["key"]}_sub'] = esc(f'{b["note"]} · 평가 {_pf_man(bv)}원 · {bp_txt} · 예수금 {cash_txt}{cash_when}')
         rh = ''
         for r in sorted(b['rows'], key=lambda x: -(x['val_krw'] or 0)):
             w = (r['val_krw'] / bv * 100) if (bv and r['val_krw'] is not None) else None
@@ -733,7 +751,7 @@ def _pf_generators(hold, pfp, usm, triggers=None):
         g[f'pf_lens_pct_{k.lower()}'] = f'{lens_pct[k]:.1f}%'
 
     # ── 정합성 매트릭스·리스크 요약(손글 대체) ──
-    g.update(_pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers))
+    g.update(_pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers, cash_lbl))
     return g
 
 

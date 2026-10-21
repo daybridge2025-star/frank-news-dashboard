@@ -1,36 +1,36 @@
 {
-  "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화. leveraged: true면 정합성 매트릭스 '레버리지' 행에 집계된다. name에는 티커를 넣지 않는다(미국 종목은 표에서 티커를 자동으로 덧붙임).",
-  "asof": "2026-08-04 계좌 캡처",
+  "_readme": "실계좌 보유내역 원본(사용자 캡처 기준 — 수량·평단·예수금은 여기서만 수동 갱신, 지어내지 않음). 가격은 fetch_portfolio_prices.py(Action 일일 실행)가 data/portfolio_prices_latest.json에 '직전 종가'로 수집하고, build_briefing.py가 포트폴리오 탭의 PF-* 마커에 평가액·손익·비중을 계산해 주입한다. 새 캡처가 오면 이 파일의 qty/avg/cash/asof만 고치면 된다. yahoo: 가격 조회용 야후 심볼(한국 종목은 .KS/.KQ 접미사 필수). lens: 전략 렌즈 분류(C/B/A/OUT). ccy: avg·가격 통화. leveraged: true면 정합성 매트릭스 '레버리지' 행에 집계된다. name에는 티커를 넣지 않는다(미국 종목은 표에서 티커를 자동으로 덧붙임). 예수금 화면이 캡처에 없으면 cash는 건드리지 말고 broker.cash_asof(YYYY-MM-DD)에 그 값을 캡처한 날짜를 적는다 — 화면에 '예수금은 ○월 ○일 캡처 기준'으로 표시된다(새 예수금 화면이 오면 cash를 고치고 cash_asof를 지운다). 국내 종목 평단은 앱의 '평균단가'가 매매비용을 얹은 손익분기 단가로 보일 수 있어서(설정에 따라), 매입금액÷수량으로 적는다. 해외 종목은 앱의 평균단가가 그대로 매입금액÷수량이다.",
+  "asof": "2026-10-21 계좌 캡처",
   "brokers": [
     {
       "key": "mirae",
       "name": "미래에셋",
       "note": "미국주식 + 국내(HLB)",
+      "cash_asof": "2026-08-04",
       "cash": [
         {"ccy": "KRW", "amount": 38666},
         {"ccy": "USD", "amount": 1658.68}
       ],
       "holdings": [
-        {"name": "테슬라", "ticker": "TSLA", "yahoo": "TSLA", "market": "US", "ccy": "USD", "qty": 81, "avg": 387.1949, "lens": "C", "strategy": "C 테슬라 — 모델 배분 25%"},
-        {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 10, "avg": 137.649, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
-        {"name": "SK하이닉스 ADR", "ticker": "SKHY", "yahoo": "SKHY", "market": "US", "ccy": "USD", "qty": 10, "avg": 156.947, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
+        {"name": "테슬라", "ticker": "TSLA", "yahoo": "TSLA", "market": "US", "ccy": "USD", "qty": 89, "avg": 383.4662, "lens": "C", "strategy": "C 테슬라 — 모델 배분 25%"},
         {"name": "로켓랩", "ticker": "RKLB", "yahoo": "RKLB", "market": "US", "ccy": "USD", "qty": 3.160521, "avg": 96.2134, "lens": "OUT", "strategy": "전략 외"},
-        {"name": "HLB", "ticker": "028300", "yahoo": "028300.KQ", "market": "KR", "ccy": "KRW", "qty": 7, "avg": 52582, "lens": "OUT", "strategy": "전략 외"}
+        {"name": "HLB", "ticker": "028300", "yahoo": "028300.KQ", "market": "KR", "ccy": "KRW", "qty": 7, "avg": 52515, "lens": "OUT", "strategy": "전략 외"}
       ]
     },
     {
       "key": "toss",
       "name": "토스증권",
       "note": "해외+국내",
+      "cash_asof": "2026-08-04",
       "cash": [
         {"ccy": "KRW", "amount": 63568},
         {"ccy": "USD", "amount": 1520.30}
       ],
       "holdings": [
-        {"name": "SOL AI반도체TOP2플러스", "ticker": "0167A0", "yahoo": "0167A0.KS", "market": "KR", "ccy": "KRW", "qty": 275, "avg": 25496, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
-        {"name": "마이크론 2× 레버리지", "ticker": "MUU", "yahoo": "MUU", "market": "US", "ccy": "USD", "qty": 120, "avg": 41.82, "lens": "B", "leveraged": true, "strategy": "B 마이크론(8%)의 레버리지 변형"},
-        {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 4.158725, "avg": 145.01, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
-        {"name": "매그니피센트7 ETF", "ticker": "MAGS", "yahoo": "MAGS", "market": "US", "ccy": "USD", "qty": 2.676721, "avg": 63.54, "lens": "A", "strategy": "A 퀄리티 메가캡 유사"}
+        {"name": "SOL AI반도체TOP2플러스", "ticker": "0167A0", "yahoo": "0167A0.KS", "market": "KR", "ccy": "KRW", "qty": 250, "avg": 25496, "lens": "B", "strategy": "B AI메모리(32%) 유사"},
+        {"name": "마이크론 2× 레버리지", "ticker": "MUU", "yahoo": "MUU", "market": "US", "ccy": "USD", "qty": 80, "avg": 41.82, "lens": "B", "leveraged": true, "strategy": "B 마이크론(8%)의 레버리지 변형"},
+        {"name": "스페이스X", "ticker": "SPCX", "yahoo": "SPCX", "market": "US", "ccy": "USD", "qty": 15.67319, "avg": 149.77, "lens": "C", "strategy": "C SpaceX — 모델 배분 20%"},
+        {"name": "매그니피센트7 ETF", "ticker": "MAGS", "yahoo": "MAGS", "market": "US", "ccy": "USD", "qty": 6.443875, "avg": 67.51, "lens": "A", "strategy": "A 퀄리티 메가캡 유사"}
       ]
     }
   ]
