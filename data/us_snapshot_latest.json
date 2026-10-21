@@ -1,99 +1,78 @@
 {
   "yahoo": {
     "vix": {
-      "price": 17.31,
-      "prev": 18.440000534057617,
-      "change_pct": -6.13,
-      "asof": "2026-10-20"
+      "price": 16.68,
+      "prev": 17.309999465942383,
+      "change_pct": -3.64,
+      "asof": "2026-10-21"
     },
     "usdkrw": {
-      "price": 1325.9000244140625,
-      "prev": 1330.0,
-      "change_pct": -0.31,
-      "asof": "2026-10-20"
+      "price": 1325.5899658203125,
+      "prev": 1323.93994140625,
+      "change_pct": 0.12,
+      "asof": "2026-10-21"
     },
     "wti": {
-      "price": 98.30000305175781,
-      "prev": 103.66000366210938,
-      "change_pct": -5.17,
-      "asof": "2026-10-20"
+      "price": 97.93000030517578,
+      "prev": 101.79000091552734,
+      "change_pct": -3.79,
+      "asof": "2026-10-21"
     },
     "gold": {
-      "price": 4138.0,
-      "prev": 4160.10009765625,
-      "change_pct": -0.53,
-      "asof": "2026-10-20"
+      "price": 4144.10009765625,
+      "prev": 4142.60009765625,
+      "change_pct": 0.04,
+      "asof": "2026-10-21"
     },
     "copper": {
-      "price": 6.612500190734863,
-      "prev": 6.538000106811523,
-      "change_pct": 1.14,
-      "asof": "2026-10-20"
+      "price": 6.547999858856201,
+      "prev": 6.566500186920166,
+      "change_pct": -0.28,
+      "asof": "2026-10-21"
     },
     "dxy": {
-      "price": 101.7300033569336,
-      "prev": 101.9800033569336,
-      "change_pct": -0.25,
-      "asof": "2026-10-20"
+      "price": 101.69100189208984,
+      "prev": 101.7300033569336,
+      "change_pct": -0.04,
+      "asof": "2026-10-21"
     },
     "sp500": {
-      "price": 7712.57,
-      "prev": 7690.72998046875,
-      "change_pct": 0.28,
-      "asof": "2026-10-20",
+      "price": 7757.17,
+      "prev": 7712.56982421875,
+      "change_pct": 0.58,
+      "asof": "2026-10-21",
       "ytd_start": 6858.47,
       "ytd_high": 7844.52,
-      "ytd_change_pct": 12.5
+      "ytd_change_pct": 13.1
     },
     "nasdaq": {
-      "price": 26424.81640625,
-      "prev": 26430.890625,
-      "change_pct": -0.02,
-      "asof": "2026-10-20",
+      "price": 26702.857421875,
+      "prev": 26424.8203125,
+      "change_pct": 1.05,
+      "asof": "2026-10-21",
       "ytd_start": 23235.63,
       "ytd_high": 27722.75,
-      "ytd_change_pct": 13.7
+      "ytd_change_pct": 14.9
     },
     "dow": {
-      "price": 52495.88,
-      "prev": 51966.03125,
-      "change_pct": 1.02,
-      "asof": "2026-10-20",
+      "price": 52856.09,
+      "prev": 52495.87890625,
+      "change_pct": 0.69,
+      "asof": "2026-10-21",
       "ytd_start": 48382.39,
       "ytd_high": 54744.33,
-      "ytd_change_pct": 8.5
+      "ytd_change_pct": 9.2
     }
   },
-  "fred": {
-    "t10y": {
-      "value": 5.15,
-      "date": "2026-10-19"
-    },
-    "t2y": {
-      "value": 4.77,
-      "date": "2026-10-19"
-    },
-    "hy_oas": {
-      "value": 3.29,
-      "date": "2026-10-19"
-    },
-    "fed_upper": {
-      "value": 4.0,
-      "date": "2026-10-20"
-    },
-    "fed_lower": {
-      "value": 3.75,
-      "date": "2026-10-20"
-    }
-  },
+  "fred": {},
   "fear_greed": {
-    "score": 27.2,
+    "score": 31.4,
     "rating": "fear",
-    "asof": "2026-10-20",
+    "asof": "2026-10-21",
     "source": "CNN",
-    "prev_close": 23.1,
-    "prev_week": 44.1,
-    "prev_month": 30.4
+    "prev_close": 27.2,
+    "prev_week": 26.7,
+    "prev_month": 34.2
   },
   "valuation": {
     "forward_pe": 19.0,
@@ -102,5 +81,5 @@
     "asof": "2026-10-16",
     "source": "FactSet Earnings Insight"
   },
-  "fetched_at": "2026-10-21 08:18 KST"
+  "fetched_at": "2026-10-22 08:31 KST"
 }
