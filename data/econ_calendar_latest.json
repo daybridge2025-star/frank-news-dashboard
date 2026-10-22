@@ -1,6 +1,6 @@
 {
-  "status": "fred_error: Expecting value: line 1 column 1 (char 0)",
-  "fred_ok": false,
+  "status": "ok",
+  "fred_ok": true,
   "week_start": "2026-10-19",
   "week_end": "2026-10-25",
   "events": [
@@ -23,7 +23,7 @@
       "impact": "medium"
     }
   ],
-  "stale_events": true,
-  "events_fetched_at": "2026-10-20T23:18:29.226378+00:00",
-  "fetched_at": "2026-10-21T23:32:03.534923+00:00"
+  "stale_events": false,
+  "events_fetched_at": "2026-10-22T23:31:21.793602+00:00",
+  "fetched_at": "2026-10-22T23:31:21.793602+00:00"
 }
