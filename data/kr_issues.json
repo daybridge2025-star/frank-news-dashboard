@@ -59,17 +59,5 @@
       ],
       "sources": "뉴스핌·파이낸셜뉴스·데일리안 집계(KRX 확정 전)"
     }
-  ],
-  "provisional": {
-    "asof": "2026-10-23",
-    "source": "복수 매체 일치(뉴스핌·파이낸셜뉴스·데일리안)",
-    "kospi": {
-      "close": 5550.3,
-      "change_pct": 0.3
-    },
-    "kosdaq": {
-      "close": 751.69,
-      "change_pct": -1.62
-    }
-  }
+  ]
 }
