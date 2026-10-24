@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261023",
-  "fetched_at": "2026-10-24 08:18 KST",
+  "fetched_at": "2026-10-25 07:37 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,63 +1224,63 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "openapi",
-      "close": 215500,
-      "change_pct": 0.47,
+      "source": "pykrx",
+      "close": 213500,
+      "change_pct": -0.4662004662004662,
       "open": 206000,
       "high": 215500,
       "low": 203500,
-      "volume": 16145972
+      "volume": 16019854
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "openapi",
-      "close": 1277000,
-      "change_pct": 4.42,
+      "source": "pykrx",
+      "close": 1263000,
+      "change_pct": 2.3500810372771475,
       "open": 1200000,
       "high": 1284000,
       "low": 1171000,
-      "volume": 3941446
+      "volume": 3710446
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "openapi",
-      "close": 470000,
-      "change_pct": -4.08,
+      "source": "pykrx",
+      "close": 466500,
+      "change_pct": -3.4161490683229814,
       "open": 472500,
-      "high": 473000,
+      "high": 474500,
       "low": 448500,
       "volume": 168558
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "openapi",
-      "close": 156900,
-      "change_pct": -2.79,
+      "source": "pykrx",
+      "close": 154600,
+      "change_pct": -3.4353529044347284,
       "open": 155400,
       "high": 157400,
       "low": 147000,
-      "volume": 837152
+      "volume": 830025
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "openapi",
-      "close": 792000,
-      "change_pct": -2.34,
+      "source": "pykrx",
+      "close": 786000,
+      "change_pct": -3.3210332103321036,
       "open": 808000,
       "high": 812000,
       "low": 763000,
-      "volume": 148662
+      "volume": 139508
     },
     "064350": {
       "name": "현대로템",
-      "source": "openapi",
-      "close": 82700,
-      "change_pct": -3.27,
+      "source": "pykrx",
+      "close": 81600,
+      "change_pct": -3.7735849056603774,
       "open": 82000,
       "high": 84100,
       "low": 80400,
-      "volume": 659535
+      "volume": 538231
     }
   },
   "investor_flow": {

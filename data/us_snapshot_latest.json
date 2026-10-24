@@ -7,27 +7,27 @@
       "asof": "2026-10-23"
     },
     "usdkrw": {
-      "price": 1323.6600341796875,
+      "price": 1325.4000244140625,
       "prev": 1325.989990234375,
-      "change_pct": -0.18,
+      "change_pct": -0.04,
       "asof": "2026-10-23"
     },
     "wti": {
-      "price": 103.44,
+      "price": 103.27,
       "prev": 99.47000122070312,
-      "change_pct": 3.99,
+      "change_pct": 3.82,
       "asof": "2026-10-23"
     },
     "gold": {
-      "price": 4010.0,
+      "price": 4007.9,
       "prev": 4060.39990234375,
-      "change_pct": -1.24,
+      "change_pct": -1.29,
       "asof": "2026-10-23"
     },
     "copper": {
-      "price": 6.497,
+      "price": 6.508,
       "prev": 6.362500190734863,
-      "change_pct": 2.11,
+      "change_pct": 2.29,
       "asof": "2026-10-23"
     },
     "dxy": {
@@ -46,7 +46,7 @@
       "ytd_change_pct": 11.2
     },
     "nasdaq": {
-      "price": 25955.341796875,
+      "price": 25955.33984375,
       "prev": 26008.859375,
       "change_pct": -0.21,
       "asof": "2026-10-23",
@@ -79,11 +79,11 @@
     },
     "fed_upper": {
       "value": 4.0,
-      "date": "2026-10-23"
+      "date": "2026-10-24"
     },
     "fed_lower": {
       "value": 3.75,
-      "date": "2026-10-23"
+      "date": "2026-10-24"
     }
   },
   "fear_greed": {
@@ -102,5 +102,5 @@
     "asof": "2026-10-23",
     "source": "FactSet Earnings Insight"
   },
-  "fetched_at": "2026-10-24 08:19 KST"
+  "fetched_at": "2026-10-25 07:38 KST"
 }
