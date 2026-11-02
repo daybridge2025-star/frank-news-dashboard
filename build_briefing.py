@@ -7,7 +7,7 @@
   data/kr_issues.json,           <!--KR-START/END:key-->   마켓 브리프 세션(한국 이슈 분석 ·
   data/stance.json,                                         오늘의 스탠스 A/B/C · 오늘의 한 줄(lead) ·
   data/triggers.json                                        트리거 발동/임박 판단 — 셋 다 KR 접두사)
-  data/earnings_calendar.json    <!--MKT-START/END:sched_box-->  마켓 브리프 세션(보유·전략 관련 기업 실적 일정)
+  data/earnings_calendar.json    <!--MKT-START/END:sched_box-->  마켓 브리프 세션(전략 관련 기업 실적 일정)
 
 독자 노출 문장의 문체·형식(해요체, JM님 호칭, 이모지 없음, 기사형 카드)은 utils/article.py가 코드로 고정한다 —
 편집 소스(JSON)는 `**굵게**`·`==형광펜==` 두 가지 가벼운 마크업만 쓰고, 그 밖의 HTML은 전부 이스케이프된다.
@@ -44,7 +44,7 @@ TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓
 US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
 ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 (Action 생성 — fetch_econ_calendar.py)
 FOMC_PATH = 'data/fomc_schedule.json'         # 연준 공식 FOMC 일정 (수동, 연 1회)
-EARN_PATH = 'data/earnings_calendar.json'     # 보유·전략 관련 기업 실적 발표 일정 (마켓 브리프 세션이 갱신)
+EARN_PATH = 'data/earnings_calendar.json'     # 전략 관련 기업 실적 발표 일정 (마켓 브리프 세션이 갱신)
 SBX_PATH = 'data/strategy_b_screen.json'  # 전략 B 편입 스크리너 (Action 생성 — monitor_strategy_b.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
