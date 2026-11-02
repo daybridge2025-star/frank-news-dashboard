@@ -89,7 +89,7 @@ h1{font-size:24px; font-weight:800; letter-spacing:-.02em; margin:4px 0 2px; tex
 .srow2 .sp2{margin:8px 0 0; font-size:14px; line-height:1.75; color:var(--ink-2)}
 /* 인사·한 줄·일정·스탠스 블록: 대시보드 탭에서만 노출(전략 탭은 2026-07-22부터 자체 위치로 이전 — 아래 참조) */
 html[data-tab="tab-diag"] .hdr-stance-scope, html[data-tab="tab-scn"] .hdr-stance-scope,
-html[data-tab="tab-trg"] .hdr-stance-scope, html[data-tab="tab-pf"] .hdr-stance-scope,
+html[data-tab="tab-trg"] .hdr-stance-scope,
 html[data-tab="tab-strat"] .hdr-stance-scope{display:none}
 /* 전략 탭 내 스탠스 미니카드(각 전략 선택 탭 상단) — 헤더 .stance2와 톤 통일, 상단 여백만 제거 */
 .strat-pane .stance2{margin-top:0; margin-bottom:14px}
@@ -626,10 +626,6 @@ footer p{margin:5px 0}
     <p>지금은 공격이 아니라 <strong>저렴한 보험을 사면서 선별적으로 공격하는 구간</strong>이에요.</p>
   </div>
 
-  <div class="callout">
-    <h3>포트폴리오 리스크 (실계좌 연동)</h3>
-    <!--PF-START:pf_risk_summary--><p><strong>전략 C 계열이 87.1%</strong>예요(최대 단일 종목은 테슬라 82.1%). 방어자산은 0%이고, 손절 규율(−15%) 밖에 있는 포지션이 4개(합계 비중 11.8%)예요. 위 진단의 "보험 살 구간"과는 반대 구조예요. 자세한 진단과 재정렬 로드맵은 <strong>포트폴리오 탭</strong>에서 볼 수 있어요. 평가액과 비중은 매 브리핑마다 전일 종가로 자동 계산해요.</p><!--PF-END:pf_risk_summary-->
-  </div>
 </section>
 
 <!-- ======================= 3. 시나리오 ======================= -->
@@ -694,7 +690,7 @@ footer p{margin:5px 0}
   <!--KR-START:stance_a--><div class="stance2"><span class="tagpill">#오늘의 스탠스</span><div class="srow2"><div class="sh"><span class="sb">A 바벨</span><span class="sv2">참고선 아래에서 더 밀릴 수 있어 방어 모드를 그대로 이어가요</span></div><ul class="spl"><li>손절 규율 1~4번(트리거 탭)은 그대로 지켜요. 방어를 푸는 조건은 종가 6,000 위에서 2거래일 연속 버티는 거예요.</li><li>신규 한국 매수는 멈춘 채로 둬요. 예수금은 방어자산 중 모자란 것부터 채워요.</li><li>유가 신호(De-risk)는 임박 단계예요. 봉쇄까지 확인되면 방어 강도를 높여요.</li></ul></div></div><!--KR-END:stance_a-->
   <div class="callout blue">
     <h3>전략 A의 논리: 어떤 시나리오가 와도 살아남아요</h3>
-    <p>베어 시나리오 확률은 평시보다 높은 30%를 유지해요. 현실이 그쪽으로 기울고 있기 때문이에요. 시나리오 탭의 베어 케이스 KOSPI 구간(6,000~6,500)에 이미 들어와 있는지는 대시보드의 "KOSPI 위치"에서 매일 확인할 수 있어요. 방어자산 비중은 포트폴리오 탭의 정합성 매트릭스를 참고하세요.</p>
+    <p>베어 시나리오 확률은 평시보다 높은 30%를 유지해요. 현실이 그쪽으로 기울고 있기 때문이에요. 시나리오 탭의 베어 케이스 KOSPI 구간(6,000~6,500)에 이미 들어와 있는지는 대시보드의 "KOSPI 위치"에서 매일 확인할 수 있어요.</p>
     <p>그래서 <strong>순노출을 50~60%로 낮추고, 남는 자본을 저렴한 보험(풋·금·단기채)에 배분</strong>해요. 베이스·베어 어느 쪽이 와도 무너지지 않는 구조를 먼저 만든 다음, 조정받은 우량 자산(전력 인프라·에너지·메모리)만 선별해서 공격해요.</p>
     <p>목표는 최대 수익이 아니라 <strong>손익비</strong>예요. 잃을 때는 적게 잃고, 벌 때는 시장만큼 벌어요.</p>
   </div>
@@ -937,108 +933,6 @@ footer p{margin:5px 0}
   <!--KR-END:triggers-->
 </section>
 
-<!-- ======================= 6. 포트폴리오 ======================= -->
-<section id="tab-pf">
-  <h2>현재 포트폴리오 <small><!--PF-START:pf_updated-->실계좌 2곳 합산 · 보유내역 2026-10-28 계좌 캡처 · 예수금은 8월 4일 캡처 기준 · 가격은 미국 10/30·한국 10/30 종가 · 환산 1,333원/$<!--PF-END:pf_updated--></small></h2>
-
-  <div class="callout blue">
-    <h3><!--PF-START:pf_summary_head-->합산 요약 · 주식 평가 5,778만원 + 예수금 434만원(8월 4일 기준) · 평가손익 −316만원(−5.2%)<!--PF-END:pf_summary_head--></h3>
-    <!--PF-START:pf_summary_body--><p><b>계좌별 평가</b> 미래에셋 4,795만원(+3.6%) · 토스증권 982만원(−33.0%). 평단×수량×직전 종가로 통일해 계산해서, 계좌 앱 표기와는 수수료·세금·시차만큼 다를 수 있어요.</p><p><b>예수금</b> 미래에셋 38,666원+$1,658.68 · 토스증권 63,568원+$1,520.30, 합쳐서 약 434만원이에요. 이번 캡처에는 예수금 화면이 없어서 8월 4일 값을 그대로 썼어요. 그 뒤의 거래는 반영하지 못했어요. 주식 비중은 93%, 현금은 7%이고, 달러 자산은 주식 평가액의 93.0%예요.</p><!--PF-END:pf_summary_body-->
-    <p style="font-size:12px; color:var(--ink-3)">수량·평단·예수금은 계좌 캡처가 새로 공유될 때만 수동으로 갱신해요(지어내지 않아요). 가격은 매 브리핑마다 직전 종가로 자동 갱신돼요.</p>
-  </div>
-
-  <h2>보유 내역 — 전체 합산 <small>비중순 · 같은 종목은 계좌 간 블렌드 평단 합산 · 평가액은 원화 환산(만원)</small></h2>
-  <div class="prose tbl-scroll">
-    <table class="dtl">
-      <tr><th>종목</th><th>수량</th><th>평단</th><th>전일 종가</th><th>평가액</th><th>손익률</th><th>비중</th><th>전략 매핑</th></tr>
-      <!--PF-START:pf_total_rows--><tr><td>테슬라 TSLA</td><td class="num">89</td><td class="num">$383.47</td><td class="num">$399.81</td><td class="num">4,744만</td><td class="num" style="color:var(--good)">+4.3%</td><td class="num">82.1%</td><td>C 테슬라 — 모델 배분 25%</td></tr><tr><td>SOL AI반도체TOP2플러스</td><td class="num">250</td><td class="num">25,496원</td><td class="num">14,970원</td><td class="num">374만</td><td class="num" style="color:var(--crit)">−41.3%</td><td class="num">6.5%</td><td>B AI메모리(32%) 유사</td></tr><tr><td>스페이스X SPCX</td><td class="num">16.07</td><td class="num">$149.79</td><td class="num">$134.72</td><td class="num">289만</td><td class="num">−10.1%</td><td class="num">5.0%</td><td>C SpaceX — 모델 배분 20%</td></tr><tr><td>마이크론 2× 레버리지 MUU</td><td class="num">80</td><td class="num">$41.82</td><td class="num">$24.08</td><td class="num">257만</td><td class="num" style="color:var(--crit)">−42.4%</td><td class="num">4.4%</td><td>B 마이크론(8%)의 레버리지 변형</td></tr><tr><td>매그니피센트7 ETF MAGS</td><td class="num">6.87</td><td class="num">$67.74</td><td class="num">$68.48</td><td class="num">63만</td><td class="num" style="color:var(--good)">+1.1%</td><td class="num">1.1%</td><td>A 퀄리티 메가캡 유사</td></tr><tr><td>HLB</td><td class="num">7</td><td class="num">52,515원</td><td class="num">40,000원</td><td class="num">28만</td><td class="num" style="color:var(--crit)">−23.8%</td><td class="num">0.5%</td><td><b style="color:var(--warn)">전략 외</b></td></tr><tr><td>로켓랩 RKLB</td><td class="num">3.16</td><td class="num">$96.21</td><td class="num">$54.73</td><td class="num">23만</td><td class="num" style="color:var(--crit)">−43.1%</td><td class="num">0.4%</td><td><b style="color:var(--warn)">전략 외</b></td></tr><tr><td>합계</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">5,778만</td><td class="num">−5.2%</td><td class="num">100%</td><td>달러 표시 자산 93.0%</td></tr><!--PF-END:pf_total_rows-->
-    </table>
-    <p style="font-size:12px; color:var(--ink-2)">MUU는 마이크론 일간 2배 레버리지 ETF, MAGS는 매그니피센트7 ETF, SOL AI반도체TOP2플러스는 국내 상장 AI 반도체 테마 ETF(삼성전자·SK하이닉스 집중), HLB는 코스닥 바이오 종목이에요.</p>
-  </div>
-
-  <h2>증권사별 내역 — 미래에셋 <small><!--PF-START:pf_mirae_sub-->미국주식 + 국내(HLB) · 평가 4,795만원 · +3.6% · 예수금 38,666원+$1,658.68(8월 4일 기준)<!--PF-END:pf_mirae_sub--></small></h2>
-  <div class="prose tbl-scroll">
-    <table class="dtl">
-      <tr><th>종목</th><th>구분</th><th>수량</th><th>평단</th><th>전일 종가</th><th>평가액</th><th>손익률</th><th>계좌 내 비중</th></tr>
-      <!--PF-START:pf_mirae_rows--><tr><td>테슬라 TSLA</td><td>해외</td><td class="num">89</td><td class="num">$383.47</td><td class="num">$399.81</td><td class="num">$35,583.09</td><td class="num" style="color:var(--good)">+4.3%</td><td class="num">98.9%</td></tr><tr><td>HLB</td><td>국내</td><td class="num">7</td><td class="num">52,515원</td><td class="num">40,000원</td><td class="num">280,000원</td><td class="num" style="color:var(--crit)">−23.8%</td><td class="num">0.6%</td></tr><tr><td>로켓랩 RKLB</td><td>해외</td><td class="num">3.16</td><td class="num">$96.21</td><td class="num">$54.73</td><td class="num">$172.98</td><td class="num" style="color:var(--crit)">−43.1%</td><td class="num">0.5%</td></tr><!--PF-END:pf_mirae_rows-->
-    </table>
-    <p style="font-size:12px; color:var(--ink-2)">테슬라에 초집중한 계좌예요. 계좌 손익이 테슬라 한 종목에 수렴하는 구조라서, 테슬라가 흔들리면 완충재가 없어요.</p>
-  </div>
-
-  <h2>증권사별 내역 — 토스증권 <small><!--PF-START:pf_toss_sub-->해외+국내 · 평가 982만원 · −33.0% · 예수금 63,568원+$1,520.30(8월 4일 기준)<!--PF-END:pf_toss_sub--></small></h2>
-  <div class="prose tbl-scroll">
-    <table class="dtl">
-      <tr><th>종목</th><th>구분</th><th>수량</th><th>평단</th><th>전일 종가</th><th>평가액</th><th>손익률</th><th>계좌 내 비중</th></tr>
-      <!--PF-START:pf_toss_rows--><tr><td>SOL AI반도체TOP2플러스</td><td>국내</td><td class="num">250</td><td class="num">25,496원</td><td class="num">14,970원</td><td class="num">3,742,500원</td><td class="num" style="color:var(--crit)">−41.3%</td><td class="num">38.1%</td></tr><tr><td>스페이스X SPCX</td><td>해외</td><td class="num">16.07</td><td class="num">$149.79</td><td class="num">$134.72</td><td class="num">$2,165.30</td><td class="num">−10.1%</td><td class="num">29.4%</td></tr><tr><td>마이크론 2× 레버리지 MUU</td><td>해외</td><td class="num">80</td><td class="num">$41.82</td><td class="num">$24.08</td><td class="num">$1,926.40</td><td class="num" style="color:var(--crit)">−42.4%</td><td class="num">26.1%</td></tr><tr><td>매그니피센트7 ETF MAGS</td><td>해외</td><td class="num">6.87</td><td class="num">$67.74</td><td class="num">$68.48</td><td class="num">$470.16</td><td class="num" style="color:var(--good)">+1.1%</td><td class="num">6.4%</td></tr><!--PF-END:pf_toss_rows-->
-    </table>
-    <p style="font-size:12px; color:var(--ink-2)">큰 비중이 AI 메모리·반도체 테마(SOL AI반도체TOP2플러스+MUU)에 있고, 스페이스X와 MAGS가 나머지를 채워요. 두 증권사의 손익 격차는 종목 실력이 아니라 집중 대상의 차이예요. 미래에셋은 테슬라에, 토스는 메모리 테마에 집중돼 있어요.</p>
-  </div>
-
-  <h2>전략 렌즈로 본 구성 <small>막대의 구간을 탭해 보세요 · 전략 탭 A/B/C 문서 기준으로 분류했고, 비중은 자동으로 다시 계산해요</small></h2>
-  <div class="prose">
-    <!--PF-START:pf_lens_bar--><div class="alloc-bar" id="allocP" role="img" aria-label="전략별 구성(주식 평가액 기준, 매 브리핑 재계산)"><span style="--sg:var(--s1); flex:87.1" data-i="0" title="C 87.1%"></span><span style="--sg:var(--s2); flex:10.9" data-i="1" title="B 10.9%"></span><span style="--sg:var(--s3); flex:1.1" data-i="2" title="A 1.1%"></span><span style="--sg:var(--s6); flex:0.9" data-i="3" title="전략 외 0.9%"></span></div><!--PF-END:pf_lens_bar-->
-    <ul class="legend" id="legendP">
-      <li data-i="0"><span class="sw" style="--sg:var(--s1)"></span><span class="nm">전략 C 계열 (테슬라+SpaceX)</span><span class="pct"><!--PF-START:pf_lens_pct_c-->87.1%<!--PF-END:pf_lens_pct_c--></span>
-        <span class="note">C 모델 배분은 테슬라 25 · SpaceX 20 · 양자컴퓨팅 15 · AI신약 15 · 대기현금 25예요. 미보유 테마(IonQ·AbCellera)는 아래 매트릭스의 "C 테마 커버리지"에서 확인할 수 있어요.</span></li>
-      <li data-i="1"><span class="sw" style="--sg:var(--s2)"></span><span class="nm">전략 B 계열 (SOL AI반도체+MUU)</span><span class="pct"><!--PF-START:pf_lens_pct_b-->10.9%<!--PF-END:pf_lens_pct_b--></span>
-        <span class="note">B의 AI메모리 32% 테마에 해당해요: SOL AI반도체·MUU(마이크론 2배). B 손절 규율(−15%)에 해당하는지는 아래 매트릭스가 매번 자동으로 판정해요.</span></li>
-      <li data-i="2"><span class="sw" style="--sg:var(--s3)"></span><span class="nm">전략 A 근접 (MAGS)</span><span class="pct"><!--PF-START:pf_lens_pct_a-->1.1%<!--PF-END:pf_lens_pct_a--></span>
-        <span class="note">A에 가까운 보유는 MAGS(매그니피센트7 ETF)뿐이에요. A의 뼈대인 현금·단기채 30 / 금 10 / 헤지 3 / 전력·에너지·방산 23 중 채워진 건 예수금뿐이에요.</span></li>
-      <li data-i="3"><span class="sw" style="--sg:var(--s6)"></span><span class="nm">전략 외 (로켓랩·HLB)</span><span class="pct"><!--PF-START:pf_lens_pct_out-->0.9%<!--PF-END:pf_lens_pct_out--></span>
-        <span class="note">어느 전략 문서에도 편입 논리와 손절 규칙이 없는 포지션이에요.</span></li>
-    </ul>
-  </div>
-
-  <h2>정합성 매트릭스 <small>포트폴리오 실측과 브리핑 기준 비교</small></h2>
-  <div class="prose tbl-scroll">
-    <table class="dtl">
-      <tr><th>점검 항목</th><th>실측(보유내역 · 전일 종가)</th><th>브리핑 기준</th><th>판정</th></tr>
-      <!--PF-START:pf_matrix_rows--><tr><td>단일 종목 집중</td><td>테슬라 TSLA 82.1%</td><td>C 모델 25% · 리밸런싱 규율 절대 상한 50%(초과분 트리밍)</td><td><b style="color:var(--crit)">위반</b></td></tr><tr><td>방어자산</td><td>단기채·금·헤지 0% (예수금 434만원은 별도 확보, 8월 4일 캡처 기준)</td><td>A 합계 43%(현금·단기채30+금10+헤지3) · 진단 탭 "저렴한 보험을 살 구간"</td><td><b style="color:var(--crit)">부재</b></td></tr><tr><td>손절 규율(−15%)</td><td>4개 포지션(합계 비중 11.8%): 로켓랩 RKLB −43% · 마이크론 2× 레버리지 MUU −42% · SOL AI반도체TOP2플러스 −41% 외 1개</td><td>B: "예외 없이 파는 기계적 매도"</td><td><b style="color:var(--crit)">위반</b></td></tr><tr><td>레버리지</td><td>마이크론 2× 레버리지 MUU 4.4%</td><td>B: 마이크론 현물 8% · 현 스탠스 "신규 진입 보류"</td><td><b style="color:var(--warn)">경고</b></td></tr><tr><td>환노출</td><td>달러 표시 자산 93.0%</td><td>FX Watch 발동 · 원/달러 1,333원</td><td><b style="color:var(--warn)">경고</b></td></tr><tr><td>C 테마 커버리지</td><td>테슬라 TSLA · 스페이스X SPCX — IonQ·AbCellera 0</td><td>C: 양자 15 · AI신약 15 · 대기현금 25</td><td><b style="color:var(--warn)">불일치</b></td></tr><tr><td>한국 주식 구성</td><td>SOL AI반도체TOP2플러스 6.5% + HLB 0.5%</td><td>A 한국 20%: 삼전 8 · 하이닉스 6 · 전력기기 4 · 방산 2 분할매수</td><td><b style="color:var(--warn)">상이</b></td></tr><tr><td>현금 실탄</td><td>예수금 434만원 — 총자산의 7% · 8월 4일 캡처 기준</td><td>A 30% · B 20% · C 25%</td><td><b style="color:var(--warn)">부족</b></td></tr><tr><td>퀄리티 메가캡</td><td>매그니피센트7 ETF MAGS 1.1%</td><td>A: 5%, "조정 시에만"</td><td><b style="color:var(--warn)">미달</b></td></tr><!--PF-END:pf_matrix_rows-->
-    </table>
-  </div>
-
-  <h2>정합성 진단 <small>대시보드 · 진단 · 시나리오 · 전략 · 트리거 탭 기준</small></h2>
-  <div class="callout">
-    <h3>핵심: 하우스뷰와 반대 구조</h3>
-    <p>진단 탭의 결론은 "지금은 공격이 아니라 저렴한 보험을 사면서 선별적으로 공격하는 구간"(베어 확률 30%, 평시의 2배)이에요. 그런데 이 포트폴리오는 보험이 0이고 고베타 성장·테마 중심이라서, 시나리오 매트릭스의 셋 중 '불'(확률 20%)에 주로 맞춰져 있어요.</p>
-    <p>구체적인 수치(집중도·방어자산·손절 규율·환노출·실탄)는 위의 정합성 매트릭스가 매 브리핑마다 자동으로 계산해요. 아래는 그 숫자를 읽는 틀이에요.</p>
-  </div>
-  <div class="prose">
-    <h3>① 레버리지 상품은 변동성이 계좌에 그대로 실현돼요</h3>
-    <p>토스증권 계좌는 메모리 사이클 변동성의 영향을 가장 크게 받아요. 왕복 폭 자체가 리스크의 크기예요. 특히 MUU는 B 스탠스가 "신규 진입 보류"로 잡아 둔 마이크론의 레버리지 변형이라, 방향이 맞더라도
-      <span class="jt"><span class="kw">변동성 잠식</span><button type="button" class="qmark" aria-label="설명 보기">❓</button><span class="def">일간 2배 레버리지 ETF는 "매일의 등락률"을 2배로 따라가기 때문에, 원지수가 오르내림을 반복하다 제자리로 돌아와도 ETF 가격은 조금씩 깎여 내려가요. 지금 같은 ±6% 왕복 장이 길어질수록 손실이 구조적으로 쌓여요.</span></span>이 이중으로 얹혀요. 위아래로 크게 흔들리는 왕복 장은 레버리지 상품에 최악의 환경이에요.</p>
-    <h3>② 전략 B 렌즈 — 손절 규율</h3>
-    <p>B 규율은 "개별 −15% 또는 50일선 3일 연속 이탈 → 예외 없이 파는 기계적 매도"예요. 이 기준에 걸리는 포지션 수와 비중은 위 매트릭스("손절 규율")가 자동으로 세요. 모멘텀 규율 표의 부제처럼, 이게 없으면 전략이 아니라 도박이에요.</p>
-    <h3>③ 전략 C 렌즈 — 문제는 손절이 아니라 집중도</h3>
-    <p>테슬라·스페이스X는 C 원칙상 가격 손절선이 없어서, 등락 자체는 규율 위반이 아니에요(점검 대상은 "테제 무효화"뿐이에요). 위반 여부는 집중도로 판단해요. C 모델의 테슬라 배분은 25%이고 리밸런싱 규율의 절대 상한은 50%예요. 실제 비중은 위 매트릭스("단일 종목 집중")가 자동으로 판정해요. 양자컴퓨팅(IonQ 15%)·AI신약(AbCellera 15%)을 편입했는지와 대기현금 규모도 매트릭스("C 테마 커버리지"·"현금 실탄")에서 확인할 수 있어요. "급락 = 매수 가속" 규율은 실탄이 있어야 실행되기 때문이에요.</p>
-    <h3>④ 전략 A 렌즈 — 뼈대 부재 여부</h3>
-    <p>A의 뼈대(금 10%·인덱스 풋 3%·전력·에너지·방산 23%·한국 분할매수 20%, 퀄리티 메가캡은 "조정 시에만" 5%)와 비교한 실제 보유는 위 매트릭스("방어자산"·"퀄리티 메가캡"·"한국 주식 구성")가 자동으로 보여줘요.</p>
-    <h3>⑤ 환노출 — 주식 자산 대부분이 달러</h3>
-    <p>환전략의 전술은 신규 원화 자금을 기준으로 해요. 달러/원이 FX Watch 하단(1,460) 아래에 있는 동안은 "추가 달러 매수 중단"이 트리거 탭의 액션이에요. 지금 상태는 트리거 탭의 FX Watch에서 확인할 수 있어요. 정리·트리밍 대금은 대부분 달러로 나오기 때문에, 달러 예수금을 원화로 환전할지도 이 트리거 상태를 보고 판단해요.</p>
-    <h3>⑥ 전략 외 포지션</h3>
-    <p>어느 전략 문서에도 편입 논리가 없는 보유(로켓랩·HLB)는 비중이 작아서 우선순위는 낮아요. 다만 각자 보유 논리가 있다면, 전략 문서에 편입 조건과 손절 규칙을 명문화하는 게 먼저예요. (8월 4일에 서클 인터넷·MSTW를 전량 정리한 건 B의 "모멘텀 꺼진 종목은 미련 없이 교체" 규칙을 지킨 사례예요.)</p>
-  </div>
-
-  <h2>향후 전략 — 재정렬 로드맵 <small>전략 A/B/C 문서와 트리거 탭 규칙을 실계좌에 적용한 실행 순서예요</small></h2>
-  <div class="callout blue">
-    <h3>원칙: 새 판단이 아니라 이미 있는 규칙의 집행</h3>
-    <p>아래는 새로운 시장 전망이 아니에요. 전략 탭에 이미 적혀 있는 규율과 트리거 탭의 조건을 현재 보유에 그대로 적용했을 때 나오는 순서예요. 순서가 중요해요. 실탄(현금) 없이는 어떤 트리거도 집행할 수 없어서, 사는 것보다 정리·트리밍이 먼저예요.</p>
-  </div>
-  <div class="prose">
-    <h3>1단계 · 즉시 — 규율 밖 포지션의 거취 결정</h3>
-    <p>손절 규율(−15%) 밖 포지션 중 <strong>전략 외 종목</strong>이 첫 번째 대상이에요. 보유 논리를 전략 문서에 명문화하거나, 못 하면 B 규칙("모멘텀 꺼진 종목은 미련 없이 교체")대로 정리해요. <strong>MUU(마이크론 2배)</strong>는 따로 다뤄요. 방향 판단과 상관없이 큰 왕복 장에서 변동성 잠식이 매일 쌓이는 구조라서, 메모리 노출을 유지하려면 현물(B 문서 기준 마이크론 현물 8% 또는 삼성전자·SK하이닉스)로 바꾸는 게 B 배분 구조에 맞아요. SOL AI반도체는 B의 AI메모리 테마와 방향이 같으니 '규율에 따라 정리할지, 테마를 유지할지' 중 하나를 고르되, 유지한다면 그 근거(50일선 회복 등 재편입 조건)를 밝히고 물타기는 하지 않아요.</p>
-    <h3>2단계 · 단기 — 테슬라 초과분 트리밍</h3>
-    <p>C 리밸런싱 규율의 절대 상한(50%)을 넘는 부분이 트리밍 대상이에요. C 원칙상 시점은 매크로와 상관없고, 실적 발표 같은 개별 종목 이벤트 전에 나눠서 트리밍하는 게 규율에도 리스크 관리에도 맞아요. 실적 결과에 베팅하는 게 아니라 상한 규율을 집행하는 것이기 때문이에요. 트리밍한 뒤에도 테슬라는 50%로, C 모델(25%)의 2배가 남아요.</p>
-    <h3>3단계 · 트리밍 재원의 배치 — 실탄 최우선</h3>
-    <p>확보한 재원의 1순위는 <strong>현금·단기채(실탄)</strong>예요. Add 트리거(KOSPI 구간 재진입 종가 + 외국인 순매수 재전환)가 발동해도 집행할 실탄이 없으면 실행할 수 없어요. A 문서 기준 현금·단기채 30%가 목표이고, C를 따르는 부분은 정액매수 대기현금(25%)이 같은 역할을 해요. 실탄이 채워진 다음에야 금(A: 10%)·인덱스 풋(A: 3%) 같은 방어 슬리브를 만들고, C 미보유 테마(IonQ·AbCellera, C 문서상 각 15%)의 정액매수를 시작해요.</p>
-    <h3>4단계 · 환노출 — FX Watch와 연동</h3>
-    <p>정리·트리밍 대금은 대부분 달러로 나와요. 원화로 환전할지는 FX Watch 경계와 연동해서 정해요. 1,460 하향 이탈 시 "추가 달러 매수 중단"이 트리거 탭의 액션이라서, 그 아래에서는 달러를 더 쌓지 않는 쪽이 문서와 일치해요. 반대로 1,530~1,550까지 반등하면 일부 익절(달러 매도)하는 게 환전략의 전술이에요.</p>
-    <h3>금지 목록 (전략 문서 공통)</h3>
-    <ul><li>Add 트리거가 발동해도 확보한 실탄을 넘는 한국 추격 매수는 하지 않아요.</li><li>규율 밖 포지션을 물타기하지 않아요.</li><li>신규 레버리지·인버스는 사지 않아요(B 문서: KOSPI 인버스 금지 포함).</li><li>엔비디아는 신규 진입하지 않아요(A 문서에 명시).</li><li>미 장기채와 HY 크레딧은 0%로, 전면 회피해요(A 문서).</li></ul>
-    <p style="font-size:12px; color:var(--ink-3)">이 진단과 로드맵은 브리핑 안의 전략 문서와 맞는지 점검한 것이고, 투자 권유가 아니에요. 매도·매수를 실행할지와 그 시점은 투자자 본인이 판단해요.</p>
-  </div>
-</section>
-
 </main>
 
 <footer>
@@ -1073,7 +967,6 @@ footer p{margin:5px 0}
   <button data-t="tab-scn"><span class="ico">⑂</span>시나리오</button>
   <button data-t="tab-strat"><span class="ico">◫</span>전략</button>
   <button data-t="tab-trg"><span class="ico">⚑</span>트리거</button>
-  <button data-t="tab-pf"><span class="ico">▦</span>포트폴리오</button>
 </nav>
 
 <script>
@@ -1126,7 +1019,6 @@ footer p{margin:5px 0}
   wireAlloc('alloc','legend');
   wireAlloc('allocB','legendB');
   wireAlloc('allocC','legendC');
-  wireAlloc('allocP','legendP');
   // strategy A/B switcher
   var segBtns=document.querySelectorAll('.seg button');
   segBtns.forEach(function(b){

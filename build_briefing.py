@@ -18,7 +18,7 @@
   라벨에 그대로 표기**한다(과거 값을 새 날짜 라벨 아래 두지 않는다 — 투자자 수급 `flow_asof`/`flow_notice`,
   KOSPI 위치 바의 연초·고점 이월 참고). 이월할 값조차 없으면 해당 구간은 건드리지 않는다.
 - 변하는 숫자(현재가·거리·비중·트리거 상태)는 손글에 쓰지 않고 여기서 자동 계산해 넣는다
-  (`kospi_readout`, `pf_matrix_rows`, `pf_risk_summary`, 지표 카드 눈금 `mkt_*_tick`).
+  (`kospi_readout`, 지표 카드 눈금 `mkt_*_tick`).
 - 마커를 못 찾으면 경고만 남기고 계속(마켓 브리프 세션이 마커를 지웠을 가능성 대비).
 """
 
@@ -28,7 +28,7 @@ import re
 import glob
 import json
 import html as _html
-from datetime import date, datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 if hasattr(sys.stdout, 'reconfigure'):
@@ -46,8 +46,6 @@ ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 
 FOMC_PATH = 'data/fomc_schedule.json'         # 연준 공식 FOMC 일정 (수동, 연 1회)
 EARN_PATH = 'data/earnings_calendar.json'     # 보유·전략 관련 기업 실적 발표 일정 (마켓 브리프 세션이 갱신)
 SBX_PATH = 'data/strategy_b_screen.json'  # 전략 B 편입 스크리너 (Action 생성 — monitor_strategy_b.py)
-PF_HOLD_PATH = 'data/portfolio_holdings.json'      # 실계좌 보유내역 (사용자 캡처 기준 — 세션이 수동 갱신)
-PF_PRICE_PATH = 'data/portfolio_prices_latest.json'  # 보유종목 직전 종가 (Action 생성 — fetch_portfolio_prices.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
 
 
@@ -429,332 +427,6 @@ def _render_issue_cards(src, tag, meta=None):
     return '\n  ' + '\n  '.join(article.issue_card(it, tag, meta) for it in issues) + '\n  '
 
 
-# ── 포트폴리오 탭 (PF 접두사) ─────────────────────────────
-# 수량·평단 = portfolio_holdings.json(캡처 원본, 수동), 가격 = portfolio_prices_latest.json(자동 직전 종가).
-# 평가액·손익·비중은 매 빌드마다 여기서 재계산되므로 화석화되지 않는다.
-
-_PF_LENS_ORDER = ('C', 'B', 'A', 'OUT')
-_PF_LENS_STYLE = {'C': 'var(--s1)', 'B': 'var(--s2)', 'A': 'var(--s3)', 'OUT': 'var(--s6)'}
-
-
-def _pf_qty(q):
-    return f'{q:,.0f}' if float(q) == int(q) else f'{q:,.2f}'
-
-
-def _pf_money(v, ccy):
-    if v is None:
-        return '—'
-    return f'${v:,.2f}' if ccy == 'USD' else f'{v:,.0f}원'
-
-
-def _pf_man(v):
-    """원화 금액 → '5,725만' (만원 단위, 부호 없는 크기 표기)."""
-    if v is None:
-        return '—'
-    return f'{v / 1e4:,.0f}만'
-
-
-def _pf_label(r):
-    """표시 이름 — 미국 종목은 티커를 덧붙인다(이름 필드에는 티커를 넣지 않는다)."""
-    return esc(r['name']) + (f' {r["ticker"]}' if r['market'] == 'US' else '')
-
-
-def _pf_pnl_cell(p):
-    if p is None:
-        return '<td class="num">—</td>'
-    txt = ('+' if p >= 0 else MINUS) + f'{abs(p):.1f}%'
-    if p > 0:
-        return f'<td class="num" style="color:var(--good)">{txt}</td>'
-    if p <= -15:
-        return f'<td class="num" style="color:var(--crit)">{txt}</td>'
-    return f'<td class="num">{txt}</td>'
-
-
-def _pf_enrich(hold, pfp, fx):
-    """보유내역 + 가격 → 계산 완료된 브로커/종목 구조와 합산치. 가격 미확보 종목은 합산에서 제외."""
-    prices = (pfp or {}).get('prices') or {}
-    brokers = []
-    for b in hold.get('brokers', []):
-        rows = []
-        for h in b.get('holdings', []):
-            p = prices.get(h['ticker']) or {}
-            close = p.get('close')
-            e = dict(h)
-            e['close'] = close
-            e['asof'] = p.get('asof')
-            if close is not None:
-                e['pnl'] = (close / h['avg'] - 1) * 100
-                e['val'] = h['qty'] * close
-                e['cost'] = h['qty'] * h['avg']
-                if h['ccy'] == 'USD':
-                    e['val_krw'] = e['val'] * fx if fx else None
-                    e['cost_krw'] = e['cost'] * fx if fx else None
-                else:
-                    e['val_krw'], e['cost_krw'] = e['val'], e['cost']
-            else:
-                e['pnl'] = e['val'] = e['cost'] = e['val_krw'] = e['cost_krw'] = None
-            rows.append(e)
-        cash_krw = 0
-        for c in b.get('cash', []):
-            cash_krw += c['amount'] * (fx or 0) if c['ccy'] == 'USD' else c['amount']
-        brokers.append({'key': b['key'], 'name': b['name'], 'note': b.get('note', ''),
-                        'cash': b.get('cash', []), 'cash_asof': b.get('cash_asof'),
-                        'cash_krw': cash_krw, 'rows': rows})
-    return brokers
-
-
-_PF_LV = {'crit': 'var(--crit)', 'warn': 'var(--warn)', 'good': 'var(--good)'}
-
-
-def _pf_verdict(level, text):
-    return f'<b style="color:{_PF_LV[level]}">{text}</b>'
-
-
-def _pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers, cash_lbl=''):
-    """정합성 매트릭스(브리핑 기준 vs 실계좌)와 진단 탭 리스크 요약을 보유내역·가격에서 매번 재계산한다.
-    예전엔 손글이라 '9/24 가격 기준' 같은 낡은 수치가 표 위쪽 자동 표와 모순되는 일이 반복됐다.
-    판정 기준(상한 50%·손절 −15% 등)은 전략 탭 문서의 규율을 그대로 옮긴 것."""
-    rows = list(merged.values())
-    share = lambda r: r['val_krw'] / tot_val * 100
-    out = []
-
-    def add(item, actual, std, verdict):
-        out.append(f'<tr><td>{item}</td><td>{actual}</td><td>{std}</td><td>{verdict}</td></tr>')
-
-    # 1) 단일 종목 집중
-    top = max(rows, key=lambda r: r['val_krw'])
-    ts = share(top)
-    lv = 'crit' if ts > 50 else ('warn' if ts > 25 else 'good')
-    add('단일 종목 집중', f'{_pf_label(top)} {ts:.1f}%',
-        'C 모델 25% · 리밸런싱 규율 절대 상한 50%(초과분 트리밍)',
-        _pf_verdict(lv, {'crit': '위반', 'warn': '경고', 'good': '양호'}[lv]))
-
-    # 2) 방어자산(단기채·금·헤지 — lens DEF)
-    dsh = sum(r['val_krw'] for r in rows if r.get('lens') == 'DEF') / tot_val * 100
-    cash_note = (f' (예수금 {_pf_man(cash_krw)}원은 별도 확보' + (f', {cash_lbl} 캡처 기준' if cash_lbl else '') + ')'
-                 if cash_krw else '')
-    lv = 'crit' if dsh < 1 else ('warn' if dsh < 20 else 'good')
-    add('방어자산', f'단기채·금·헤지 {dsh:.0f}%{cash_note}',
-        'A 합계 43%(현금·단기채30+금10+헤지3) · 진단 탭 "저렴한 보험을 살 구간"',
-        _pf_verdict(lv, {'crit': '부재', 'warn': '부족', 'good': '양호'}[lv]))
-
-    # 3) 손절 규율(−15%): C(손절선 없는 초장기)를 뺀 포지션
-    off = sorted((r for r in rows if r.get('lens') != 'C' and r['pnl'] is not None and r['pnl'] <= -15),
-                 key=lambda r: r['pnl'])
-    if off:
-        names = ' · '.join(f'{_pf_label(r)} {MINUS}{abs(r["pnl"]):.0f}%' for r in off[:3])
-        more = f' 외 {len(off) - 3}개' if len(off) > 3 else ''
-        w = sum(share(r) for r in off)
-        add('손절 규율(−15%)', f'{len(off)}개 포지션(합계 비중 {w:.1f}%): {names}{more}',
-            'B: "예외 없이 파는 기계적 매도"', _pf_verdict('crit', '위반'))
-    else:
-        add('손절 규율(−15%)', '손절선(−15%)을 넘은 포지션 없음',
-            'B: "예외 없이 파는 기계적 매도"', _pf_verdict('good', '준수'))
-
-    # 4) 레버리지
-    lev = [r for r in rows if r.get('leveraged')]
-    if lev:
-        add('레버리지', ' · '.join(f'{_pf_label(r)} {share(r):.1f}%' for r in lev),
-            'B: 마이크론 현물 8% · 현 스탠스 "신규 진입 보류"', _pf_verdict('warn', '경고'))
-    else:
-        add('레버리지', '레버리지 상품 없음', 'B: 신규 레버리지·인버스 금지', _pf_verdict('good', '없음'))
-
-    # 5) 환노출
-    fxs = _trigger_status(triggers, 'FX Watch')
-    fx_txt = (f'FX Watch {_TRG_KO.get(fxs, fxs)}' if fxs else 'FX Watch') + \
-             (f' · 원/달러 {fx:,.0f}원' if fx else '')
-    add('환노출', f'달러 표시 자산 {usd_share:.1f}%', esc(fx_txt),
-        _pf_verdict('warn' if usd_share > 50 else 'good', '경고' if usd_share > 50 else '양호'))
-
-    # 6) C 테마 커버리지
-    tickers = {r['ticker'] for r in rows}
-    c_names = [_pf_label(r) for r in rows if r.get('lens') == 'C']
-    miss = [n for t, n in (('IONQ', 'IonQ'), ('ABCL', 'AbCellera')) if t not in tickers]
-    add('C 테마 커버리지', ' · '.join(c_names) + (f' — {"·".join(miss)} 0' if miss else ''),
-        'C: 양자 15 · AI신약 15 · 대기현금 25', _pf_verdict('warn' if miss else 'good', '불일치' if miss else '일치'))
-
-    # 7) 한국 주식 구성
-    kr = [r for r in rows if r['market'] == 'KR']
-    kr_txt = ' + '.join(f'{esc(r["name"])} {share(r):.1f}%' for r in sorted(kr, key=lambda r: -r['val_krw'])) or '없음'
-    adr = next((r for r in rows if r['ticker'] == 'SKHY'), None)
-    if adr:
-        kr_txt += f' · SK하이닉스 ADR(SKHY) {share(adr):.1f}%(미국 상장)'
-    add('한국 주식 구성', kr_txt, 'A 한국 20%: 삼전 8 · 하이닉스 6 · 전력기기 4 · 방산 2 분할매수',
-        _pf_verdict('warn', '상이'))
-
-    # 8) 현금 실탄
-    cash_sh = cash_krw / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else 0
-    add('현금 실탄', f'예수금 {_pf_man(cash_krw)}원 — 총자산의 {cash_sh:.0f}%' + (f' · {cash_lbl} 캡처 기준' if cash_lbl else ''),
-        'A 30% · B 20% · C 25%',
-        _pf_verdict('warn' if cash_sh < 20 else 'good', '부족' if cash_sh < 20 else '충분'))
-
-    # 9) 퀄리티 메가캡
-    a_rows = [r for r in rows if r.get('lens') == 'A']
-    a_sh = lens_pct.get('A', 0.0)
-    a_txt = ' · '.join(_pf_label(r) for r in a_rows) or '없음'
-    add('퀄리티 메가캡', f'{a_txt} {a_sh:.1f}%', 'A: 5%, "조정 시에만"',
-        _pf_verdict('good' if 2.5 <= a_sh <= 7.5 else 'warn', '근접' if 2.5 <= a_sh <= 7.5 else '미달'))
-
-    # ── 진단 탭 리스크 요약 ──
-    c_sh = lens_pct.get('C', 0.0)
-    n_off = len(off)
-    w_off = sum(share(r) for r in off) if off else 0.0
-    summary = (f'<strong>전략 C 계열이 {c_sh:.1f}%</strong>예요(최대 단일 종목은 {esc(top["name"])} {ts:.1f}%). '
-               f'방어자산은 {dsh:.0f}%이고, 손절 규율(−15%) 밖에 있는 포지션이 {n_off}개(합계 비중 {w_off:.1f}%)예요. '
-               f'위 진단의 "보험 살 구간"과는 반대 구조예요. '
-               f'자세한 진단과 재정렬 로드맵은 <strong>포트폴리오 탭</strong>에서 볼 수 있어요. '
-               f'평가액과 비중은 매 브리핑마다 전일 종가로 자동 계산해요.')
-    return {'pf_matrix_rows': ''.join(out), 'pf_risk_summary': f'<p>{summary}</p>'}
-
-
-def _pf_generators(hold, pfp, usm, triggers=None):
-    g = {}
-    if not hold or not hold.get('brokers'):
-        return g
-    fx = (((usm or {}).get('yahoo') or {}).get('usdkrw') or {}).get('price')
-    brokers = _pf_enrich(hold, pfp, fx)
-    all_rows = [r for b in brokers for r in b['rows']]
-    priced = [r for r in all_rows if r['val_krw'] is not None]
-    missing = [r['name'] for r in all_rows if r['close'] is None or r['val_krw'] is None]
-    if not priced:
-        return g
-    tot_val = sum(r['val_krw'] for r in priced)
-    tot_cost = sum(r['cost_krw'] for r in priced)
-    tot_pnl = (tot_val / tot_cost - 1) * 100 if tot_cost else None
-    cash_krw = sum(b['cash_krw'] for b in brokers)
-    usd_share = sum(r['val_krw'] for r in priced if r['ccy'] == 'USD') / tot_val * 100
-
-    # 예수금 화면이 빠진 캡처가 오면 cash는 그대로 두고 broker.cash_asof(YYYY-MM-DD)에 그 값을 캡처한 날짜를 적는다.
-    # 낡은 예수금이 새 값처럼 보이지 않도록, 보유내역 기준일보다 앞선 계좌만 '○월 ○일'로 화면에 밝힌다.
-    def _md(d):
-        m = re.match(r'\d{4}-(\d{2})-(\d{2})', d or '')
-        return f'{int(m.group(1))}월 {int(m.group(2))}일' if m else None
-    cap_day = (hold.get('asof') or '')[:10]
-    cash_stale = {b['key']: _md(b['cash_asof']) for b in brokers
-                  if b['cash'] and _md(b['cash_asof']) and b['cash_asof'] < cap_day}
-    cash_lbl = '·'.join(dict.fromkeys(cash_stale.values()))
-
-    # ── 기준일 라벨 ──
-    def _dlabel(mkt):
-        ds = [r['asof'] for r in priced if r['market'] == mkt and r.get('asof')]
-        return f'{int(max(ds)[5:7])}/{int(max(ds)[8:10])}' if ds else '미확보'
-    fx_txt = f'{fx:,.0f}원/$' if fx else 'FX 미확보'
-    # 보유내역(수량·평단)은 사용자 캡처로만 바뀌므로 오래되면 독자가 알아보게 경고한다 — 기준은 렌더 시각이 아니라
-    # 가격 수집일(fetched_at)이라 언제 다시 빌드해도 같은 결과.
-    stale = ''
-    cap = re.match(r'(\d{4})-(\d{2})-(\d{2})', hold.get('asof') or '')
-    ref = re.match(r'(\d{4})-(\d{2})-(\d{2})', (pfp or {}).get('fetched_at') or '')
-    if cap and ref:
-        try:
-            age = (date(*map(int, ref.groups())) - date(*map(int, cap.groups()))).days
-        except ValueError:
-            age = 0
-        if age > 30:
-            stale = f' (캡처 후 {age}일 지났어요, 새 캡처를 주시면 갱신해요)'
-    cash_txt_hdr = f' · 예수금은 {cash_lbl} 캡처 기준' if cash_lbl else ''
-    g['pf_updated'] = esc(f'실계좌 2곳 합산 · 보유내역 {hold.get("asof", "미상")}{stale}{cash_txt_hdr} · '
-                          f'가격은 미국 {_dlabel("US")}·한국 {_dlabel("KR")} 종가 · 환산 {fx_txt}')
-
-    # ── 합산 요약 ──
-    pnl_txt = (('+' if tot_pnl >= 0 else MINUS) + f'{abs(tot_pnl):.1f}%') if tot_pnl is not None else '—'
-    diff = tot_val - tot_cost
-    diff_txt = ('+' if diff >= 0 else MINUS) + _pf_man(abs(diff)) + '원'
-    cash_head = f'({cash_lbl} 기준)' if cash_lbl else ''
-    g['pf_summary_head'] = esc(f'합산 요약 · 주식 평가 {_pf_man(tot_val)}원 + 예수금 {_pf_man(cash_krw)}원{cash_head} '
-                               f'· 평가손익 {diff_txt}({pnl_txt})')
-    ps = []
-    parts = []
-    for b in brokers:
-        bv = sum(r['val_krw'] for r in b['rows'] if r['val_krw'] is not None)
-        bc = sum(r['cost_krw'] for r in b['rows'] if r['cost_krw'] is not None)
-        bp = (bv / bc - 1) * 100 if bc else None
-        bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
-        parts.append(f'{b["name"]} {_pf_man(bv)}원({bp_txt})')
-    ps.append('**계좌별 평가** ' + ' · '.join(parts) + '. 평단×수량×직전 종가로 통일해 계산해서, '
-              '계좌 앱 표기와는 수수료·세금·시차만큼 다를 수 있어요.')
-    ne = tot_val / (tot_val + cash_krw) * 100 if (tot_val + cash_krw) else None
-    cash_bits = ' · '.join(
-        f'{b["name"]} ' + '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash'])
-        for b in brokers if b['cash'])
-    if cash_bits:
-        cash_why = (f' 이번 캡처에는 예수금 화면이 없어서 {cash_lbl} 값을 그대로 썼어요. 그 뒤의 거래는 반영하지 못했어요.'
-                    if cash_lbl else '')
-        ps.append(f'**예수금** {cash_bits}, 합쳐서 약 {_pf_man(cash_krw)}원이에요.{cash_why} '
-                  f'주식 비중은 {ne:.0f}%, 현금은 {100 - ne:.0f}%이고, 달러 자산은 주식 평가액의 {usd_share:.1f}%예요.')
-    if missing:
-        ps.append(f'**가격 미확보** {", ".join(missing)} 종목은 가격을 아직 못 가져와서 합산과 비중에서 뺐어요.')
-    g['pf_summary_body'] = ''.join(f'<p>{article.rich(p)}</p>' for p in ps)
-
-    # ── 전체 합산 표 (같은 종목 계좌 간 블렌드) ──
-    merged = {}
-    for r in priced:
-        m = merged.setdefault(r['ticker'], dict(r))
-        if m is not r and m.get('_seen'):
-            q = m['qty'] + r['qty']
-            m['avg'] = (m['qty'] * m['avg'] + r['qty'] * r['avg']) / q
-            m['qty'] = q
-            m['val'] += r['val']; m['cost'] += r['cost']
-            m['val_krw'] += r['val_krw']; m['cost_krw'] += r['cost_krw']
-            m['pnl'] = (m['close'] / m['avg'] - 1) * 100
-        m['_seen'] = True
-    rows_html = ''
-    for r in sorted(merged.values(), key=lambda x: -x['val_krw']):
-        w = r['val_krw'] / tot_val * 100
-        strat = ('<b style="color:var(--warn)">전략 외</b>' if r.get('lens') == 'OUT'
-                 else esc(r.get('strategy', '')))
-        label = _pf_label(r)
-        rows_html += (f'<tr><td>{label}</td><td class="num">{_pf_qty(r["qty"])}</td>'
-                      f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
-                      f'<td class="num">{_pf_money(r["close"], r["ccy"])}</td>'
-                      f'<td class="num">{_pf_man(r["val_krw"])}</td>'
-                      f'{_pf_pnl_cell(r["pnl"])}<td class="num">{w:.1f}%</td>'
-                      f'<td>{strat}</td></tr>')
-    rows_html += (f'<tr><td>합계</td><td class="num"></td><td class="num"></td><td class="num"></td>'
-                  f'<td class="num">{_pf_man(tot_val)}</td>{_pf_pnl_cell(tot_pnl)}'
-                  f'<td class="num">100%</td><td>달러 표시 자산 {usd_share:.1f}%</td></tr>')
-    g['pf_total_rows'] = rows_html
-
-    # ── 증권사별 표 ──
-    for b in brokers:
-        bv = sum(r['val_krw'] for r in b['rows'] if r['val_krw'] is not None)
-        bc = sum(r['cost_krw'] for r in b['rows'] if r['cost_krw'] is not None)
-        bp = (bv / bc - 1) * 100 if bc else None
-        bp_txt = (('+' if bp >= 0 else MINUS) + f'{abs(bp):.1f}%') if bp is not None else '—'
-        cash_txt = '+'.join(_pf_money(c['amount'], c['ccy']) for c in b['cash']) or '미확보'
-        cash_when = f'({cash_stale[b["key"]]} 기준)' if b['key'] in cash_stale else ''
-        g[f'pf_{b["key"]}_sub'] = esc(f'{b["note"]} · 평가 {_pf_man(bv)}원 · {bp_txt} · 예수금 {cash_txt}{cash_when}')
-        rh = ''
-        for r in sorted(b['rows'], key=lambda x: -(x['val_krw'] or 0)):
-            w = (r['val_krw'] / bv * 100) if (bv and r['val_krw'] is not None) else None
-            rh += (f'<tr><td>{_pf_label(r)}</td>'
-                   f'<td>{"국내" if r["market"] == "KR" else "해외"}</td>'
-                   f'<td class="num">{_pf_qty(r["qty"])}</td>'
-                   f'<td class="num">{_pf_money(r["avg"], r["ccy"])}</td>'
-                   f'<td class="num">{_pf_money(r["close"], r["ccy"])}</td>'
-                   f'<td class="num">{_pf_money(r["val"], r["ccy"])}</td>'
-                   f'{_pf_pnl_cell(r["pnl"])}'
-                   f'<td class="num">{f"{w:.1f}%" if w is not None else "—"}</td></tr>')
-        g[f'pf_{b["key"]}_rows'] = rh
-
-    # ── 전략 렌즈 바 + 퍼센트 ──
-    lens_val = {k: 0.0 for k in _PF_LENS_ORDER}
-    for r in priced:
-        lens_val[r.get('lens') if r.get('lens') in lens_val else 'OUT'] += r['val_krw']
-    lens_pct = {k: v / tot_val * 100 for k, v in lens_val.items()}
-    spans = ''.join(
-        f'<span style="--sg:{_PF_LENS_STYLE[k]}; flex:{lens_pct[k]:.1f}" data-i="{i}" '
-        f'title="{k if k != "OUT" else "전략 외"} {lens_pct[k]:.1f}%"></span>'
-        for i, k in enumerate(_PF_LENS_ORDER) if lens_pct[k] > 0)
-    g['pf_lens_bar'] = (f'<div class="alloc-bar" id="allocP" role="img" '
-                        f'aria-label="전략별 구성(주식 평가액 기준, 매 브리핑 재계산)">{spans}</div>')
-    for k in _PF_LENS_ORDER:
-        g[f'pf_lens_pct_{k.lower()}'] = f'{lens_pct[k]:.1f}%'
-
-    # ── 정합성 매트릭스·리스크 요약(손글 대체) ──
-    g.update(_pf_alignment(merged, tot_val, cash_krw, usd_share, lens_pct, fx, triggers, cash_lbl))
-    return g
-
-
 # 공포탐욕지수 등급(CNN) → (한글 라벨, 칩 색). 극단 구간은 경고색, 중립은 녹색.
 _FNG_KO = {'extreme fear': ('극단적 공포', 'c'), 'fear': ('공포', 'w'), 'neutral': ('중립', 'g'),
            'greed': ('탐욕', 'w'), 'extreme greed': ('극단적 탐욕', 'c')}
@@ -1010,8 +682,7 @@ def _cal_refs(cal, snap):
     return None, None
 
 
-def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None,
-                     fomc=None, earnings=None):
+def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -1184,13 +855,11 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=N
     g['sbx_screen'] = _screen_rows(screen)
     if screen and screen.get('fetched_at'):
         g['sbx_asof'] = esc(screen['fetched_at'])
-    g.update(_pf_generators(pf_hold, pf_prices, usm, triggers))
     return g
 
 
-def render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold=None, pf_prices=None,
-           fomc=None, earnings=None):
-    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices, fomc, earnings)
+def render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None):
+    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -1366,16 +1035,14 @@ def main():
     fomc = _load(FOMC_PATH, 'FOMC 일정')
     earnings = _load(EARN_PATH, '실적 발표 일정')
     screen = _load(SBX_PATH, '전략 B 스크리너')
-    pf_hold = _load(PF_HOLD_PATH, '포트폴리오 보유내역')
-    pf_prices = _load(PF_PRICE_PATH, '포트폴리오 가격')
-    if not any((snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, earnings)):
+    if not any((snap, us, kr, stance, triggers, usm, cal, screen, earnings)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
     _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'), earnings)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, pf_hold, pf_prices, fomc, earnings)
+    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings)
     size = len(out.encode('utf-8'))
     if size > _HTML_SOFT_LIMIT:
         print(f'⚠️ 분량 경고 — HTML {size:,}바이트 > {_HTML_SOFT_LIMIT:,}: 일지식 덧붙임이 쌓였는지 확인할 것(BRIEFING_PIPELINE.md "본문 작성 규칙")')
