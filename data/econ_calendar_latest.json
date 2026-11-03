@@ -5,14 +5,14 @@
   "week_end": "2026-11-08",
   "events": [
     {
-      "date": "2026-11-03",
-      "name": "JOLTS 구인·이직",
+      "date": "2026-11-02",
+      "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-11-05",
-      "name": "주간 신규 실업수당 청구",
+      "date": "2026-11-03",
+      "name": "JOLTS 구인·이직",
       "kind": "indicator",
       "impact": "medium"
     },
@@ -24,6 +24,6 @@
     }
   ],
   "stale_events": false,
-  "events_fetched_at": "2026-11-01T23:46:10.854957+00:00",
-  "fetched_at": "2026-11-01T23:46:10.854957+00:00"
+  "events_fetched_at": "2026-11-03T02:33:12.444571+00:00",
+  "fetched_at": "2026-11-03T02:33:12.444571+00:00"
 }
