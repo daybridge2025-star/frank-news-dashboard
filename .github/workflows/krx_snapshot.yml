@@ -1,16 +1,27 @@
-name: KRX 데이터 스냅샷 수집 (하루 1회 · 미국장 마감 후)
+name: KRX 데이터 스냅샷 수집 (새벽 1회 + 평일 저녁 1회)
 
-# 하루 1회, 미국장 마감 직후 예약(20:30 UTC = 05:30 KST). 기준일 판정이 pykrx 우선(2026-07-11 재설계)이라
+# 새벽 실행(20:30 UTC = 05:30 KST)은 미국장 마감 직후 예약한다. 기준일 판정이 pykrx 우선(2026-07-11 재설계)이라
 # 한국 직전 영업일 데이터는 전날 저녁부터 확보돼 있고, 미국 지표(Yahoo/FRED)도
 # 마감 직후 즉시 조회 가능하다.
 # 주의(2026-11-03 실측): GitHub cron은 예약보다 크게 늦게 돈다. 10/22~11/3의 12회가 예약보다
 # 2시간 06분~6시간 늦은 22:36~02:30 UTC에 시작했다(중앙값 약 3시간 18분). 그래서 21:53 UTC
 # 마켓 브리프 에디션은 매번 이 Action보다 먼저 끝나고, 이 Action이 커밋한 자료는 다음 에디션
 # (07:53 UTC)이 발행할 때까지 라이브에 실리지 않는다(BRIEFING_PIPELINE.md 운영 노트 18).
+#
+# 평일 저녁 실행(10:00 UTC = 19:00 KST, 2026-11-03 추가)은 그 지연을 메우려는 것이다. 지연을 감안하면
+# 21:00~01:00 KST에 끝나 아침(21:53 UTC) 에디션이 당일 확정 수급을 싣는다. 저녁 실행은 KRX만 수집하고
+# (미국 지표·캘린더는 새벽 실행 몫), 그 시각에 투자자 수급이 아직 확정되지 않았으면 아무것도 저장하지 않고
+# 성공으로 끝난다 — 수급이 빠진 스냅샷이 멀쩡한 전날 스냅샷을 덮어쓰지 않게 하기 위해서다(운영 노트 19).
 on:
   schedule:
-    - cron: '30 20 * * *'  # UTC 20:30 = KST 05:30 (익일)
+    - cron: '30 20 * * *'  # 새벽 실행: UTC 20:30 = KST 05:30 (익일)
+    - cron: '0 10 * * 1-5' # 저녁 실행: UTC 10:00 = KST 19:00 (평일)
   workflow_dispatch:         # 수동 실행 가능
+
+# 두 실행이 겹쳐 같은 파일을 동시에 푸시하지 않도록 한 줄로 세운다(진행 중인 실행은 끊지 않는다).
+concurrency:
+  group: krx-snapshot
+  cancel-in-progress: false
 
 permissions:
   contents: write            # 결과 JSON을 저장소에 커밋·푸시하려면 쓰기 권한 필요
@@ -18,6 +29,9 @@ permissions:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    env:
+      # 저녁 크론으로 시작했을 때만 '1'. 수동 실행·새벽 크론은 빈 값(기존 동작 그대로).
+      KRX_EVENING: ${{ github.event.schedule == '0 10 * * 1-5' && '1' || '' }}
 
     steps:
       - name: 코드 체크아웃
@@ -40,11 +54,13 @@ jobs:
         run: python fetch_krx_snapshot.py
 
       - name: 미국 지표 스냅샷 수집 실행
+        if: env.KRX_EVENING != '1'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 금리·HY스프레드·연준타깃 (없으면 해당 값 미확보 유지)
         run: python fetch_us_snapshot.py
 
       - name: 경제 캘린더 수집 실행
+        if: env.KRX_EVENING != '1'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}    # 미국 지표 단계와 동일 시크릿 (Finnhub 무료플랜 403 확정으로 교체)
         run: python fetch_econ_calendar.py
@@ -57,12 +73,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/krx_snapshot_*.json data/us_snapshot_latest.json data/econ_calendar_latest.json reports/macro-strategy-briefing.html
-          git diff --cached --quiet || git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
+          if git diff --cached --quiet; then
+            echo '변경 없음 — 커밋 생략'
+          else
+            git commit -m "KRX·미국 데이터 갱신 + 브리핑 주입 $(date -u +'%Y-%m-%d %H:%M UTC')"
+            # 루틴·세션이 그 사이 푸시했을 수 있어 먼저 합친다(충돌 파일이 없는 자동 데이터라 rebase로 충분).
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push
+          fi
 
       # 수집·커밋이 모두 끝난 뒤 마지막에 점검한다 — 투자자 수급이 비면(예: KRX 비밀번호 만료) 이 실행을 실패로 표시해
       # GitHub 알림 메일이 오게 한다. (2026-10-08부터 비밀번호 만료로 수급이 비었는데 실행은 계속 '성공'이라 일주일간 아무도 몰랐다.)
       - name: KRX 투자자 수급 점검 (결측이면 실패 표시 → 알림)
+        if: env.KRX_EVENING != '1'   # 저녁 실행은 수급 미확정이면 저장 자체를 건너뛰므로 점검 대상이 아니다
         run: |
           python - <<'PY'
           import json, sys

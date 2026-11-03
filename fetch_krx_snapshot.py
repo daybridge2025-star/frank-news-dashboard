@@ -141,9 +141,22 @@ def _latest_business_day():
     return None
 
 
+def _kospi_buy_zone():
+    """data/stance.json의 kospi_buy_zone([하한, 상한]). 없거나 형식이 다르면 None — 구간 숫자를 코드에 박지 않는다."""
+    try:
+        with open('data/stance.json', encoding='utf-8') as fh:
+            z = json.load(fh).get('kospi_buy_zone')
+        if (isinstance(z, list) and len(z) == 2
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in z)):
+            return float(z[0]), float(z[1])
+    except Exception:
+        pass
+    return None
+
+
 def _print_kospi_buy_trigger_hint(close, flow):
     """
-    data/triggers.json의 'Add — KOSPI 7,000~7,200 + 외국인 순매수 전환' 트리거는
+    data/triggers.json의 'Add — KOSPI 매수구간(stance.json) + 외국인 순매수 전환' 트리거는
     이 파이프라인이 이미 수집하는 두 수치만으로 판정 가능한 유일한 조건이라
     참고용 콘솔 힌트를 남긴다. status는 여전히 triggers.json에서 사람이 갱신 —
     여기서는 절대 자동으로 바꾸지 않는다(1~2일 지속 확인 등 판단이 더 필요하므로).
@@ -155,9 +168,10 @@ def _print_kospi_buy_trigger_hint(close, flow):
         if r.get('투자자구분') == '외국인':
             foreign_net = r.get('순매수')
             break
-    if close is None or foreign_net is None:
+    zone = _kospi_buy_zone()
+    if close is None or foreign_net is None or zone is None:
         return
-    in_range = 7000 <= close <= 7200
+    in_range = zone[0] <= close <= zone[1]
     buying = foreign_net > 0
     verdict = '조건 충족' if (in_range and buying) else ('조건 일부 근접' if (in_range or buying) else '조건 미충족')
     print(f'🔔 KOSPI 매수 트리거 힌트: {verdict} — 코스피 {close:,.0f}'
@@ -248,6 +262,12 @@ def main():
     if flow.get('code') == 'password_change_required':
         # Actions 화면 상단에 오류 주석으로 띄운다(단계 자체는 성공 처리 — 지수·미국 지표 수집을 막지 않기 위해)
         print(f"::error title=KRX 로그인 실패 — 비밀번호 변경 필요::{flow.get('reason')}")
+
+    # 평일 저녁 크론(KRX_EVENING=1)은 투자자 수급이 아직 확정 전일 수 있다. 그때 저장하면 수급이 빠진
+    # 스냅샷이 멀쩡한 이전 스냅샷을 덮어쓰므로, 수급이 'ok'가 아니면 저장하지 않고 정상 종료한다.
+    if os.environ.get('KRX_EVENING') == '1' and flow.get('status') != 'ok':
+        print(f"저녁 실행: {bas_dd} 투자자 수급 미확정({flow.get('reason')}) — 저장하지 않고 종료(새벽 실행이 다시 수집)")
+        return
 
     _print_kospi_buy_trigger_hint((index.get('KOSPI') or {}).get('close'), flow)
 
