@@ -193,6 +193,48 @@ def trigger_cards(triggers):
     return '\n  ' + '\n  '.join(cards) + '\n  '
 
 
+# ── 지표 카드(AI·반도체 사이클) ───────────────────────────────
+_TERM = re.compile(r'\[\[(.+?)\|(.+?)\]\]', re.S)
+
+
+def rich_terms(s):
+    """rich() + 용어 풀이 [[용어|쉬운 풀이]] → 탭하면 풀이가 열리는 .jt 요소. 그 밖의 HTML은 이스케이프된다."""
+    s = str(s or '')
+    out, pos = [], 0
+    for m in _TERM.finditer(s):
+        out.append(rich(s[pos:m.start()]))
+        out.append('<span class="jt"><span class="kw">' + esc(m.group(1)) + '</span>'
+                   '<button type="button" class="qmark" aria-label="설명 보기">❓</button>'
+                   '<span class="def">' + rich(m.group(2)) + '</span></span>')
+        pos = m.end()
+    out.append(rich(s[pos:]))
+    return ''.join(out)
+
+
+def plain_terms(s):
+    """문체 점검용: [[용어|풀이]]는 용어 글자만, 나머지 마크업은 떼고."""
+    return plain(_TERM.sub(r'\1', str(s or '')))
+
+
+def ind_card(c):
+    """data/ai_cycle.json의 카드 1장 → 기존 .ind 카드와 같은 HTML. 필드: k·v·unit·sub·chip=[색,문구]·more[]·
+    reported(YYYY-MM-DD)+label → 제목 옆 '기준 M/D 발표' 배지."""
+    if not isinstance(c, dict) or not c.get('k'):
+        return None
+    k = rich_terms(c['k'])
+    d = re.match(r'(\d{4})-(\d{2})-(\d{2})', str(c.get('reported') or ''))
+    if d:
+        k += f'<span class="asof">기준 {int(d.group(2))}/{int(d.group(3))}{(" " + esc(c["label"])) if c.get("label") else ""}</span>'
+    unit = f'<small>{esc(c["unit"])}</small>' if c.get('unit') else ''
+    chip = c.get('chip') or []
+    chip_cls = chip[0] if len(chip) == 2 and chip[0] in ('g', 'w', 's', 'c') else 'w'
+    chip_html = f'<span class="chip {chip_cls}">{rich_terms(chip[1])}</span>' if len(chip) == 2 else ''
+    more = c.get('more') or []
+    more_html = f'\n      <div class="more">{"<br><br>".join(rich_terms(p) for p in more)}</div>' if more else ''
+    return (f'<div class="ind" tabindex="0"><div class="k">{k}</div><div class="v">{rich_terms(c.get("v", ""))}{unit}</div>'
+            f'<div class="sub">{rich_terms(c.get("sub", ""))}</div>{chip_html}{more_html}</div>')
+
+
 # ── 일정 박스 ────────────────────────────────────────────────
 def _li(date_txt, body, small=''):
     return f'<li><b>{esc(date_txt)}:</b> {esc(body)}{(" <small>" + esc(small) + "</small>") if small else ""}</li>'

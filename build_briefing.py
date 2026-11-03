@@ -44,6 +44,7 @@ TRIGGERS_PATH = 'data/triggers.json'          # 트리거 조건·상태 (마켓
 US_SNAP_PATH = 'data/us_snapshot_latest.json'  # 미국·글로벌 시세 (Action 생성 — fetch_us_snapshot.py)
 ECON_CAL_PATH = 'data/econ_calendar_latest.json'  # 이번 주 경제 캘린더 (Action 생성 — fetch_econ_calendar.py)
 FOMC_PATH = 'data/fomc_schedule.json'         # 연준 공식 FOMC 일정 (수동, 연 1회)
+AI_PATH = 'data/ai_cycle.json'                # AI·반도체 사이클 카드 5장 (마켓 브리프 세션이 갱신)
 EARN_PATH = 'data/earnings_calendar.json'     # 전략 관련 기업 실적 발표 일정 (마켓 브리프 세션이 갱신)
 SBX_PATH = 'data/strategy_b_screen.json'  # 전략 B 편입 스크리너 (Action 생성 — monitor_strategy_b.py)
 HTML_PATH = 'reports/macro-strategy-briefing.html'
@@ -682,7 +683,7 @@ def _cal_refs(cal, snap):
     return None, None
 
 
-def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None):
+def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None, ai=None):
     """key -> 교체할 내부 HTML(문자열) 또는 None(건드리지 않음)."""
     g = {}
     dd = snap.get('bas_dd', '')
@@ -842,6 +843,10 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc=None
     # ── 트리거 발동/임박 판단(data/triggers.json — 마켓 브리프 세션이 갱신) ──
     g['triggers'] = article.trigger_cards(triggers)
 
+    # ── AI·반도체 사이클 카드(data/ai_cycle.json — 마켓 브리프 세션이 갱신). 카드 id → 마커 'ai_<id>' ──
+    for cid, card in ((ai or {}).get('cards') or {}).items():
+        g['ai_' + cid] = article.ind_card(card)
+
     # ── 미국·글로벌 시세(data/us_snapshot_latest.json — Action 자동) ──
     g.update(_mkt_generators(usm))
     g['mkt_wti_chip'] = _trigger_chip(triggers, 'De-risk')
@@ -858,8 +863,8 @@ def build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc=None
     return g
 
 
-def render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None):
-    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings)
+def render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc=None, earnings=None, ai=None):
+    gens = build_generators(snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings, ai)
     filled, skipped, missing = [], [], []
     for key, content in gens.items():
         if content is None:
@@ -902,7 +907,7 @@ _JARGON = ('WebSearch', 'Action', 'fetch_', 'bas_dd', 'pykrx')
 _HTML_SOFT_LIMIT = 240_000  # 바이트. 정리 직후 약 156KB
 
 
-def _lint_sources(us, kr, stance, triggers, bas_dd=None, earnings=None):
+def _lint_sources(us, kr, stance, triggers, bas_dd=None, earnings=None, ai=None):
     """편집 소스(JSON)가 작성 규칙(최신 카드 1개·덮어쓰기·분량·내부 용어 금지)과 문체 가이드(해요체·이모지 없음·
     한 문장 90자 안팎 — BRIEFING_PIPELINE.md "문체·형식 가이드")를 지켰는지 점검한다. 경고만 출력 — 강제하지 않는다."""
     warn = []
@@ -1005,6 +1010,32 @@ def _lint_sources(us, kr, stance, triggers, bas_dd=None, earnings=None):
         if not e.get('source'):
             warn.append(f'실적 일정 {nm}: source(출처) 없음 — 확인한 출처 없이 일정을 적지 않는다')
 
+    # AI·반도체 사이클 카드: 문체 + 신선도(next_due가 지났는데 reported가 그대로면 실적 카드가 낡은 것)
+    ai_cards = (ai or {}).get('cards') or {}
+    today_kst = datetime.now(_KST).strftime('%Y-%m-%d')
+    for cid, c in ai_cards.items():
+        if not isinstance(c, dict) or not c.get('k'):
+            warn.append(f'ai_cycle {cid}: k(카드 제목) 없음')
+            continue
+        chip = c.get('chip') or []
+        if len(chip) != 2 or chip[0] not in ('g', 'w', 's', 'c'):
+            warn.append(f'ai_cycle {cid}: chip은 ["g|w|s|c", "문구"]')
+        fields = [('sub', c.get('sub'))] + [('more', m) for m in (c.get('more') or [])]
+        if len(chip) == 2:
+            fields.append(('chip', chip[1]))
+        for fld, text in fields:
+            t = article.plain_terms(text)
+            jargon(f'ai_cycle {cid}.{fld}', t)
+            warn.extend(article.style_warnings(f'ai_cycle {cid}.{fld}', t))
+        for fld in ('reported', 'next_due'):
+            v = c.get(fld)
+            if v is not None and not re.match(r'\d{4}-\d{2}-\d{2}$', str(v)):
+                warn.append(f'ai_cycle {cid}.{fld}: YYYY-MM-DD 형식 오류 — {v!r}')
+        due, rep_ = c.get('next_due'), c.get('reported')
+        if due and re.match(r'\d{4}-\d{2}-\d{2}$', str(due)) and due < today_kst:
+            warn.append(f'ai_cycle {cid}: 다음 갱신 예정일({due}, {c.get("next_what", "새 발표")})이 지났다 — '
+                        f'새 발표가 나왔는지 확인해 카드를 새 분기로 교체하고 reported·next_due를 갱신할 것(마지막 기준일 {rep_ or "없음"})')
+
     for w in warn:
         print('⚠️ 작성 규칙 —', w)
 
@@ -1034,15 +1065,16 @@ def main():
     cal = _load(ECON_CAL_PATH, '경제 캘린더')
     fomc = _load(FOMC_PATH, 'FOMC 일정')
     earnings = _load(EARN_PATH, '실적 발표 일정')
+    ai = _load(AI_PATH, 'AI·반도체 사이클 카드')
     screen = _load(SBX_PATH, '전략 B 스크리너')
-    if not any((snap, us, kr, stance, triggers, usm, cal, screen, earnings)):
+    if not any((snap, us, kr, stance, triggers, usm, cal, screen, earnings, ai)):
         print('주입할 소스가 하나도 없음 — 종료')
         return
     _warn_if_editorial_stale(us, snap)
-    _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'), earnings)
+    _lint_sources(us, kr, stance, triggers, (snap or {}).get('bas_dd'), earnings, ai)
     with open(HTML_PATH, encoding='utf-8') as f:
         html = f.read()
-    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings)
+    out = render(html, snap, us, kr, stance, triggers, usm, cal, screen, fomc, earnings, ai)
     size = len(out.encode('utf-8'))
     if size > _HTML_SOFT_LIMIT:
         print(f'⚠️ 분량 경고 — HTML {size:,}바이트 > {_HTML_SOFT_LIMIT:,}: 일지식 덧붙임이 쌓였는지 확인할 것(BRIEFING_PIPELINE.md "본문 작성 규칙")')
