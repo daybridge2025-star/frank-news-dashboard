@@ -263,6 +263,19 @@ def main():
         # Actions 화면 상단에 오류 주석으로 띄운다(단계 자체는 성공 처리 — 지수·미국 지표 수집을 막지 않기 위해)
         print(f"::error title=KRX 로그인 실패 — 비밀번호 변경 필요::{flow.get('reason')}")
 
+    # 같은 기준일(bas_dd)에 이미 수급이 'ok'로 저장돼 있는데 이번 응답이 비었으면(KRX가 밤새 응답을 비우는 일이 있다 —
+    # 2026-11-04 새벽 실행이 저녁에 받아 둔 11/3 확정 수급을 '응답 비어있음'으로 덮어썼다) 기존 수급을 그대로 이어받는다.
+    if flow.get('status') != 'ok':
+        prev_path = f'data/krx_snapshot_{bas_dd}.json'
+        try:
+            with open(prev_path, encoding='utf-8') as fh:
+                prev_flow = (json.load(fh).get('investor_flow') or {})
+            if prev_flow.get('status') == 'ok':
+                print(f"투자자 수급: 이번 응답({flow.get('reason')})을 버리고 {prev_path}의 확정 수급을 유지한다")
+                flow = prev_flow
+        except Exception:
+            pass
+
     # 평일 저녁 크론(KRX_EVENING=1)은 투자자 수급이 아직 확정 전일 수 있다. 그때 저장하면 수급이 빠진
     # 스냅샷이 멀쩡한 이전 스냅샷을 덮어쓰므로, 수급이 'ok'가 아니면 저장하지 않고 정상 종료한다.
     if os.environ.get('KRX_EVENING') == '1' and flow.get('status') != 'ok':
