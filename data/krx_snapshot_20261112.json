@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261112",
-  "fetched_at": "2026-11-13 02:48 KST",
+  "fetched_at": "2026-11-13 10:18 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,29 +1224,29 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 206500,
-      "change_pct": -0.7211538461538461,
+      "source": "openapi",
+      "close": 208000,
+      "change_pct": 0.97,
       "open": 208500,
       "high": 214000,
       "low": 206000,
-      "volume": 19504253
+      "volume": 19721557
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1241000,
-      "change_pct": -3.8729666924864445,
+      "source": "openapi",
+      "close": 1254000,
+      "change_pct": -1.8,
       "open": 1280000,
       "high": 1310000,
-      "low": 1240000,
-      "volume": 4150272
+      "low": 1245000,
+      "volume": 4238276
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 421500,
-      "change_pct": 2.3058252427184467,
+      "source": "openapi",
+      "close": 421000,
+      "change_pct": 3.95,
       "open": 409500,
       "high": 430000,
       "low": 403000,
@@ -1254,9 +1254,9 @@
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 122800,
-      "change_pct": -1.2067578439259854,
+      "source": "openapi",
+      "close": 124500,
+      "change_pct": 2.13,
       "open": 121000,
       "high": 128700,
       "low": 118800,
@@ -1264,9 +1264,9 @@
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
+      "source": "openapi",
       "close": 654000,
-      "change_pct": -0.7587253414264037,
+      "change_pct": -0.76,
       "open": 662000,
       "high": 678000,
       "low": 647000,
@@ -1274,9 +1274,9 @@
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
-      "close": 73200,
-      "change_pct": -1.4804845222072678,
+      "source": "openapi",
+      "close": 74100,
+      "change_pct": -0.13,
       "open": 73700,
       "high": 75200,
       "low": 72500,
