@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261113",
-  "fetched_at": "2026-11-14 02:26 KST",
+  "fetched_at": "2026-11-14 09:57 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,29 +1224,29 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 209000,
-      "change_pct": 1.2106537530266344,
+      "source": "openapi",
+      "close": 206000,
+      "change_pct": -0.96,
       "open": 214000,
       "high": 216000,
       "low": 205000,
-      "volume": 12822005
+      "volume": 12829515
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1233000,
-      "change_pct": -0.6446414182111201,
+      "source": "openapi",
+      "close": 1216000,
+      "change_pct": -3.03,
       "open": 1292000,
       "high": 1317000,
       "low": 1201000,
-      "volume": 3199812
+      "volume": 3215511
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 423000,
-      "change_pct": 0.3558718861209964,
+      "source": "openapi",
+      "close": 416000,
+      "change_pct": -1.19,
       "open": 429500,
       "high": 437500,
       "low": 413500,
@@ -1254,29 +1254,29 @@
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 124900,
-      "change_pct": 1.710097719869707,
+      "source": "openapi",
+      "close": 123300,
+      "change_pct": -0.96,
       "open": 126300,
       "high": 131300,
       "low": 122200,
-      "volume": 462922
+      "volume": 467845
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
+      "source": "openapi",
       "close": 641000,
-      "change_pct": -1.9877675840978593,
+      "change_pct": -1.99,
       "open": 652000,
       "high": 670000,
       "low": 635000,
-      "volume": 193102
+      "volume": 193202
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
+      "source": "openapi",
       "close": 71300,
-      "change_pct": -2.5956284153005464,
+      "change_pct": -3.78,
       "open": 73900,
       "high": 74900,
       "low": 70600,

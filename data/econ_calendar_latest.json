@@ -1,29 +1,47 @@
 {
   "status": "ok",
   "fred_ok": true,
-  "week_start": "2026-11-09",
-  "week_end": "2026-11-15",
+  "week_start": "2026-11-16",
+  "week_end": "2026-11-22",
   "events": [
     {
-      "date": "2026-11-09",
+      "date": "2026-11-17",
+      "name": "소매판매",
+      "kind": "indicator",
+      "impact": "high"
+    },
+    {
+      "date": "2026-11-17",
+      "name": "산업생산·설비가동률",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-11-18",
+      "name": "FOMC 의사록 공개(10/27~28 회의분)",
+      "kind": "fomc",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-11-18",
+      "name": "주택착공·건축허가",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
+      "date": "2026-11-19",
       "name": "주간 신규 실업수당 청구",
       "kind": "indicator",
       "impact": "medium"
     },
     {
-      "date": "2026-11-10",
-      "name": "CPI(소비자물가지수)",
-      "kind": "indicator",
-      "impact": "high"
-    },
-    {
-      "date": "2026-11-13",
-      "name": "PPI(생산자물가지수)",
+      "date": "2026-11-20",
+      "name": "미시간대 소비자심리",
       "kind": "indicator",
       "impact": "medium"
     }
   ],
   "stale_events": false,
-  "events_fetched_at": "2026-11-13T01:21:33.566636+00:00",
-  "fetched_at": "2026-11-13T01:21:33.566636+00:00"
+  "events_fetched_at": "2026-11-14T00:58:48.625281+00:00",
+  "fetched_at": "2026-11-14T00:58:48.625281+00:00"
 }
