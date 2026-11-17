@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261116",
-  "fetched_at": "2026-11-17 04:56 KST",
+  "fetched_at": "2026-11-17 12:01 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,29 +1224,29 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 195000,
-      "change_pct": -6.698564593301436,
+      "source": "openapi",
+      "close": 196800,
+      "change_pct": -4.47,
       "open": 206500,
       "high": 208000,
-      "low": 194900,
-      "volume": 16131737
+      "low": 195000,
+      "volume": 16163286
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1118000,
-      "change_pct": -9.326845093268451,
+      "source": "openapi",
+      "close": 1120000,
+      "change_pct": -7.89,
       "open": 1216000,
       "high": 1222000,
       "low": 1113000,
-      "volume": 4181125
+      "volume": 4189272
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 400500,
-      "change_pct": -5.319148936170213,
+      "source": "openapi",
+      "close": 401000,
+      "change_pct": -3.61,
       "open": 425000,
       "high": 432500,
       "low": 396000,
@@ -1254,9 +1254,9 @@
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 118100,
-      "change_pct": -5.44435548438751,
+      "source": "openapi",
+      "close": 118600,
+      "change_pct": -3.81,
       "open": 129000,
       "high": 129000,
       "low": 117500,
@@ -1264,9 +1264,9 @@
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
-      "close": 650000,
-      "change_pct": 1.40405616224649,
+      "source": "openapi",
+      "close": 649000,
+      "change_pct": 1.25,
       "open": 646000,
       "high": 673000,
       "low": 645000,
@@ -1274,9 +1274,9 @@
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
-      "close": 69200,
-      "change_pct": -2.9453015427769986,
+      "source": "openapi",
+      "close": 70000,
+      "change_pct": -1.82,
       "open": 71300,
       "high": 73300,
       "low": 69100,
