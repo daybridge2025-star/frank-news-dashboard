@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261118",
-  "fetched_at": "2026-11-19 03:31 KST",
+  "fetched_at": "2026-11-19 10:56 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,9 +1224,9 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 196400,
-      "change_pct": 3.477344573234984,
+      "source": "openapi",
+      "close": 194700,
+      "change_pct": 2.31,
       "open": 196900,
       "high": 199950,
       "low": 188800,
@@ -1234,29 +1234,29 @@
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1164000,
-      "change_pct": 5.818181818181818,
+      "source": "openapi",
+      "close": 1144000,
+      "change_pct": 4.19,
       "open": 1154000,
       "high": 1173000,
       "low": 1108000,
-      "volume": 3533382
+      "volume": 3547671
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 388000,
-      "change_pct": 3.054448871181939,
+      "source": "openapi",
+      "close": 382500,
+      "change_pct": 1.06,
       "open": 385500,
       "high": 391500,
       "low": 370000,
-      "volume": 99368
+      "volume": 102492
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 117300,
-      "change_pct": 3.9893617021276597,
+      "source": "openapi",
+      "close": 116000,
+      "change_pct": 2.11,
       "open": 116300,
       "high": 118700,
       "low": 112100,
@@ -1264,19 +1264,19 @@
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
-      "close": 633000,
-      "change_pct": 2.4271844660194173,
+      "source": "openapi",
+      "close": 632000,
+      "change_pct": 1.44,
       "open": 628000,
       "high": 639000,
       "low": 614000,
-      "volume": 88919
+      "volume": 100997
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
-      "close": 67100,
-      "change_pct": 1.5128593040847202,
+      "source": "openapi",
+      "close": 66700,
+      "change_pct": 0.15,
       "open": 67100,
       "high": 67600,
       "low": 64500,
