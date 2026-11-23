@@ -1,24 +1,24 @@
 {
-  "bas_dd": "20261120",
-  "fetched_at": "2026-11-23 10:01 KST",
+  "bas_dd": "20261123",
+  "fetched_at": "2026-11-24 06:50 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
-      "close": 4869.96,
-      "change_pct": -5.2109375,
-      "open": 5137.89,
-      "high": 4971.31,
-      "low": 4831.69,
+      "close": 4708.54,
+      "change_pct": -3.310546875,
+      "open": 4869.96,
+      "high": 4759.88,
+      "low": 4586.8,
       "ytd_start": 4309.63,
       "ytd_high": 9385.59
     },
     "KOSDAQ": {
       "name": "코스닥",
-      "close": 645.68,
-      "change_pct": -5.7109375,
-      "open": 684.81,
-      "high": 665.15,
-      "low": 642.13,
+      "close": 635.45,
+      "change_pct": -1.580078125,
+      "open": 645.68,
+      "high": 645.93,
+      "low": 618.74,
       "ytd_start": 945.57,
       "ytd_high": 1229.42
     }
@@ -27,1191 +27,1191 @@
     "KOSPI": [
       {
         "name": "코스피",
-        "close": 4869.96,
-        "change_pct": -5.2109375,
-        "ytd_pct": 15.5625
+        "close": 4708.54,
+        "change_pct": -3.310546875,
+        "ytd_pct": 11.7265625
       },
       {
         "name": "코스피 200",
-        "close": 755.34,
-        "change_pct": -5.53125,
-        "ytd_pct": 24.65625
+        "close": 730.83,
+        "change_pct": -3.240234375,
+        "ytd_pct": 20.59375
       },
       {
         "name": "코스피 100",
-        "close": 5870.15,
-        "change_pct": -5.5,
-        "ytd_pct": 27.03125
+        "close": 5680.57,
+        "change_pct": -3.23046875,
+        "ytd_pct": 22.9375
       },
       {
         "name": "코스피 50",
-        "close": 5664.76,
-        "change_pct": -5.640625,
-        "ytd_pct": 29.765625
+        "close": 5484.55,
+        "change_pct": -3.1796875,
+        "ytd_pct": 25.625
       },
       {
         "name": "코스피 200 중소형주",
-        "close": 1742.28,
-        "change_pct": -4.328125,
-        "ytd_pct": -12.2265625
+        "close": 1675.54,
+        "change_pct": -3.830078125,
+        "ytd_pct": -15.59375
       },
       {
         "name": "코스피 200 초대형제외 지수",
-        "close": 408.43,
-        "change_pct": -4.08984375,
-        "ytd_pct": -4.46875
+        "close": 392.86,
+        "change_pct": -3.810546875,
+        "ytd_pct": -8.109375
       },
       {
         "name": "코스피200제외 코스피지수",
-        "close": 3814.36,
-        "change_pct": -3.44921875,
-        "ytd_pct": -9.7578125
+        "close": 3706.57,
+        "change_pct": -2.830078125,
+        "ytd_pct": -12.3125
       },
       {
         "name": "코스피 200 커뮤니케이션서비스",
-        "close": 1664.05,
-        "change_pct": -4.44921875,
-        "ytd_pct": -22.515625
+        "close": 1567.1,
+        "change_pct": -5.828125,
+        "ytd_pct": -27.03125
       },
       {
         "name": "코스피 200 건설",
-        "close": 614.78,
-        "change_pct": -5.69140625,
-        "ytd_pct": 34.09375
+        "close": 574.69,
+        "change_pct": -6.51953125,
+        "ytd_pct": 25.34375
       },
       {
         "name": "코스피 200 중공업",
-        "close": 698.2,
-        "change_pct": -6.75,
-        "ytd_pct": -45.21875
+        "close": 673.21,
+        "change_pct": -3.580078125,
+        "ytd_pct": -47.15625
       },
       {
         "name": "코스피 200 철강/소재",
-        "close": 797.85,
-        "change_pct": -4.25,
-        "ytd_pct": -34.15625
+        "close": 772.48,
+        "change_pct": -3.1796875,
+        "ytd_pct": -36.25
       },
       {
         "name": "코스피 200 에너지/화학",
-        "close": 1240.87,
-        "change_pct": -5.1015625,
-        "ytd_pct": -7.859375
+        "close": 1186.31,
+        "change_pct": -4.3984375,
+        "ytd_pct": -11.90625
       },
       {
         "name": "코스피 200 정보기술",
-        "close": 9267.84,
-        "change_pct": -7.6484375,
-        "ytd_pct": 60.65625
+        "close": 9066.3,
+        "change_pct": -2.169921875,
+        "ytd_pct": 57.1875
       },
       {
         "name": "코스피 200 금융",
-        "close": 1458.53,
-        "change_pct": -1.3203125,
-        "ytd_pct": 12.0078125
+        "close": 1391.17,
+        "change_pct": -4.62109375,
+        "ytd_pct": 6.83984375
       },
       {
         "name": "코스피 200 생활소비재",
-        "close": 1167.23,
-        "change_pct": -1.099609375,
-        "ytd_pct": -4.96875
+        "close": 1152.16,
+        "change_pct": -1.2900390625,
+        "ytd_pct": -6.19921875
       },
       {
         "name": "코스피 200 경기소비재",
-        "close": 2116.42,
-        "change_pct": -1.669921875,
-        "ytd_pct": -0.9599609375
+        "close": 2027.22,
+        "change_pct": -4.2109375,
+        "ytd_pct": -5.140625
       },
       {
         "name": "코스피 200 산업재",
-        "close": 887.91,
-        "change_pct": -3.509765625,
-        "ytd_pct": -11.5078125
+        "close": 852.54,
+        "change_pct": -3.98046875,
+        "ytd_pct": -15.03125
       },
       {
         "name": "코스피 200 헬스케어",
-        "close": 2057.14,
-        "change_pct": -0.25,
-        "ytd_pct": -14.0
+        "close": 1949.73,
+        "change_pct": -5.21875,
+        "ytd_pct": -18.484375
       },
       {
         "name": "음식료·담배",
-        "close": 4713.39,
-        "change_pct": -0.93017578125,
-        "ytd_pct": 4.25,
+        "close": 4603.17,
+        "change_pct": -2.33984375,
+        "ytd_pct": 1.8203125,
         "leaders": [
           {
             "name": "KTG",
-            "chg_pct": -0.82
+            "chg_pct": -1.22
           },
           {
             "name": "삼양식품",
-            "chg_pct": -1.36
+            "chg_pct": -3.33
           },
           {
             "name": "오리온",
-            "chg_pct": -0.76
+            "chg_pct": -2.64
           }
         ]
       },
       {
         "name": "섬유·의류",
-        "close": 203.66,
-        "change_pct": -1.400390625,
-        "ytd_pct": -15.703125,
+        "close": 197.54,
+        "change_pct": -3.009765625,
+        "ytd_pct": -18.234375,
         "leaders": [
           {
             "name": "FF",
-            "chg_pct": -1.31
+            "chg_pct": -4.14
           },
           {
             "name": "LF",
-            "chg_pct": 2.52
+            "chg_pct": -0.22
           },
           {
             "name": "조광피혁",
-            "chg_pct": -1.01
+            "chg_pct": -2.93
           }
         ]
       },
       {
         "name": "종이·목재",
-        "close": 176.77,
-        "change_pct": -2.2109375,
-        "ytd_pct": -35.40625,
+        "close": 170.35,
+        "change_pct": -3.630859375,
+        "ytd_pct": -37.75,
         "leaders": [
           {
             "name": "신대양제지",
-            "chg_pct": -3.06
+            "chg_pct": -6.52
           },
           {
             "name": "아세아제지",
-            "chg_pct": -4.02
+            "chg_pct": -1.77
           },
           {
             "name": "한솔제지",
-            "chg_pct": -2.44
+            "chg_pct": -2.33
           }
         ]
       },
       {
         "name": "화학",
-        "close": 3558.12,
-        "change_pct": -3.55078125,
-        "ytd_pct": -12.921875,
+        "close": 3465.37,
+        "change_pct": -2.609375,
+        "ytd_pct": -15.1875,
         "leaders": [
           {
             "name": "SK이노베이션",
-            "chg_pct": -3.97
+            "chg_pct": -3.81
           },
           {
             "name": "LG화학",
-            "chg_pct": -3.1
+            "chg_pct": -5.12
           },
           {
             "name": "S-Oil",
-            "chg_pct": -3.66
+            "chg_pct": -4.11
           }
         ]
       },
       {
         "name": "제약",
-        "close": 15755.28,
-        "change_pct": -0.8798828125,
-        "ytd_pct": -8.8515625,
+        "close": 14984.93,
+        "change_pct": -4.890625,
+        "ytd_pct": -13.3125,
         "leaders": [
           {
             "name": "삼성바이오로직스",
-            "chg_pct": -1.45
+            "chg_pct": -4.94
           },
           {
             "name": "셀트리온",
-            "chg_pct": -0.93
+            "chg_pct": -5.16
           },
           {
-            "name": "유한양행",
-            "chg_pct": -0.86
+            "name": "한미약품",
+            "chg_pct": -3.0
           }
         ]
       },
       {
         "name": "비금속",
-        "close": 3080.18,
-        "change_pct": -2.390625,
-        "ytd_pct": -25.328125,
+        "close": 2983.86,
+        "change_pct": -3.130859375,
+        "ytd_pct": -27.671875,
         "leaders": [
           {
             "name": "한일시멘트",
-            "chg_pct": -1.74
+            "chg_pct": -2.43
           },
           {
             "name": "한일홀딩스",
-            "chg_pct": -1.43
+            "chg_pct": -3.13
           },
           {
             "name": "아이에스동서",
-            "chg_pct": -3.21
+            "chg_pct": -7.18
           }
         ]
       },
       {
         "name": "금속",
-        "close": 4659.34,
-        "change_pct": -4.48828125,
-        "ytd_pct": -28.734375,
+        "close": 4513.09,
+        "change_pct": -3.140625,
+        "ytd_pct": -30.96875,
         "leaders": [
           {
             "name": "POSCO홀딩스",
-            "chg_pct": -2.89
+            "chg_pct": -3.77
           },
           {
             "name": "고려아연",
-            "chg_pct": -5.93
+            "chg_pct": -2.42
           },
           {
             "name": "LIG디펜스앤에어로스페이스",
-            "chg_pct": -6.2
+            "chg_pct": -3.59
           }
         ]
       },
       {
         "name": "기계·장비",
-        "close": 1838.04,
-        "change_pct": -7.859375,
-        "ytd_pct": -32.4375,
+        "close": 1782.22,
+        "change_pct": -3.0390625,
+        "ytd_pct": -34.46875,
         "leaders": [
           {
             "name": "두산에너빌리티",
-            "chg_pct": -6.96
+            "chg_pct": -2.58
           },
           {
             "name": "한미반도체",
-            "chg_pct": -10.79
+            "chg_pct": -1.95
           },
           {
             "name": "두산밥캣",
-            "chg_pct": -3.09
+            "chg_pct": -6.18
           }
         ]
       },
       {
         "name": "전기전자",
-        "close": 73684.13,
-        "change_pct": -6.5703125,
-        "ytd_pct": 48.03125,
+        "close": 71699.23,
+        "change_pct": -2.689453125,
+        "ytd_pct": 44.03125,
         "leaders": [
           {
             "name": "삼성전자",
-            "chg_pct": -7.01
+            "chg_pct": -3.06
           },
           {
             "name": "SK하이닉스",
-            "chg_pct": -5.92
+            "chg_pct": -2.52
           },
           {
             "name": "LG에너지솔루션",
-            "chg_pct": -0.83
+            "chg_pct": -2.67
           }
         ]
       },
       {
         "name": "의료·정밀기기",
-        "close": 1681.83,
-        "change_pct": -4.55078125,
-        "ytd_pct": 18.90625,
+        "close": 1670.08,
+        "change_pct": -0.7001953125,
+        "ytd_pct": 18.0625,
         "leaders": [
           {
             "name": "케이씨텍",
-            "chg_pct": -3.95
+            "chg_pct": 1.49
           },
           {
             "name": "에스디바이오센서",
-            "chg_pct": 0.41
+            "chg_pct": -3.25
           },
           {
             "name": "디아이",
-            "chg_pct": -12.04
-          }
-        ]
-      },
-      {
-        "name": "운송장비·부품",
-        "close": 3084.23,
-        "change_pct": -4.80078125,
-        "ytd_pct": -35.0625,
-        "leaders": [
-          {
-            "name": "현대차",
-            "chg_pct": -4.67
-          },
-          {
-            "name": "기아",
-            "chg_pct": -3.61
-          },
-          {
-            "name": "한화에어로스페이스",
-            "chg_pct": -4.12
-          }
-        ]
-      },
-      {
-        "name": "유통",
-        "close": 481.61,
-        "change_pct": -3.6796875,
-        "ytd_pct": 0.509765625,
-        "leaders": [
-          {
-            "name": "삼성물산",
-            "chg_pct": -5.32
-          },
-          {
-            "name": "포스코인터내셔널",
-            "chg_pct": -3.52
-          },
-          {
-            "name": "영원무역",
-            "chg_pct": 0.14
-          }
-        ]
-      },
-      {
-        "name": "전기·가스",
-        "close": 847.35,
-        "change_pct": 0.419921875,
-        "ytd_pct": -39.28125,
-        "leaders": [
-          {
-            "name": "한국전력",
-            "chg_pct": 1.19
-          },
-          {
-            "name": "한국가스공사",
-            "chg_pct": -1.7
-          },
-          {
-            "name": "지역난방공사",
-            "chg_pct": -0.92
-          }
-        ]
-      },
-      {
-        "name": "건설",
-        "close": 110.06,
-        "change_pct": -6.421875,
-        "ytd_pct": 12.0078125,
-        "leaders": [
-          {
-            "name": "현대건설",
-            "chg_pct": -8.55
-          },
-          {
-            "name": "대우건설",
-            "chg_pct": -7.6
-          },
-          {
-            "name": "GS건설",
-            "chg_pct": -4.98
-          }
-        ]
-      },
-      {
-        "name": "운송·창고",
-        "close": 2099.69,
-        "change_pct": -1.5703125,
-        "ytd_pct": 11.9765625,
-        "leaders": [
-          {
-            "name": "HMM",
-            "chg_pct": -1.77
-          },
-          {
-            "name": "현대글로비스",
-            "chg_pct": 0.49
-          },
-          {
-            "name": "대한항공",
-            "chg_pct": -3.24
-          }
-        ]
-      },
-      {
-        "name": "통신",
-        "close": 515.33,
-        "change_pct": -7.78125,
-        "ytd_pct": 5.48828125,
-        "leaders": [
-          {
-            "name": "SK텔레콤",
-            "chg_pct": -13.09
-          },
-          {
-            "name": "KT",
-            "chg_pct": -3.81
-          },
-          {
-            "name": "LG유플러스",
-            "chg_pct": -1.38
-          }
-        ]
-      },
-      {
-        "name": "금융",
-        "close": 882.31,
-        "change_pct": -3.140625,
-        "ytd_pct": 12.7890625,
-        "leaders": [
-          {
-            "name": "SK스퀘어",
-            "chg_pct": -8.39
-          },
-          {
-            "name": "KB금융",
-            "chg_pct": -0.33
-          },
-          {
-            "name": "삼성생명",
-            "chg_pct": -6.46
-          }
-        ]
-      },
-      {
-        "name": "증권",
-        "close": 3579.19,
-        "change_pct": -4.1796875,
-        "ytd_pct": -14.59375,
-        "leaders": [
-          {
-            "name": "미래에셋증권",
-            "chg_pct": -5.67
-          },
-          {
-            "name": "NH투자증권",
-            "chg_pct": -4.06
-          },
-          {
-            "name": "삼성증권",
-            "chg_pct": -4.16
-          }
-        ]
-      },
-      {
-        "name": "보험",
-        "close": 38371.83,
-        "change_pct": -4.73828125,
-        "ytd_pct": 25.8125,
-        "leaders": [
-          {
-            "name": "삼성생명",
-            "chg_pct": -6.46
-          },
-          {
-            "name": "삼성화재",
-            "chg_pct": -2.67
-          },
-          {
-            "name": "DB손해보험",
-            "chg_pct": -2.43
-          }
-        ]
-      },
-      {
-        "name": "일반서비스",
-        "close": 1378.48,
-        "change_pct": -2.33984375,
-        "ytd_pct": 3.94921875,
-        "leaders": [
-          {
-            "name": "삼성EA",
-            "chg_pct": -4.89
-          },
-          {
-            "name": "HD현대마린솔루션",
-            "chg_pct": 0.38
-          },
-          {
-            "name": "코웨이",
-            "chg_pct": -1.96
-          }
-        ]
-      },
-      {
-        "name": "제조",
-        "close": 13806.63,
-        "change_pct": -5.91015625,
-        "ytd_pct": 20.875,
-        "leaders": [
-          {
-            "name": "삼성전자",
-            "chg_pct": -7.01
-          },
-          {
-            "name": "SK하이닉스",
-            "chg_pct": -5.92
-          },
-          {
-            "name": "LG에너지솔루션",
-            "chg_pct": -0.83
-          }
-        ]
-      },
-      {
-        "name": "코스피 대형주",
-        "close": 5239.7,
-        "change_pct": -5.44921875,
-        "ytd_pct": 19.6875
-      },
-      {
-        "name": "코스피 중형주",
-        "close": 3418.05,
-        "change_pct": -3.009765625,
-        "ytd_pct": -8.1796875
-      },
-      {
-        "name": "코스피 소형주",
-        "close": 2079.97,
-        "change_pct": -2.6796875,
-        "ytd_pct": -17.375
-      },
-      {
-        "name": "코스피 200 비중상한 30%",
-        "close": 755.05,
-        "change_pct": -5.48046875,
-        "ytd_pct": 24.65625
-      },
-      {
-        "name": "코스피 200 비중상한 25%",
-        "close": 756.1,
-        "change_pct": -5.359375,
-        "ytd_pct": 24.6875
-      },
-      {
-        "name": "코스피 200 비중상한 20%",
-        "close": 737.17,
-        "change_pct": -5.140625,
-        "ytd_pct": 24.65625
-      },
-      {
-        "name": "오락·문화",
-        "close": 869.4,
-        "change_pct": -1.98046875,
-        "ytd_pct": -38.65625,
-        "leaders": [
-          {
-            "name": "하이브",
-            "chg_pct": -3.06
-          },
-          {
-            "name": "강원랜드",
-            "chg_pct": 0.64
-          },
-          {
-            "name": "파라다이스",
-            "chg_pct": -2.33
-          }
-        ]
-      },
-      {
-        "name": "IT 서비스",
-        "close": 1013.53,
-        "change_pct": -2.76953125,
-        "ytd_pct": -20.765625,
-        "leaders": [
-          {
-            "name": "NAVER",
-            "chg_pct": -3.98
-          },
-          {
-            "name": "삼성에스디에스",
-            "chg_pct": -2.33
-          },
-          {
-            "name": "카카오",
-            "chg_pct": -2.82
-          }
-        ]
-      },
-      {
-        "name": "부동산",
-        "close": 787.28,
-        "change_pct": -2.259765625,
-        "ytd_pct": -20.359375,
-        "leaders": [
-          {
-            "name": "SK리츠",
-            "chg_pct": -1.11
-          },
-          {
-            "name": "롯데리츠",
-            "chg_pct": -3.99
-          },
-          {
-            "name": "한화리츠",
-            "chg_pct": -3.26
-          }
-        ]
-      },
-      {
-        "name": "코스피 200 25/50지수",
-        "close": 2607.94,
-        "change_pct": -5.19140625,
-        "ytd_pct": 23.953125
-      },
-      {
-        "name": "코스피 200 25/50 NTR 지수",
-        "close": 2926.68,
-        "change_pct": -5.19140625,
-        "ytd_pct": 25.453125
-      },
-      {
-        "name": "코스피 200 25/50 NTR USD 지수",
-        "close": 2514.78,
-        "change_pct": -5.58984375,
-        "ytd_pct": 35.125
-      },
-      {
-        "name": "코스피 200 경기방어소비재지수",
-        "close": 1175.06,
-        "change_pct": -1.990234375,
-        "ytd_pct": -3.169921875
-      },
-      {
-        "name": "코스피 200 TOP 10",
-        "close": 1755.5,
-        "change_pct": -4.4296875,
-        "ytd_pct": -4.44921875
-      }
-    ],
-    "KOSDAQ": [
-      {
-        "name": "코스닥",
-        "close": 645.68,
-        "change_pct": -5.7109375,
-        "ytd_pct": -30.234375
-      },
-      {
-        "name": "코스닥 150",
-        "close": 1058.78,
-        "change_pct": -6.6484375,
-        "ytd_pct": -31.5625
-      },
-      {
-        "name": "코스닥 글로벌",
-        "close": 1456.25,
-        "change_pct": -5.890625,
-        "ytd_pct": -23.375
-      },
-      {
-        "name": "코스닥 150 정보기술",
-        "close": 910.81,
-        "change_pct": -10.359375,
-        "ytd_pct": 7.859375
-      },
-      {
-        "name": "코스닥 150 헬스케어",
-        "close": 2933.22,
-        "change_pct": -2.689453125,
-        "ytd_pct": -53.0
-      },
-      {
-        "name": "코스닥 150 커뮤니케이션서비스",
-        "close": 1533.6,
-        "change_pct": -1.4501953125,
-        "ytd_pct": -30.09375
-      },
-      {
-        "name": "코스닥 150 소재",
-        "close": 1852.26,
-        "change_pct": -8.328125,
-        "ytd_pct": -33.59375
-      },
-      {
-        "name": "코스닥 150 산업재",
-        "close": 190.02,
-        "change_pct": -5.94140625,
-        "ytd_pct": -34.15625
-      },
-      {
-        "name": "코스닥 150 필수소비재",
-        "close": 352.01,
-        "change_pct": -4.3203125,
-        "ytd_pct": 0.43994140625
-      },
-      {
-        "name": "코스닥 150 자유소비재",
-        "close": 332.25,
-        "change_pct": -4.80078125,
-        "ytd_pct": -34.84375
-      },
-      {
-        "name": "일반서비스",
-        "close": 3019.76,
-        "change_pct": -3.2890625,
-        "ytd_pct": -51.1875,
-        "leaders": [
-          {
-            "name": "알테오젠",
-            "chg_pct": 0.98
-          },
-          {
-            "name": "보로노이",
-            "chg_pct": -3.04
-          },
-          {
-            "name": "리가켐바이오",
-            "chg_pct": -7.96
-          }
-        ]
-      },
-      {
-        "name": "제조",
-        "close": 2173.49,
-        "change_pct": -6.55859375,
-        "ytd_pct": -24.8125,
-        "leaders": [
-          {
-            "name": "에코프로비엠",
-            "chg_pct": -4.61
-          },
-          {
-            "name": "레인보우로보틱스",
-            "chg_pct": -4.11
-          },
-          {
-            "name": "주성엔지니어링",
-            "chg_pct": -9.31
-          }
-        ]
-      },
-      {
-        "name": "건설",
-        "close": 59.65,
-        "change_pct": -4.8515625,
-        "ytd_pct": -27.25,
-        "leaders": [
-          {
-            "name": "LS마린솔루션",
-            "chg_pct": -6.82
-          },
-          {
-            "name": "서희건설",
-            "chg_pct": -2.83
-          },
-          {
-            "name": "대명에너지",
-            "chg_pct": -7.35
-          }
-        ]
-      },
-      {
-        "name": "유통",
-        "close": 361.84,
-        "change_pct": -5.73046875,
-        "ytd_pct": -24.1875,
-        "leaders": [
-          {
-            "name": "ISC",
-            "chg_pct": -13.48
-          },
-          {
-            "name": "실리콘투",
-            "chg_pct": -4.13
-          },
-          {
-            "name": "에스에이엠티",
-            "chg_pct": -5.77
-          }
-        ]
-      },
-      {
-        "name": "운송·창고",
-        "close": 2707.83,
-        "change_pct": -2.73046875,
-        "ytd_pct": 0.1199951171875,
-        "leaders": [
-          {
-            "name": "선광",
-            "chg_pct": -3.11
-          },
-          {
-            "name": "유성티엔에스",
-            "chg_pct": -4.13
-          },
-          {
-            "name": "태웅로직스",
-            "chg_pct": 0.1
-          }
-        ]
-      },
-      {
-        "name": "금융",
-        "close": 1149.0,
-        "change_pct": -4.51953125,
-        "ytd_pct": -23.15625,
-        "leaders": [
-          {
-            "name": "에코프로",
-            "chg_pct": -5.92
-          },
-          {
-            "name": "하림지주",
-            "chg_pct": -4.49
-          },
-          {
-            "name": "미래에셋벤처투자",
-            "chg_pct": -4.85
-          }
-        ]
-      },
-      {
-        "name": "오락·문화",
-        "close": 322.32,
-        "change_pct": -1.0703125,
-        "ytd_pct": -36.0,
-        "leaders": [
-          {
-            "name": "에스엠",
-            "chg_pct": 2.52
-          },
-          {
-            "name": "JYPEnt.",
-            "chg_pct": -1.98
-          },
-          {
-            "name": "CJENM",
-            "chg_pct": -8.06
-          }
-        ]
-      },
-      {
-        "name": "음식료·담배",
-        "close": 3499.33,
-        "change_pct": -1.9501953125,
-        "ytd_pct": -29.03125,
-        "leaders": [
-          {
-            "name": "하림",
-            "chg_pct": -1.14
-          },
-          {
-            "name": "이지홀딩스",
-            "chg_pct": -2.4
-          },
-          {
-            "name": "매일유업",
-            "chg_pct": -1.47
-          }
-        ]
-      },
-      {
-        "name": "섬유·의류",
-        "close": 22.6,
-        "change_pct": -5.44140625,
-        "ytd_pct": -43.28125,
-        "leaders": [
-          {
-            "name": "나인앤컴퍼니",
-            "chg_pct": -1.15
-          },
-          {
-            "name": "더네이쳐홀딩스",
-            "chg_pct": -2.28
-          },
-          {
-            "name": "코데즈컴바인",
-            "chg_pct": -21.43
-          }
-        ]
-      },
-      {
-        "name": "종이·목재",
-        "close": 5444.89,
-        "change_pct": -3.560546875,
-        "ytd_pct": -29.75,
-        "leaders": [
-          {
-            "name": "에스엠국일",
-            "chg_pct": -3.52
-          },
-          {
-            "name": "동화기업",
-            "chg_pct": -5.13
-          },
-          {
-            "name": "삼보판지",
-            "chg_pct": -4.48
-          }
-        ]
-      },
-      {
-        "name": "출판·매체복제",
-        "close": 1281.68,
-        "change_pct": -2.8203125,
-        "ytd_pct": -41.0625,
-        "leaders": [
-          {
-            "name": "양지사",
-            "chg_pct": -4.65
-          },
-          {
-            "name": "SMLifeDesign",
             "chg_pct": 0.0
           }
         ]
       },
       {
-        "name": "화학",
-        "close": 1795.21,
-        "change_pct": -6.05078125,
-        "ytd_pct": -25.796875,
-        "leaders": [
-          {
-            "name": "원익홀딩스",
-            "chg_pct": -11.0
-          },
-          {
-            "name": "솔브레인",
-            "chg_pct": -8.78
-          },
-          {
-            "name": "동진쎄미켐",
-            "chg_pct": -10.68
-          }
-        ]
-      },
-      {
-        "name": "제약",
-        "close": 6872.01,
-        "change_pct": -2.55078125,
-        "ytd_pct": -47.90625,
-        "leaders": [
-          {
-            "name": "HLB",
-            "chg_pct": -2.52
-          },
-          {
-            "name": "삼천당제약",
-            "chg_pct": 0.84
-          },
-          {
-            "name": "파마리서치",
-            "chg_pct": -1.08
-          }
-        ]
-      },
-      {
-        "name": "비금속",
-        "close": 50139.19,
-        "change_pct": -7.48046875,
-        "ytd_pct": 3.30078125,
-        "leaders": [
-          {
-            "name": "티씨케이",
-            "chg_pct": -8.74
-          },
-          {
-            "name": "원익QnC",
-            "chg_pct": -8.29
-          },
-          {
-            "name": "삼표시멘트",
-            "chg_pct": -6.31
-          }
-        ]
-      },
-      {
-        "name": "금속",
-        "close": 1342.78,
-        "change_pct": -5.76953125,
-        "ytd_pct": -27.9375,
-        "leaders": [
-          {
-            "name": "에이치브이엠",
-            "chg_pct": -9.72
-          },
-          {
-            "name": "태광",
-            "chg_pct": -6.76
-          },
-          {
-            "name": "성광벤드",
-            "chg_pct": -5.64
-          }
-        ]
-      },
-      {
-        "name": "기계·장비",
-        "close": 602.66,
-        "change_pct": -8.75,
-        "ytd_pct": -3.130859375,
-        "leaders": [
-          {
-            "name": "레인보우로보틱스",
-            "chg_pct": -4.11
-          },
-          {
-            "name": "주성엔지니어링",
-            "chg_pct": -9.31
-          },
-          {
-            "name": "이오테크닉스",
-            "chg_pct": -14.03
-          }
-        ]
-      },
-      {
-        "name": "전기전자",
-        "close": 1251.68,
-        "change_pct": -7.5,
-        "ytd_pct": -13.3671875,
-        "leaders": [
-          {
-            "name": "에코프로비엠",
-            "chg_pct": -4.61
-          },
-          {
-            "name": "심텍",
-            "chg_pct": -11.61
-          },
-          {
-            "name": "리노공업",
-            "chg_pct": -15.07
-          }
-        ]
-      },
-      {
-        "name": "의료·정밀기기",
-        "close": 1307.58,
-        "change_pct": -5.5390625,
-        "ytd_pct": -44.5,
-        "leaders": [
-          {
-            "name": "티에스이",
-            "chg_pct": -15.11
-          },
-          {
-            "name": "클래시스",
-            "chg_pct": -4.39
-          },
-          {
-            "name": "파크시스템스",
-            "chg_pct": -5.0
-          }
-        ]
-      },
-      {
         "name": "운송장비·부품",
-        "close": 3428.85,
-        "change_pct": -4.6796875,
-        "ytd_pct": -33.71875,
+        "close": 2969.59,
+        "change_pct": -3.720703125,
+        "ytd_pct": -37.46875,
         "leaders": [
           {
-            "name": "삼현",
-            "chg_pct": -2.25
+            "name": "현대차",
+            "chg_pct": -2.94
           },
           {
-            "name": "쎄트렉아이",
-            "chg_pct": -6.72
+            "name": "기아",
+            "chg_pct": -2.04
           },
           {
-            "name": "성우하이텍",
-            "chg_pct": -6.5
+            "name": "한화에어로스페이스",
+            "chg_pct": -4.96
           }
         ]
       },
       {
-        "name": "기타제조",
-        "close": 447.64,
-        "change_pct": -2.76953125,
-        "ytd_pct": -30.953125,
+        "name": "유통",
+        "close": 460.67,
+        "change_pct": -4.3515625,
+        "ytd_pct": -3.859375,
         "leaders": [
           {
-            "name": "에이스침대",
-            "chg_pct": -2.31
+            "name": "삼성물산",
+            "chg_pct": -4.46
           },
           {
-            "name": "슈피겐코리아",
-            "chg_pct": -2.29
+            "name": "포스코인터내셔널",
+            "chg_pct": -3.01
           },
           {
-            "name": "노바텍",
-            "chg_pct": -3.52
+            "name": "영원무역",
+            "chg_pct": -3.98
           }
         ]
       },
       {
-        "name": "코스닥 대형주",
-        "close": 1516.24,
-        "change_pct": -6.62890625,
-        "ytd_pct": -32.65625
-      },
-      {
-        "name": "코스닥 중형주",
-        "close": 713.92,
-        "change_pct": -5.41015625,
-        "ytd_pct": -20.65625
-      },
-      {
-        "name": "코스닥 소형주",
-        "close": 1976.92,
-        "change_pct": -3.55078125,
-        "ytd_pct": -23.1875
-      },
-      {
-        "name": "코스닥 우량기업부",
-        "close": 1614.24,
-        "change_pct": -6.1796875,
-        "ytd_pct": -13.0
-      },
-      {
-        "name": "코스닥 벤처기업부",
-        "close": 934.45,
-        "change_pct": -5.671875,
-        "ytd_pct": -32.78125
-      },
-      {
-        "name": "코스닥 중견기업부",
-        "close": 1010.36,
-        "change_pct": -5.359375,
-        "ytd_pct": -32.21875
-      },
-      {
-        "name": "코스닥 기술성장기업부",
-        "close": 4124.47,
-        "change_pct": -5.62109375,
-        "ytd_pct": -56.75
-      },
-      {
-        "name": "IT 서비스",
-        "close": 572.49,
-        "change_pct": -4.12109375,
-        "ytd_pct": -35.46875,
+        "name": "전기·가스",
+        "close": 819.09,
+        "change_pct": -3.33984375,
+        "ytd_pct": -41.3125,
         "leaders": [
           {
-            "name": "펄어비스",
-            "chg_pct": -3.75
+            "name": "한국전력",
+            "chg_pct": -2.74
           },
           {
-            "name": "카카오게임즈",
-            "chg_pct": 4.06
+            "name": "한국가스공사",
+            "chg_pct": -6.0
           },
           {
-            "name": "안랩",
-            "chg_pct": -5.77
+            "name": "지역난방공사",
+            "chg_pct": -4.17
+          }
+        ]
+      },
+      {
+        "name": "건설",
+        "close": 102.46,
+        "change_pct": -6.91015625,
+        "ytd_pct": 4.26953125,
+        "leaders": [
+          {
+            "name": "현대건설",
+            "chg_pct": -8.8
+          },
+          {
+            "name": "대우건설",
+            "chg_pct": -7.07
+          },
+          {
+            "name": "GS건설",
+            "chg_pct": -12.57
+          }
+        ]
+      },
+      {
+        "name": "운송·창고",
+        "close": 2000.41,
+        "change_pct": -4.73046875,
+        "ytd_pct": 6.69140625,
+        "leaders": [
+          {
+            "name": "HMM",
+            "chg_pct": -3.84
+          },
+          {
+            "name": "현대글로비스",
+            "chg_pct": -6.99
+          },
+          {
+            "name": "대한항공",
+            "chg_pct": -3.5
           }
         ]
       },
       {
         "name": "통신",
-        "close": 1004.45,
-        "change_pct": -0.91015625,
-        "ytd_pct": -10.7578125,
+        "close": 490.15,
+        "change_pct": -4.890625,
+        "ytd_pct": 0.330078125,
+        "leaders": [
+          {
+            "name": "SK텔레콤",
+            "chg_pct": -7.32
+          },
+          {
+            "name": "KT",
+            "chg_pct": -3.52
+          },
+          {
+            "name": "LG유플러스",
+            "chg_pct": -1.67
+          }
+        ]
+      },
+      {
+        "name": "금융",
+        "close": 849.0,
+        "change_pct": -3.779296875,
+        "ytd_pct": 8.53125,
+        "leaders": [
+          {
+            "name": "SK스퀘어",
+            "chg_pct": 0.44
+          },
+          {
+            "name": "KB금융",
+            "chg_pct": -5.71
+          },
+          {
+            "name": "삼성생명",
+            "chg_pct": -5.86
+          }
+        ]
+      },
+      {
+        "name": "증권",
+        "close": 3488.01,
+        "change_pct": -2.55078125,
+        "ytd_pct": -16.765625,
+        "leaders": [
+          {
+            "name": "미래에셋증권",
+            "chg_pct": -3.8
+          },
+          {
+            "name": "NH투자증권",
+            "chg_pct": -3.56
+          },
+          {
+            "name": "삼성증권",
+            "chg_pct": -2.31
+          }
+        ]
+      },
+      {
+        "name": "보험",
+        "close": 36407.41,
+        "change_pct": -5.12109375,
+        "ytd_pct": 19.375,
+        "leaders": [
+          {
+            "name": "삼성생명",
+            "chg_pct": -5.86
+          },
+          {
+            "name": "삼성화재",
+            "chg_pct": -5.68
+          },
+          {
+            "name": "DB손해보험",
+            "chg_pct": -3.28
+          }
+        ]
+      },
+      {
+        "name": "일반서비스",
+        "close": 1303.02,
+        "change_pct": -5.46875,
+        "ytd_pct": -1.740234375,
+        "leaders": [
+          {
+            "name": "삼성EA",
+            "chg_pct": -7.96
+          },
+          {
+            "name": "HD현대마린솔루션",
+            "chg_pct": -4.55
+          },
+          {
+            "name": "코웨이",
+            "chg_pct": -7.22
+          }
+        ]
+      },
+      {
+        "name": "제조",
+        "close": 13407.38,
+        "change_pct": -2.890625,
+        "ytd_pct": 17.375,
+        "leaders": [
+          {
+            "name": "삼성전자",
+            "chg_pct": -3.06
+          },
+          {
+            "name": "SK하이닉스",
+            "chg_pct": -2.52
+          },
+          {
+            "name": "LG에너지솔루션",
+            "chg_pct": -2.67
+          }
+        ]
+      },
+      {
+        "name": "코스피 대형주",
+        "close": 5065.93,
+        "change_pct": -3.3203125,
+        "ytd_pct": 15.71875
+      },
+      {
+        "name": "코스피 중형주",
+        "close": 3302.11,
+        "change_pct": -3.390625,
+        "ytd_pct": -11.2890625
+      },
+      {
+        "name": "코스피 소형주",
+        "close": 2019.18,
+        "change_pct": -2.919921875,
+        "ytd_pct": -19.796875
+      },
+      {
+        "name": "코스피 200 비중상한 30%",
+        "close": 730.5,
+        "change_pct": -3.25,
+        "ytd_pct": 20.59375
+      },
+      {
+        "name": "코스피 200 비중상한 25%",
+        "close": 731.41,
+        "change_pct": -3.26953125,
+        "ytd_pct": 20.609375
+      },
+      {
+        "name": "코스피 200 비중상한 20%",
+        "close": 712.42,
+        "change_pct": -3.359375,
+        "ytd_pct": 20.46875
+      },
+      {
+        "name": "오락·문화",
+        "close": 827.34,
+        "change_pct": -4.83984375,
+        "ytd_pct": -41.625,
+        "leaders": [
+          {
+            "name": "하이브",
+            "chg_pct": -6.32
+          },
+          {
+            "name": "강원랜드",
+            "chg_pct": -2.46
+          },
+          {
+            "name": "파라다이스",
+            "chg_pct": -4.87
+          }
+        ]
+      },
+      {
+        "name": "IT 서비스",
+        "close": 927.56,
+        "change_pct": -8.4765625,
+        "ytd_pct": -27.484375,
+        "leaders": [
+          {
+            "name": "NAVER",
+            "chg_pct": -7.18
+          },
+          {
+            "name": "삼성에스디에스",
+            "chg_pct": -15.42
+          },
+          {
+            "name": "카카오",
+            "chg_pct": -6.61
+          }
+        ]
+      },
+      {
+        "name": "부동산",
+        "close": 761.86,
+        "change_pct": -3.23046875,
+        "ytd_pct": -22.9375,
+        "leaders": [
+          {
+            "name": "SK리츠",
+            "chg_pct": -0.1
+          },
+          {
+            "name": "롯데리츠",
+            "chg_pct": -5.54
+          },
+          {
+            "name": "한화리츠",
+            "chg_pct": -4.43
+          }
+        ]
+      },
+      {
+        "name": "코스피 200 25/50지수",
+        "close": 2520.29,
+        "change_pct": -3.359375,
+        "ytd_pct": 19.78125
+      },
+      {
+        "name": "코스피 200 25/50 NTR 지수",
+        "close": 2828.33,
+        "change_pct": -3.359375,
+        "ytd_pct": 21.234375
+      },
+      {
+        "name": "코스피 200 25/50 NTR USD 지수",
+        "close": 2411.95,
+        "change_pct": -4.08984375,
+        "ytd_pct": 29.625
+      },
+      {
+        "name": "코스피 200 경기방어소비재지수",
+        "close": 1133.63,
+        "change_pct": -3.529296875,
+        "ytd_pct": -6.578125
+      },
+      {
+        "name": "코스피 200 TOP 10",
+        "close": 1702.05,
+        "change_pct": -3.0390625,
+        "ytd_pct": -7.3515625
+      }
+    ],
+    "KOSDAQ": [
+      {
+        "name": "코스닥",
+        "close": 635.45,
+        "change_pct": -1.580078125,
+        "ytd_pct": -31.34375
+      },
+      {
+        "name": "코스닥 150",
+        "close": 1044.71,
+        "change_pct": -1.330078125,
+        "ytd_pct": -32.46875
+      },
+      {
+        "name": "코스닥 글로벌",
+        "close": 1423.85,
+        "change_pct": -2.220703125,
+        "ytd_pct": -25.078125
+      },
+      {
+        "name": "코스닥 150 정보기술",
+        "close": 907.38,
+        "change_pct": -0.3798828125,
+        "ytd_pct": 7.4609375
+      },
+      {
+        "name": "코스닥 150 헬스케어",
+        "close": 2862.87,
+        "change_pct": -2.400390625,
+        "ytd_pct": -54.125
+      },
+      {
+        "name": "코스닥 150 커뮤니케이션서비스",
+        "close": 1490.0,
+        "change_pct": -2.83984375,
+        "ytd_pct": -32.0625
+      },
+      {
+        "name": "코스닥 150 소재",
+        "close": 1829.29,
+        "change_pct": -1.240234375,
+        "ytd_pct": -34.40625
+      },
+      {
+        "name": "코스닥 150 산업재",
+        "close": 188.21,
+        "change_pct": -0.9501953125,
+        "ytd_pct": -34.78125
+      },
+      {
+        "name": "코스닥 150 필수소비재",
+        "close": 356.76,
+        "change_pct": 1.349609375,
+        "ytd_pct": 1.7900390625
+      },
+      {
+        "name": "코스닥 150 자유소비재",
+        "close": 329.16,
+        "change_pct": -0.93017578125,
+        "ytd_pct": -35.46875
+      },
+      {
+        "name": "일반서비스",
+        "close": 2942.45,
+        "change_pct": -2.560546875,
+        "ytd_pct": -52.4375,
+        "leaders": [
+          {
+            "name": "알테오젠",
+            "chg_pct": -3.38
+          },
+          {
+            "name": "보로노이",
+            "chg_pct": -3.71
+          },
+          {
+            "name": "리가켐바이오",
+            "chg_pct": -3.08
+          }
+        ]
+      },
+      {
+        "name": "제조",
+        "close": 2147.26,
+        "change_pct": -1.2099609375,
+        "ytd_pct": -25.734375,
+        "leaders": [
+          {
+            "name": "에코프로비엠",
+            "chg_pct": -3.99
+          },
+          {
+            "name": "레인보우로보틱스",
+            "chg_pct": -1.47
+          },
+          {
+            "name": "주성엔지니어링",
+            "chg_pct": -2.34
+          }
+        ]
+      },
+      {
+        "name": "건설",
+        "close": 59.32,
+        "change_pct": -0.5498046875,
+        "ytd_pct": -27.65625,
+        "leaders": [
+          {
+            "name": "LS마린솔루션",
+            "chg_pct": -0.22
+          },
+          {
+            "name": "서희건설",
+            "chg_pct": -2.43
+          },
+          {
+            "name": "대명에너지",
+            "chg_pct": 2.12
+          }
+        ]
+      },
+      {
+        "name": "유통",
+        "close": 352.34,
+        "change_pct": -2.630859375,
+        "ytd_pct": -26.1875,
+        "leaders": [
+          {
+            "name": "ISC",
+            "chg_pct": -4.25
+          },
+          {
+            "name": "실리콘투",
+            "chg_pct": 2.16
+          },
+          {
+            "name": "에스에이엠티",
+            "chg_pct": -3.99
+          }
+        ]
+      },
+      {
+        "name": "운송·창고",
+        "close": 2642.43,
+        "change_pct": -2.419921875,
+        "ytd_pct": -2.30078125,
+        "leaders": [
+          {
+            "name": "선광",
+            "chg_pct": -4.28
+          },
+          {
+            "name": "유성티엔에스",
+            "chg_pct": -1.63
+          },
+          {
+            "name": "태웅로직스",
+            "chg_pct": -1.65
+          }
+        ]
+      },
+      {
+        "name": "금융",
+        "close": 1112.44,
+        "change_pct": -3.1796875,
+        "ytd_pct": -25.59375,
+        "leaders": [
+          {
+            "name": "에코프로",
+            "chg_pct": -3.07
+          },
+          {
+            "name": "하림지주",
+            "chg_pct": -5.68
+          },
+          {
+            "name": "미래에셋벤처투자",
+            "chg_pct": -9.36
+          }
+        ]
+      },
+      {
+        "name": "오락·문화",
+        "close": 315.93,
+        "change_pct": -1.98046875,
+        "ytd_pct": -37.28125,
+        "leaders": [
+          {
+            "name": "에스엠",
+            "chg_pct": -4.1
+          },
+          {
+            "name": "JYPEnt.",
+            "chg_pct": -3.09
+          },
+          {
+            "name": "CJENM",
+            "chg_pct": 2.11
+          }
+        ]
+      },
+      {
+        "name": "음식료·담배",
+        "close": 3425.84,
+        "change_pct": -2.099609375,
+        "ytd_pct": -30.515625,
+        "leaders": [
+          {
+            "name": "하림",
+            "chg_pct": -1.73
+          },
+          {
+            "name": "이지홀딩스",
+            "chg_pct": -2.33
+          },
+          {
+            "name": "매일유업",
+            "chg_pct": -4.17
+          }
+        ]
+      },
+      {
+        "name": "섬유·의류",
+        "close": 22.1,
+        "change_pct": -2.2109375,
+        "ytd_pct": -44.53125,
+        "leaders": [
+          {
+            "name": "나인앤컴퍼니",
+            "chg_pct": -1.68
+          },
+          {
+            "name": "더네이쳐홀딩스",
+            "chg_pct": -1.43
+          },
+          {
+            "name": "블랙야크아이앤씨",
+            "chg_pct": -6.23
+          }
+        ]
+      },
+      {
+        "name": "종이·목재",
+        "close": 5318.24,
+        "change_pct": -2.330078125,
+        "ytd_pct": -31.390625,
+        "leaders": [
+          {
+            "name": "에스엠국일",
+            "chg_pct": -1.31
+          },
+          {
+            "name": "동화기업",
+            "chg_pct": -2.97
+          },
+          {
+            "name": "삼보판지",
+            "chg_pct": -1.32
+          }
+        ]
+      },
+      {
+        "name": "출판·매체복제",
+        "close": 1230.03,
+        "change_pct": -4.03125,
+        "ytd_pct": -43.4375,
+        "leaders": [
+          {
+            "name": "양지사",
+            "chg_pct": -2.71
+          },
+          {
+            "name": "SMLifeDesign",
+            "chg_pct": -5.98
+          }
+        ]
+      },
+      {
+        "name": "화학",
+        "close": 1768.99,
+        "change_pct": -1.4599609375,
+        "ytd_pct": -26.875,
+        "leaders": [
+          {
+            "name": "원익홀딩스",
+            "chg_pct": 2.89
+          },
+          {
+            "name": "솔브레인",
+            "chg_pct": -2.72
+          },
+          {
+            "name": "동진쎄미켐",
+            "chg_pct": -2.8
+          }
+        ]
+      },
+      {
+        "name": "제약",
+        "close": 6758.64,
+        "change_pct": -1.650390625,
+        "ytd_pct": -48.75,
+        "leaders": [
+          {
+            "name": "HLB",
+            "chg_pct": -1.11
+          },
+          {
+            "name": "삼천당제약",
+            "chg_pct": 0.0
+          },
+          {
+            "name": "파마리서치",
+            "chg_pct": -0.55
+          }
+        ]
+      },
+      {
+        "name": "비금속",
+        "close": 49100.7,
+        "change_pct": -2.0703125,
+        "ytd_pct": 1.16015625,
+        "leaders": [
+          {
+            "name": "티씨케이",
+            "chg_pct": -1.86
+          },
+          {
+            "name": "원익QnC",
+            "chg_pct": -3.21
+          },
+          {
+            "name": "삼표시멘트",
+            "chg_pct": -1.15
+          }
+        ]
+      },
+      {
+        "name": "금속",
+        "close": 1324.88,
+        "change_pct": -1.330078125,
+        "ytd_pct": -28.90625,
+        "leaders": [
+          {
+            "name": "에이치브이엠",
+            "chg_pct": 16.51
+          },
+          {
+            "name": "태광",
+            "chg_pct": -5.07
+          },
+          {
+            "name": "성광벤드",
+            "chg_pct": -4.7
+          }
+        ]
+      },
+      {
+        "name": "기계·장비",
+        "close": 601.08,
+        "change_pct": -0.260009765625,
+        "ytd_pct": -3.380859375,
+        "leaders": [
+          {
+            "name": "레인보우로보틱스",
+            "chg_pct": -1.47
+          },
+          {
+            "name": "주성엔지니어링",
+            "chg_pct": -2.34
+          },
+          {
+            "name": "로보티즈",
+            "chg_pct": 5.35
+          }
+        ]
+      },
+      {
+        "name": "전기전자",
+        "close": 1231.84,
+        "change_pct": -1.58984375,
+        "ytd_pct": -14.7421875,
+        "leaders": [
+          {
+            "name": "에코프로비엠",
+            "chg_pct": -3.99
+          },
+          {
+            "name": "심텍",
+            "chg_pct": 2.41
+          },
+          {
+            "name": "리노공업",
+            "chg_pct": -1.43
+          }
+        ]
+      },
+      {
+        "name": "의료·정밀기기",
+        "close": 1284.55,
+        "change_pct": -1.759765625,
+        "ytd_pct": -45.5,
+        "leaders": [
+          {
+            "name": "티에스이",
+            "chg_pct": 0.18
+          },
+          {
+            "name": "클래시스",
+            "chg_pct": -6.88
+          },
+          {
+            "name": "파크시스템스",
+            "chg_pct": -0.73
+          }
+        ]
+      },
+      {
+        "name": "운송장비·부품",
+        "close": 3399.55,
+        "change_pct": -0.85009765625,
+        "ytd_pct": -34.28125,
+        "leaders": [
+          {
+            "name": "삼현",
+            "chg_pct": 3.45
+          },
+          {
+            "name": "쎄트렉아이",
+            "chg_pct": 2.72
+          },
+          {
+            "name": "성우하이텍",
+            "chg_pct": -3.12
+          }
+        ]
+      },
+      {
+        "name": "기타제조",
+        "close": 443.11,
+        "change_pct": -1.009765625,
+        "ytd_pct": -31.65625,
+        "leaders": [
+          {
+            "name": "에이스침대",
+            "chg_pct": -1.52
+          },
+          {
+            "name": "슈피겐코리아",
+            "chg_pct": 2.18
+          },
+          {
+            "name": "노바텍",
+            "chg_pct": -1.25
+          }
+        ]
+      },
+      {
+        "name": "코스닥 대형주",
+        "close": 1496.3,
+        "change_pct": -1.3203125,
+        "ytd_pct": -33.53125
+      },
+      {
+        "name": "코스닥 중형주",
+        "close": 702.82,
+        "change_pct": -1.5498046875,
+        "ytd_pct": -21.875
+      },
+      {
+        "name": "코스닥 소형주",
+        "close": 1931.36,
+        "change_pct": -2.30078125,
+        "ytd_pct": -24.953125
+      },
+      {
+        "name": "코스닥 우량기업부",
+        "close": 1585.12,
+        "change_pct": -1.7998046875,
+        "ytd_pct": -14.5703125
+      },
+      {
+        "name": "코스닥 벤처기업부",
+        "close": 915.08,
+        "change_pct": -2.0703125,
+        "ytd_pct": -34.1875
+      },
+      {
+        "name": "코스닥 중견기업부",
+        "close": 994.75,
+        "change_pct": -1.5400390625,
+        "ytd_pct": -33.28125
+      },
+      {
+        "name": "코스닥 기술성장기업부",
+        "close": 4105.98,
+        "change_pct": -0.449951171875,
+        "ytd_pct": -56.9375
+      },
+      {
+        "name": "IT 서비스",
+        "close": 560.64,
+        "change_pct": -2.0703125,
+        "ytd_pct": -36.8125,
+        "leaders": [
+          {
+            "name": "펄어비스",
+            "chg_pct": -4.96
+          },
+          {
+            "name": "카카오게임즈",
+            "chg_pct": -0.62
+          },
+          {
+            "name": "안랩",
+            "chg_pct": 3.78
+          }
+        ]
+      },
+      {
+        "name": "통신",
+        "close": 987.53,
+        "change_pct": -1.6796875,
+        "ytd_pct": -12.2578125,
         "leaders": [
           {
             "name": "나이스정보통신",
-            "chg_pct": -0.93
+            "chg_pct": -4.04
           },
           {
             "name": "한국정보통신",
-            "chg_pct": -1.05
+            "chg_pct": -1.86
           },
           {
             "name": "버킷스튜디오",
@@ -1224,400 +1224,400 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "openapi",
-      "close": 183100,
-      "change_pct": -7.01,
-      "open": 188100,
-      "high": 189300,
-      "low": 181400,
-      "volume": 17713847
+      "source": "pykrx",
+      "close": 180600,
+      "change_pct": -0.16583747927031509,
+      "open": 177600,
+      "high": 181000,
+      "low": 171500,
+      "volume": 19550322
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "openapi",
-      "close": 1113000,
-      "change_pct": -5.92,
-      "open": 1117000,
-      "high": 1124000,
-      "low": 1096000,
-      "volume": 3310840
+      "source": "pykrx",
+      "close": 1101000,
+      "change_pct": 0.09090909090909091,
+      "open": 1079000,
+      "high": 1108000,
+      "low": 1044000,
+      "volume": 3945821
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "openapi",
-      "close": 386500,
-      "change_pct": -6.98,
-      "open": 395000,
-      "high": 407500,
-      "low": 381000,
-      "volume": 154909
+      "source": "pykrx",
+      "close": 385000,
+      "change_pct": -0.2590673575129534,
+      "open": 373500,
+      "high": 386000,
+      "low": 366500,
+      "volume": 105083
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "openapi",
-      "close": 109700,
-      "change_pct": -9.19,
-      "open": 113500,
-      "high": 114900,
-      "low": 108500,
-      "volume": 474072
+      "source": "pykrx",
+      "close": 112000,
+      "change_pct": 3.3210332103321036,
+      "open": 105000,
+      "high": 112500,
+      "low": 105000,
+      "volume": 600647
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "openapi",
-      "close": 605000,
-      "change_pct": -4.12,
-      "open": 609000,
-      "high": 623000,
-      "low": 601000,
-      "volume": 149681
+      "source": "pykrx",
+      "close": 581000,
+      "change_pct": -3.6484245439469323,
+      "open": 576000,
+      "high": 599000,
+      "low": 567000,
+      "volume": 104205
     },
     "064350": {
       "name": "현대로템",
-      "source": "openapi",
-      "close": 61600,
-      "change_pct": -7.51,
-      "open": 63200,
-      "high": 63700,
-      "low": 61000,
-      "volume": 547090
+      "source": "pykrx",
+      "close": 58000,
+      "change_pct": -4.918032786885246,
+      "open": 59000,
+      "high": 59900,
+      "low": 56700,
+      "volume": 550758
     }
   },
   "investor_flow": {
     "status": "ok",
-    "bas_dd": "20261120",
+    "bas_dd": "20261123",
     "mtd_from": "20261101",
     "ytd_from": "20260102",
     "KOSPI": {
       "investor_value": [
         {
           "투자자구분": "금융투자",
-          "매도": 1125065874815,
-          "매수": 677393206047,
-          "순매수": -447672668768
+          "매도": 542144861775,
+          "매수": 1012082672788,
+          "순매수": 469937811013
         },
         {
           "투자자구분": "보험",
-          "매도": 104044473703,
-          "매수": 72982245395,
-          "순매수": -31062228308
+          "매도": 76630588030,
+          "매수": 133402090217,
+          "순매수": 56771502187
         },
         {
           "투자자구분": "투신",
-          "매도": 574712910359,
-          "매수": 265884241503,
-          "순매수": -308828668856
+          "매도": 354939056237,
+          "매수": 301502437279,
+          "순매수": -53436618958
         },
         {
           "투자자구분": "사모",
-          "매도": 392286503020,
-          "매수": 172036657599,
-          "순매수": -220249845421
+          "매도": 323910893320,
+          "매수": 218584362101,
+          "순매수": -105326531219
         },
         {
           "투자자구분": "은행",
-          "매도": 6036481070,
-          "매수": 4890397241,
-          "순매수": -1146083829
+          "매도": 6688251215,
+          "매수": 3985727278,
+          "순매수": -2702523937
         },
         {
           "투자자구분": "기타금융",
-          "매도": 21424039065,
-          "매수": 12901201755,
-          "순매수": -8522837310
+          "매도": 47328871767,
+          "매수": 16113194097,
+          "순매수": -31215677670
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 2366931846855,
-          "매수": 2451394636242,
-          "순매수": 84462789387
+          "매도": 3464020635945,
+          "매수": 3306276451854,
+          "순매수": -157744184091
         },
         {
           "투자자구분": "기관합계",
-          "매도": 4590502128887,
-          "매수": 3657482585782,
-          "순매수": -933019543105
+          "매도": 4815663158289,
+          "매수": 4991946935614,
+          "순매수": 176283777325
         },
         {
           "투자자구분": "기타법인",
-          "매도": 82452060249,
-          "매수": 589628518969,
-          "순매수": 507176458720
+          "매도": 133694976708,
+          "매수": 567107536085,
+          "순매수": 433412559377
         },
         {
           "투자자구분": "개인",
-          "매도": 3678313030140,
-          "매수": 5199752472086,
-          "순매수": 1521439441946
+          "매도": 4733162037930,
+          "매수": 4379926569410,
+          "순매수": -353235468520
         },
         {
           "투자자구분": "외국인",
-          "매도": 6586189762330,
-          "매수": 5481990146465,
-          "순매수": -1104199615865
+          "매도": 6356427950556,
+          "매수": 6109936379606,
+          "순매수": -246491570950
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 11728402346,
-          "매수": 20331660650,
-          "순매수": 8603258304
+          "매도": 23417958704,
+          "매수": 13448661472,
+          "순매수": -9969297232
         },
         {
           "투자자구분": "전체",
-          "매도": 14949185383952,
-          "매수": 14949185383952,
+          "매도": 16062366082187,
+          "매수": 16062366082187,
           "순매수": 0
         }
       ],
       "investor_value_mtd": [
         {
           "투자자구분": "금융투자",
-          "매도": 16697692470575,
-          "매수": 21168602282963,
-          "순매수": 4470909812388
+          "매도": 17239837332350,
+          "매수": 22180684955751,
+          "순매수": 4940847623401
         },
         {
           "투자자구분": "보험",
-          "매도": 1188652275387,
-          "매수": 1463166944756,
-          "순매수": 274514669369
+          "매도": 1265282863417,
+          "매수": 1596569034973,
+          "순매수": 331286171556
         },
         {
           "투자자구분": "투신",
-          "매도": 7935689348264,
-          "매수": 7697323787153,
-          "순매수": -238365561111
+          "매도": 8290628404501,
+          "매수": 7998826224432,
+          "순매수": -291802180069
         },
         {
           "투자자구분": "사모",
-          "매도": 5337270870979,
-          "매수": 4727933018308,
-          "순매수": -609337852671
+          "매도": 5661181764299,
+          "매수": 4946517380409,
+          "순매수": -714664383890
         },
         {
           "투자자구분": "은행",
-          "매도": 103715807860,
-          "매수": 86810083247,
-          "순매수": -16905724613
+          "매도": 110404059075,
+          "매수": 90795810525,
+          "순매수": -19608248550
         },
         {
           "투자자구분": "기타금융",
-          "매도": 227685379917,
-          "매수": 267846575405,
-          "순매수": 40161195488
+          "매도": 275014251684,
+          "매수": 283959769502,
+          "순매수": 8945517818
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 49567543110185,
-          "매수": 49719457497791,
-          "순매수": 151914387606
+          "매도": 53031563746130,
+          "매수": 53025733949645,
+          "순매수": -5829796485
         },
         {
           "투자자구분": "기관합계",
-          "매도": 81058249263167,
-          "매수": 85131140189623,
-          "순매수": 4072890926456
+          "매도": 85873912421456,
+          "매수": 90123087125237,
+          "순매수": 4249174703781
         },
         {
           "투자자구분": "기타법인",
-          "매도": 1782952754547,
-          "매수": 8660610236415,
-          "순매수": 6877657481868
+          "매도": 1916647731255,
+          "매수": 9227717772500,
+          "순매수": 7311070041245
         },
         {
           "투자자구분": "개인",
-          "매도": 77017068579444,
-          "매수": 80532501105399,
-          "순매수": 3515432525955
+          "매도": 81750230617374,
+          "매수": 84912427674809,
+          "순매수": 3162197057435
         },
         {
           "투자자구분": "외국인",
-          "매도": 113677613285756,
-          "매수": 99194286105391,
-          "순매수": -14483327180365
+          "매도": 120034041236312,
+          "매수": 105304222484997,
+          "순매수": -14729818751315
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 272893227126,
-          "매수": 290239473212,
-          "순매수": 17346246086
+          "매도": 296311185830,
+          "매수": 303688134684,
+          "순매수": 7376948854
         },
         {
           "투자자구분": "전체",
-          "매도": 273808777110040,
-          "매수": 273808777110040,
+          "매도": 289871143192227,
+          "매수": 289871143192227,
           "순매수": 0
         }
       ],
       "investor_value_ytd": [
         {
           "투자자구분": "금융투자",
-          "매도": 451744171473241,
-          "매수": 528992095760896,
-          "순매수": 77247924287655
+          "매도": 452286316335016,
+          "매수": 530004178433684,
+          "순매수": 77717862098668
         },
         {
           "투자자구분": "보험",
-          "매도": 29994870681568,
-          "매수": 23691504718929,
-          "순매수": -6303365962639
+          "매도": 30071501269598,
+          "매수": 23824906809146,
+          "순매수": -6246594460452
         },
         {
           "투자자구분": "투신",
-          "매도": 160783613200311,
-          "매수": 153544770490955,
-          "순매수": -7238842709356
+          "매도": 161138552256548,
+          "매수": 153846272928234,
+          "순매수": -7292279328314
         },
         {
           "투자자구분": "사모",
-          "매도": 104331317131212,
-          "매수": 97738238098444,
-          "순매수": -6593079032768
+          "매도": 104655228024532,
+          "매수": 97956822460545,
+          "순매수": -6698405563987
         },
         {
           "투자자구분": "은행",
-          "매도": 5754015463635,
-          "매수": 2144896678454,
-          "순매수": -3609118785181
+          "매도": 5760703714850,
+          "매수": 2148882405732,
+          "순매수": -3611821309118
         },
         {
           "투자자구분": "기타금융",
-          "매도": 3248073125353,
-          "매수": 4932037415387,
-          "순매수": 1683964290034
+          "매도": 3295401997120,
+          "매수": 4948150609484,
+          "순매수": 1652748612364
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 910660999288046,
-          "매수": 902638760543203,
-          "순매수": -8022238744843
+          "매도": 914125019923991,
+          "매수": 905945036995057,
+          "순매수": -8179982928934
         },
         {
           "투자자구분": "기관합계",
-          "매도": 1666517060363366,
-          "매수": 1713682303706268,
-          "순매수": 47165243342902
+          "매도": 1671332723521655,
+          "매수": 1718674250641882,
+          "순매수": 47341527120227
         },
         {
           "투자자구분": "기타법인",
-          "매도": 66012509209126,
-          "매수": 141437537765198,
-          "순매수": 75425028556072
+          "매도": 66146204185834,
+          "매수": 142004645301283,
+          "순매수": 75858441115449
         },
         {
           "투자자구분": "개인",
-          "매도": 2499756045660836,
-          "매수": 2600203645984588,
-          "순매수": 100447600323752
+          "매도": 2504489207698766,
+          "매수": 2604583572553998,
+          "순매수": 100094364855232
         },
         {
           "투자자구분": "외국인",
-          "매도": 2552232104265440,
-          "매수": 2328432893999871,
-          "순매수": -223799210265569
+          "매도": 2558588532215996,
+          "매수": 2334542830379477,
+          "순매수": -224045701836519
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 12407183833404,
-          "매수": 13168521876247,
-          "순매수": 761338042843
+          "매도": 12430601792108,
+          "매수": 13181970537719,
+          "순매수": 751368745611
         },
         {
           "투자자구분": "전체",
-          "매도": 6796924903332172,
-          "매수": 6796924903332172,
+          "매도": 6812987269414359,
+          "매수": 6812987269414359,
           "순매수": 0
         }
       ],
       "foreign_net_top": {
         "buy": [
           {
-            "종목": "셀트리온",
-            "순매수": 22315258750
+            "종목": "삼성전자우",
+            "순매수": 37179089250
           },
           {
-            "종목": "S-Oil",
-            "순매수": 17048500300
+            "종목": "GS",
+            "순매수": 29903432550
           },
           {
-            "종목": "한국전력",
-            "순매수": 11980311550
+            "종목": "SK스퀘어",
+            "순매수": 22123844000
           },
           {
-            "종목": "SK이노베이션",
-            "순매수": 11169912950
+            "종목": "이수페타시스",
+            "순매수": 20861076900
           },
           {
-            "종목": "HD현대중공업",
-            "순매수": 10721336250
+            "종목": "삼성SDI",
+            "순매수": 16691082000
           }
         ],
         "sell": [
           {
-            "종목": "삼성전자",
-            "순매수": -429963981600
-          },
-          {
-            "종목": "삼성전기",
-            "순매수": -244821957000
-          },
-          {
             "종목": "SK하이닉스",
-            "순매수": -185791854000
+            "순매수": -174642344500
           },
           {
-            "종목": "삼성전자우",
-            "순매수": -48089156750
+            "종목": "하나금융지주",
+            "순매수": -24477618050
           },
           {
-            "종목": "SK텔레콤",
-            "순매수": -29827102350
+            "종목": "NAVER",
+            "순매수": -19800089650
+          },
+          {
+            "종목": "KB금융",
+            "순매수": -18291325850
+          },
+          {
+            "종목": "삼성바이오로직스",
+            "순매수": -15274933000
           }
         ]
       },
       "pension_net_top": {
         "buy": [
           {
-            "종목": "SK하이닉스",
-            "순매수": 45432356000
+            "종목": "셀트리온",
+            "순매수": 15461069450
           },
           {
-            "종목": "삼성전자",
-            "순매수": 34855568150
+            "종목": "에이피알",
+            "순매수": 11423830250
           },
           {
-            "종목": "삼성전자우",
-            "순매수": 29175235750
+            "종목": "삼성전기",
+            "순매수": 8040681500
           },
           {
-            "종목": "한미약품",
-            "순매수": 15969923250
+            "종목": "LG전자",
+            "순매수": 7487868300
           },
           {
-            "종목": "하이브",
-            "순매수": 14078163950
+            "종목": "삼성생명",
+            "순매수": 6326517500
           }
         ],
         "sell": [
           {
-            "종목": "이수페타시스",
-            "순매수": -25818387750
+            "종목": "NAVER",
+            "순매수": -40516993950
           },
           {
-            "종목": "두산",
-            "순매수": -11243637500
+            "종목": "SK하이닉스",
+            "순매수": -32526287000
           },
           {
-            "종목": "DB하이텍",
-            "순매수": -9516045050
+            "종목": "삼성전자",
+            "순매수": -28967409300
           },
           {
-            "종목": "KB금융",
-            "순매수": -8459622850
+            "종목": "SK스퀘어",
+            "순매수": -26558068000
           },
           {
-            "종목": "두산에너빌리티",
-            "순매수": -8217396925
+            "종목": "삼성에스디에스",
+            "순매수": -25359528050
           }
         ]
       }
@@ -1626,286 +1626,286 @@
       "investor_value": [
         {
           "투자자구분": "금융투자",
-          "매도": 182616052005,
-          "매수": 175031381459,
-          "순매수": -7584670546
+          "매도": 182126838776,
+          "매수": 330632720201,
+          "순매수": 148505881425
         },
         {
           "투자자구분": "보험",
-          "매도": 12172248405,
-          "매수": 14058935981,
-          "순매수": 1886687576
+          "매도": 8637390608,
+          "매수": 13333364504,
+          "순매수": 4695973896
         },
         {
           "투자자구분": "투신",
-          "매도": 138454719080,
-          "매수": 83186438433,
-          "순매수": -55268280647
+          "매도": 79568049385,
+          "매수": 114933135624,
+          "순매수": 35365086239
         },
         {
           "투자자구분": "사모",
-          "매도": 104281794224,
-          "매수": 59989967959,
-          "순매수": -44291826265
+          "매도": 93230201302,
+          "매수": 78920384053,
+          "순매수": -14309817249
         },
         {
           "투자자구분": "은행",
-          "매도": 1260784240,
-          "매수": 18458903,
-          "순매수": -1242325337
+          "매도": 924608860,
+          "매수": 63918495,
+          "순매수": -860690365
         },
         {
           "투자자구분": "기타금융",
-          "매도": 3033505422,
-          "매수": 432956349,
-          "순매수": -2600549073
+          "매도": 2069325857,
+          "매수": 1610394905,
+          "순매수": -458930952
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 97800488120,
-          "매수": 103259182645,
-          "순매수": 5458694525
+          "매도": 91941774485,
+          "매수": 113984767400,
+          "순매수": 22042992915
         },
         {
           "투자자구분": "기관합계",
-          "매도": 539619591496,
-          "매수": 435977321729,
-          "순매수": -103642269767
+          "매도": 458498189273,
+          "매수": 653478685182,
+          "순매수": 194980495909
         },
         {
           "투자자구분": "기타법인",
-          "매도": 147826181991,
-          "매수": 139997812231,
-          "순매수": -7828369760
+          "매도": 33095350966,
+          "매수": 45104193577,
+          "순매수": 12008842611
         },
         {
           "투자자구분": "개인",
-          "매도": 2563640384542,
-          "매수": 2836721879166,
-          "순매수": 273081494624
+          "매도": 2683375281619,
+          "매수": 2513951535437,
+          "순매수": -169423746182
         },
         {
           "투자자구분": "외국인",
-          "매도": 1306797496490,
-          "매수": 1144695134492,
-          "순매수": -162102361998
+          "매도": 1485376178700,
+          "매수": 1448826418985,
+          "순매수": -36549759715
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 10448229502,
-          "매수": 10939736403,
-          "순매수": 491506901
+          "매도": 13473635202,
+          "매수": 12457802579,
+          "순매수": -1015832623
         },
         {
           "투자자구분": "전체",
-          "매도": 4568331884021,
-          "매수": 4568331884021,
+          "매도": 4673818635760,
+          "매수": 4673818635760,
           "순매수": 0
         }
       ],
       "investor_value_mtd": [
         {
           "투자자구분": "금융투자",
-          "매도": 3270375711500,
-          "매수": 4490863551373,
-          "순매수": 1220487839873
+          "매도": 3452502550276,
+          "매수": 4821496271574,
+          "순매수": 1368993721298
         },
         {
           "투자자구분": "보험",
-          "매도": 160994074146,
-          "매수": 183792036257,
-          "순매수": 22797962111
+          "매도": 169631464754,
+          "매수": 197125400761,
+          "순매수": 27493936007
         },
         {
           "투자자구분": "투신",
-          "매도": 1748164389995,
-          "매수": 1739448243678,
-          "순매수": -8716146317
+          "매도": 1827732439380,
+          "매수": 1854381379302,
+          "순매수": 26648939922
         },
         {
           "투자자구분": "사모",
-          "매도": 1363011761615,
-          "매수": 1242133970940,
-          "순매수": -120877790675
+          "매도": 1456241962917,
+          "매수": 1321054354993,
+          "순매수": -135187607924
         },
         {
           "투자자구분": "은행",
-          "매도": 23756585452,
-          "매수": 4450875078,
-          "순매수": -19305710374
+          "매도": 24681194312,
+          "매수": 4514793573,
+          "순매수": -20166400739
         },
         {
           "투자자구분": "기타금융",
-          "매도": 88041603580,
-          "매수": 12602809366,
-          "순매수": -75438794214
+          "매도": 90110929437,
+          "매수": 14213204271,
+          "순매수": -75897725166
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 1671793961221,
-          "매수": 1602052720274,
-          "순매수": -69741240947
+          "매도": 1763735735706,
+          "매수": 1716037487674,
+          "순매수": -47698248032
         },
         {
           "투자자구분": "기관합계",
-          "매도": 8326138087509,
-          "매수": 9275344206966,
-          "순매수": 949206119457
+          "매도": 8784636276782,
+          "매수": 9928822892148,
+          "순매수": 1144186615366
         },
         {
           "투자자구분": "기타법인",
-          "매도": 781273960077,
-          "매수": 765762264662,
-          "순매수": -15511695415
+          "매도": 814369311043,
+          "매수": 810866458239,
+          "순매수": -3502852804
         },
         {
           "투자자구분": "개인",
-          "매도": 47290961820470,
-          "매수": 48096171348300,
-          "순매수": 805209527830
+          "매도": 49974337102089,
+          "매수": 50610122883737,
+          "순매수": 635785781648
         },
         {
           "투자자구분": "외국인",
-          "매도": 22596989254938,
-          "매수": 20847907152397,
-          "순매수": -1749082102541
+          "매도": 24082365433638,
+          "매수": 22296733571382,
+          "순매수": -1785631862256
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 187928026347,
-          "매수": 198106177016,
-          "순매수": 10178150669
+          "매도": 201401661549,
+          "매수": 210563979595,
+          "순매수": 9162318046
         },
         {
           "투자자구분": "전체",
-          "매도": 79183291149341,
-          "매수": 79183291149341,
+          "매도": 83857109785101,
+          "매수": 83857109785101,
           "순매수": 0
         }
       ],
       "investor_value_ytd": [
         {
           "투자자구분": "금융투자",
-          "매도": 92069371427516,
-          "매수": 106176135688199,
-          "순매수": 14106764260683
+          "매도": 92251498266292,
+          "매수": 106506768408400,
+          "순매수": 14255270142108
         },
         {
           "투자자구분": "보험",
-          "매도": 3488066001492,
-          "매수": 3228997201693,
-          "순매수": -259068799799
+          "매도": 3496703392100,
+          "매수": 3242330566197,
+          "순매수": -254372825903
         },
         {
           "투자자구분": "투신",
-          "매도": 39843106850302,
-          "매수": 40920178462375,
-          "순매수": 1077071612073
+          "매도": 39922674899687,
+          "매수": 41035111597999,
+          "순매수": 1112436698312
         },
         {
           "투자자구분": "사모",
-          "매도": 28671669129768,
-          "매수": 26109264730507,
-          "순매수": -2562404399261
+          "매도": 28764899331070,
+          "매수": 26188185114560,
+          "순매수": -2576714216510
         },
         {
           "투자자구분": "은행",
-          "매도": 307695840122,
-          "매수": 132180113340,
-          "순매수": -175515726782
+          "매도": 308620448982,
+          "매수": 132244031835,
+          "순매수": -176376417147
         },
         {
           "투자자구분": "기타금융",
-          "매도": 2019220163688,
-          "매수": 250622649701,
-          "순매수": -1768597513987
+          "매도": 2021289489545,
+          "매수": 252233044606,
+          "순매수": -1769056444939
         },
         {
           "투자자구분": "연기금 등",
-          "매도": 31410690064476,
-          "매수": 31255673716878,
-          "순매수": -155016347598
+          "매도": 31502631838961,
+          "매수": 31369658484278,
+          "순매수": -132973354683
         },
         {
           "투자자구분": "기관합계",
-          "매도": 197809819477364,
-          "매수": 208073052562693,
-          "순매수": 10263233085329
+          "매도": 198268317666637,
+          "매수": 208726531247875,
+          "순매수": 10458213581238
         },
         {
           "투자자구분": "기타법인",
-          "매도": 23410820795285,
-          "매수": 18438104099880,
-          "순매수": -4972716695405
+          "매도": 23443916146251,
+          "매수": 18483208293457,
+          "순매수": -4960707852794
         },
         {
           "투자자구분": "개인",
-          "매도": 1467758797866145,
-          "매수": 1462326098271023,
-          "순매수": -5432699595122
+          "매도": 1470442173147764,
+          "매수": 1464840049806460,
+          "순매수": -5602123341304
         },
         {
           "투자자구분": "외국인",
-          "매도": 549389174547219,
-          "매수": 549474209920597,
-          "순매수": 85035373378
+          "매도": 550874550725919,
+          "매수": 550923036339582,
+          "순매수": 48485613663
         },
         {
           "투자자구분": "기타외국인",
-          "매도": 8703657299826,
-          "매수": 8760805131646,
-          "순매수": 57147831820
+          "매도": 8717130935028,
+          "매수": 8773262934225,
+          "순매수": 56131999197
         },
         {
           "투자자구분": "전체",
-          "매도": 2247072269985839,
-          "매수": 2247072269985839,
+          "매도": 2251746088621599,
+          "매수": 2251746088621599,
           "순매수": 0
         }
       ],
       "foreign_net_top": {
         "buy": [
           {
-            "종목": "JYP Ent.",
-            "순매수": 7119094225
+            "종목": "이오테크닉스",
+            "순매수": 6858108750
           },
           {
-            "종목": "글로벌텍스프리",
-            "순매수": 5497098325
+            "종목": "안랩",
+            "순매수": 5767802800
           },
           {
-            "종목": "큐리언트",
-            "순매수": 4514859813
+            "종목": "원익IPS",
+            "순매수": 5695514250
           },
           {
-            "종목": "티씨케이",
-            "순매수": 4353715650
+            "종목": "마이크로컨텍솔",
+            "순매수": 5111390125
           },
           {
-            "종목": "엑시콘",
-            "순매수": 4185229500
+            "종목": "디앤디파마텍",
+            "순매수": 4892911450
           }
         ],
         "sell": [
           {
-            "종목": "HPSP",
-            "순매수": -17507605925
-          },
-          {
             "종목": "레인보우로보틱스",
-            "순매수": -14728694250
+            "순매수": -23233992500
           },
           {
-            "종목": "안랩",
-            "순매수": -11153980600
+            "종목": "주성엔지니어링",
+            "순매수": -15778081600
           },
           {
-            "종목": "리노공업",
-            "순매수": -10161610750
+            "종목": "HPSP",
+            "순매수": -9817932075
           },
           {
-            "종목": "로보티즈",
-            "순매수": -8643724250
+            "종목": "코스메카코리아",
+            "순매수": -7645181750
+          },
+          {
+            "종목": "에스엠",
+            "순매수": -5142497550
           }
         ]
       },
@@ -1913,45 +1913,45 @@
         "buy": [
           {
             "종목": "에스엠",
-            "순매수": 10120873850
+            "순매수": 7172654300
           },
           {
-            "종목": "레인보우로보틱스",
-            "순매수": 5114810250
+            "종목": "주성엔지니어링",
+            "순매수": 2444898350
           },
           {
-            "종목": "HPSP",
-            "순매수": 3056818375
+            "종목": "삼현",
+            "순매수": 2037310650
           },
           {
-            "종목": "한양디지텍",
-            "순매수": 1590944600
+            "종목": "지투지바이오",
+            "순매수": 2015513475
           },
           {
-            "종목": "알테오젠",
-            "순매수": 1529034950
+            "종목": "피에스케이",
+            "순매수": 2009745850
           }
         ],
         "sell": [
           {
-            "종목": "오킨스전자",
-            "순매수": -4422512390
+            "종목": "알테오젠",
+            "순매수": -2026789750
           },
           {
-            "종목": "티에스이",
-            "순매수": -2904060000
+            "종목": "나노신소재",
+            "순매수": -1532424100
           },
           {
-            "종목": "두산테스나",
-            "순매수": -2695594300
+            "종목": "실리콘투",
+            "순매수": -1363822975
           },
           {
-            "종목": "피에스케이",
-            "순매수": -2577058400
+            "종목": "서울반도체",
+            "순매수": -1311965680
           },
           {
-            "종목": "기가비스",
-            "순매수": -2504545750
+            "종목": "디앤디파마텍",
+            "순매수": -1209674475
           }
         ]
       }
