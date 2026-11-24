@@ -5,6 +5,12 @@
   "week_end": "2026-11-29",
   "events": [
     {
+      "date": "2026-11-23",
+      "name": "주간 신규 실업수당 청구",
+      "kind": "indicator",
+      "impact": "medium"
+    },
+    {
       "date": "2026-11-24",
       "name": "산업생산·설비가동률",
       "kind": "indicator",
@@ -27,15 +33,9 @@
       "name": "PCE 물가·개인소득/지출",
       "kind": "indicator",
       "impact": "high"
-    },
-    {
-      "date": "2026-11-25",
-      "name": "주간 신규 실업수당 청구",
-      "kind": "indicator",
-      "impact": "medium"
     }
   ],
   "stale_events": false,
-  "events_fetched_at": "2026-11-23T01:03:08.608927+00:00",
-  "fetched_at": "2026-11-23T01:03:08.608927+00:00"
+  "events_fetched_at": "2026-11-24T04:56:49.725220+00:00",
+  "fetched_at": "2026-11-24T04:56:49.725220+00:00"
 }
