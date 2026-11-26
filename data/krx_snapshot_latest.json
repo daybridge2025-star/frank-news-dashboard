@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261125",
-  "fetched_at": "2026-11-26 04:40 KST",
+  "fetched_at": "2026-11-26 11:58 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,29 +1224,29 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 166900,
-      "change_pct": -8.74794969928923,
+      "source": "openapi",
+      "close": 170700,
+      "change_pct": -9.87,
       "open": 178500,
       "high": 179900,
-      "low": 166000,
-      "volume": 21801583
+      "low": 170000,
+      "volume": 22046619
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1014000,
-      "change_pct": -8.89487870619946,
+      "source": "openapi",
+      "close": 1030000,
+      "change_pct": -11.05,
       "open": 1094000,
       "high": 1097000,
-      "low": 1003000,
-      "volume": 3827872
+      "low": 1027000,
+      "volume": 3862104
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 374500,
-      "change_pct": -2.473958333333333,
+      "source": "openapi",
+      "close": 383000,
+      "change_pct": -4.25,
       "open": 381000,
       "high": 387500,
       "low": 370500,
@@ -1254,29 +1254,29 @@
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 110700,
-      "change_pct": -4.896907216494846,
+      "source": "openapi",
+      "close": 114300,
+      "change_pct": -6.31,
       "open": 115800,
       "high": 116900,
-      "low": 110400,
+      "low": 110800,
       "volume": 486864
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
-      "close": 622000,
-      "change_pct": 1.6339869281045754,
+      "source": "openapi",
+      "close": 633000,
+      "change_pct": 0.8,
       "open": 619000,
       "high": 651000,
       "low": 615000,
-      "volume": 86755
+      "volume": 125755
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
-      "close": 57700,
-      "change_pct": -1.0291595197255576,
+      "source": "openapi",
+      "close": 59000,
+      "change_pct": -1.99,
       "open": 58100,
       "high": 59800,
       "low": 57500,
