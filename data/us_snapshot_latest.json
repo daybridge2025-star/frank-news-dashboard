@@ -1,40 +1,40 @@
 {
   "yahoo": {
     "vix": {
-      "price": 28.290000915527344,
-      "prev": 26.360000610351562,
-      "change_pct": 7.32,
-      "asof": "2026-11-25"
+      "price": 26.8,
+      "prev": 28.290000915527344,
+      "change_pct": -5.27,
+      "asof": "2026-11-26"
     },
     "usdkrw": {
-      "price": 1341.8800048828125,
-      "prev": 1342.6500244140625,
-      "change_pct": -0.06,
-      "asof": "2026-11-25"
+      "price": 1342.52001953125,
+      "prev": 1342.969970703125,
+      "change_pct": -0.03,
+      "asof": "2026-11-26"
     },
     "wti": {
-      "price": 83.86000061035156,
+      "price": 85.70999908447266,
       "prev": 83.68000030517578,
-      "change_pct": 0.22,
-      "asof": "2026-11-25"
+      "change_pct": 2.43,
+      "asof": "2026-11-26"
     },
     "gold": {
-      "price": 3621.89990234375,
+      "price": 3653.800048828125,
       "prev": 3535.800048828125,
-      "change_pct": 2.44,
-      "asof": "2026-11-25"
+      "change_pct": 3.34,
+      "asof": "2026-11-26"
     },
     "copper": {
-      "price": 5.5345001220703125,
+      "price": 5.6605000495910645,
       "prev": 5.332499980926514,
-      "change_pct": 3.79,
-      "asof": "2026-11-25"
+      "change_pct": 6.15,
+      "asof": "2026-11-26"
     },
     "dxy": {
-      "price": 103.74099731445312,
+      "price": 103.66100311279297,
       "prev": 103.66999816894531,
-      "change_pct": 0.07,
-      "asof": "2026-11-25"
+      "change_pct": -0.01,
+      "asof": "2026-11-26"
     },
     "sp500": {
       "price": 7182.77978515625,
@@ -46,7 +46,7 @@
       "ytd_change_pct": 4.7
     },
     "nasdaq": {
-      "price": 23585.802734375,
+      "price": 23585.80078125,
       "prev": 23733.5390625,
       "change_pct": -0.62,
       "asof": "2026-11-25",
@@ -79,21 +79,21 @@
     },
     "fed_upper": {
       "value": 4.0,
-      "date": "2026-11-25"
+      "date": "2026-11-26"
     },
     "fed_lower": {
       "value": 3.75,
-      "date": "2026-11-25"
+      "date": "2026-11-26"
     }
   },
   "fear_greed": {
-    "score": 15.2,
+    "score": 15.0,
     "rating": "extreme fear",
     "asof": "2026-11-25",
     "source": "CNN",
-    "prev_close": 17.4,
-    "prev_week": 29.9,
-    "prev_month": 16.7
+    "prev_close": 15.2,
+    "prev_week": 15.9,
+    "prev_month": 29.8
   },
   "valuation": {
     "forward_pe": 17.1,
@@ -102,5 +102,5 @@
     "asof": "2026-11-20",
     "source": "FactSet Earnings Insight"
   },
-  "fetched_at": "2026-11-26 12:00 KST"
+  "fetched_at": "2026-11-27 12:03 KST"
 }
