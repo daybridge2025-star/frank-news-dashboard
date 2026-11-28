@@ -1,6 +1,6 @@
 {
   "bas_dd": "20261127",
-  "fetched_at": "2026-11-28 04:16 KST",
+  "fetched_at": "2026-11-28 11:52 KST",
   "index": {
     "KOSPI": {
       "name": "코스피",
@@ -1224,39 +1224,39 @@
   "stocks": {
     "005930": {
       "name": "삼성전자",
-      "source": "pykrx",
-      "close": 179500,
-      "change_pct": 4.664723032069971,
+      "source": "openapi",
+      "close": 179100,
+      "change_pct": 4.55,
       "open": 171200,
       "high": 179900,
       "low": 169000,
-      "volume": 14293472
+      "volume": 14441255
     },
     "000660": {
       "name": "SK하이닉스",
-      "source": "pykrx",
-      "close": 1111000,
-      "change_pct": 5.308056872037914,
+      "source": "openapi",
+      "close": 1110000,
+      "change_pct": 5.41,
       "open": 1040000,
-      "high": 1117000,
+      "high": 1110000,
       "low": 1022000,
-      "volume": 3023956
+      "volume": 3034278
     },
     "267260": {
       "name": "HD현대일렉트릭",
-      "source": "pykrx",
-      "close": 418000,
-      "change_pct": 7.317073170731707,
+      "source": "openapi",
+      "close": 418500,
+      "change_pct": 8.0,
       "open": 391500,
       "high": 421000,
       "low": 391500,
-      "volume": 140059
+      "volume": 140185
     },
     "010120": {
       "name": "LS ELECTRIC",
-      "source": "pykrx",
-      "close": 121500,
-      "change_pct": 7.52212389380531,
+      "source": "openapi",
+      "close": 121700,
+      "change_pct": 7.32,
       "open": 112000,
       "high": 122000,
       "low": 112000,
@@ -1264,19 +1264,19 @@
     },
     "012450": {
       "name": "한화에어로스페이스",
-      "source": "pykrx",
-      "close": 661000,
-      "change_pct": 5.5910543130990416,
+      "source": "openapi",
+      "close": 663000,
+      "change_pct": 5.74,
       "open": 634000,
       "high": 675000,
       "low": 633000,
-      "volume": 143588
+      "volume": 144570
     },
     "064350": {
       "name": "현대로템",
-      "source": "pykrx",
-      "close": 62300,
-      "change_pct": 6.86106346483705,
+      "source": "openapi",
+      "close": 62700,
+      "change_pct": 7.92,
       "open": 58000,
       "high": 62900,
       "low": 58000,
